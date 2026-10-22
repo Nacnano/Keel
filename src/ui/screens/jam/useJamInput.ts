@@ -1,34 +1,25 @@
-import { useMemo } from 'react';
-import { jamStore } from '@/state/jamStore';
+import { useEffect, useMemo } from 'react';
+import { liveInput } from '@/app/live/liveInput';
 import { isMockMode, useMockInput } from './useMockInput';
 import type { JamInput } from './useMockInput';
 
-/**
- * TODO(integration): replace with the real input hook (mic + MIDI + analysis engine feeding
- * jamStore.applyEvent). Until then Start explains how to reach the demo.
- */
-function useLiveInputPlaceholder(): JamInput {
+function useLiveInput(): JamInput {
+  useEffect(() => {
+    void liveInput().refreshDevices();
+  }, []);
   return useMemo(
     () => ({
-      start() {
-        jamStore
-          .getState()
-          .setStatus(
-            'error',
-            'Live input is not connected in this build yet. Add ?mock=1 to the address to try the demo.',
-          );
-      },
-      stop() {
-        jamStore.getState().stopSession();
-      },
+      start: () => liveInput().start(),
+      stop: () => liveInput().stop(),
     }),
     [],
   );
 }
 
+/** Mock stream under `?mock=1`, otherwise the real mic + MIDI + analysis pipeline. */
 export function useJamInput(): JamInput & { mock: boolean } {
   const mock = useMemo(() => isMockMode(), []);
   const mockInput = useMockInput();
-  const live = useLiveInputPlaceholder();
+  const live = useLiveInput();
   return { ...(mock ? mockInput : live), mock };
 }

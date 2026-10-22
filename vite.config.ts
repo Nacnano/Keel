@@ -27,7 +27,8 @@ export default defineConfig({
         runtimeCaching: [
           {
             // piano samples (smplr) — cache-first, long lived
-            urlPattern: ({ url }) => /smplr|soundfont|samples/i.test(url.href),
+            urlPattern: ({ url }) =>
+              /danigb\.github\.io\/samples|smpldsnds\.github\.io|soundfont/i.test(url.href),
             handler: 'CacheFirst',
             options: {
               cacheName: 'jamkey-samples',
