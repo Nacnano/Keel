@@ -103,12 +103,21 @@ describe('ScaleHelper', () => {
     expect(chips()[0]).toHaveTextContent('D dorian');
   });
 
-  it('collapses to a toggle', () => {
+  it('accepts the legacy open/onToggle props but has no header toggle', () => {
     const onToggle = vi.fn();
     render(<ScaleHelper chord={DM7} keyContext={C_MAJOR} open={false} onToggle={onToggle} />);
-    expect(screen.queryByRole('radiogroup')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Show' }));
-    expect(onToggle).toHaveBeenCalledOnce();
+    expect(chips()).toHaveLength(4);
+    expect(screen.queryByRole('button', { name: /^(Show|Hide)$/ })).toBeNull();
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it('lists each scale as a row with its reason and checks the selected one', () => {
+    render(<ScaleHelper chord={DM7} keyContext={C_MAJOR} />);
+    const [first, second] = chips();
+    expect(first).toHaveTextContent(/ii7 in C major/);
+    expect(first.querySelector('svg')).toHaveClass('opacity-100');
+    expect(second.querySelector('svg')).toHaveClass('opacity-0');
   });
 });
 
