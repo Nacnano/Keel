@@ -21,7 +21,11 @@ describe('App routes', () => {
     const r = createMemoryRouter(routes, { initialEntries: ['/stats'] });
     render(<RouterProvider router={r} />);
     expect(await screen.findByRole('heading', { level: 1, name: 'Stats' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Stats' })).toHaveAttribute('aria-current', 'page');
+    expect(
+      screen
+        .getAllByRole('link', { name: 'Stats' })
+        .some((a) => a.getAttribute('aria-current') === 'page'),
+    ).toBe(true);
   });
   it('renders the settings screen at /settings', async () => {
     const r = createMemoryRouter(routes, { initialEntries: ['/settings'] });
@@ -53,6 +57,10 @@ describe('App routes', () => {
     ).toBeInTheDocument();
     const view = within(container);
     expect(view.getByLabelText('Choose an audio file')).toBeInTheDocument();
-    expect(view.getByRole('link', { name: 'Analyze' })).toHaveAttribute('aria-current', 'page');
+    expect(
+      view
+        .getAllByRole('link', { name: 'Analyze' })
+        .some((a) => a.getAttribute('aria-current') === 'page'),
+    ).toBe(true);
   });
 });
