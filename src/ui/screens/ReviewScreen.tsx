@@ -1,13 +1,25 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
+import {
+  Bookmark,
+  ChevronLeft,
+  Download,
+  Ellipsis,
+  FileQuestion,
+  Keyboard,
+  Maximize2,
+  Pencil,
+  Share,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { auditionChord } from '@/app/live/audition';
 import type { Chord, ChordRecord, MarkerKind } from '@/core';
 import type { SessionFull } from '@/data';
 import { useSettings } from '@/state/settingsStore';
 import { sameChord } from '@/theory';
-import { Button } from '../components/Button';
+import { Badge, Button, EmptyState, Group, Row, Sheet, Toolbar } from '../kit';
 import { ChordLane } from '../components/ChordLane';
 import { ChordPicker } from '../components/ChordPicker';
 import { MarkerLane, MarkerToolbar } from '../components/MarkerLane';
@@ -19,7 +31,9 @@ import { toast } from '../components/toastStore';
 import { keyLabel, pretty } from '../lib/chordLabel';
 import { MARKER_LABEL } from '../lib/markers';
 import { useSync } from '@/sync/store';
-import { ExportMenu } from './library/ExportMenu';
+import { ExportItems, ExportMenu } from './library/ExportMenu';
+import { GRAY_LINK, PLAIN_LINK } from './library/linkStyles';
+import { Menu, MenuItem, MenuSeparator } from './library/Menu';
 import { chordText, keyAtTime } from './review/chordText';
 import { NameField } from './review/NameField';
 import { ShareDialog } from './review/ShareDialog';
@@ -40,6 +54,7 @@ import { usePlayback } from './review/usePlayback';
 import { useReviewSession, type ReviewSessionApi } from './review/useReviewSession';
 import { useReviewShortcuts } from './review/useReviewShortcuts';
 import { useTimeGestures } from './review/useTimeGestures';
+import { useMediaQuery } from '../lib/useMediaQuery';
 
 const fmtDate = (ms: number) =>
   new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
@@ -54,47 +69,53 @@ export function ReviewScreen() {
 
   if (load.status === 'loading') {
     return (
-      <Centered>
-        <p role="status" className="animate-pulse text-zinc-400">
+      <div className="flex h-full items-center justify-center p-6">
+        <p role="status" className="anim-pulse-soft text-subhead text-label-2">
           Loading session…
         </p>
-      </Centered>
+      </div>
     );
   }
   if (load.status === 'missing' || load.status === 'error') {
     return (
-      <Centered>
-        <h1 className="text-xl font-semibold text-white">
-          {load.status === 'missing' ? 'Session not found' : 'Could not open this session'}
-        </h1>
-        <p className="max-w-sm text-center text-sm text-zinc-400">
-          {load.status === 'missing'
-            ? 'It may have been deleted, or the link is from another device.'
-            : load.message}
-        </p>
-        <Link
-          to="/library"
-          className="inline-flex min-h-11 items-center rounded-xl bg-zinc-800 px-4 text-sm text-zinc-100 hover:bg-zinc-700 focus-visible:outline-2 focus-visible:outline-violet-300"
-        >
-          Back to library
-        </Link>
-      </Centered>
+      <div className="flex h-full items-center justify-center">
+        <EmptyState
+          icon={<FileQuestion aria-hidden />}
+          title={load.status === 'missing' ? 'Session not found' : 'Could not open this session'}
+          description={
+            load.status === 'missing'
+              ? 'It may have been deleted, or the link is from another device.'
+              : load.message
+          }
+          action={
+            <Link to="/library" className={GRAY_LINK}>
+              Back to library
+            </Link>
+          }
+        />
+      </div>
     );
   }
   return <ReviewLoaded full={load.full} api={api} />;
 }
 
-function Centered({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 p-6">{children}</div>
-  );
-}
+const SHORTCUTS: ReadonlyArray<[string, string]> = [
+  ['Space', 'Play or pause'],
+  ['← / →', 'Skip 5 s (Shift: 1 s)'],
+  ['B', 'Bookmark at the playhead'],
+  ['+ / −', 'Zoom in or out'],
+  ['E', 'Edit the focused chord'],
+  ['Delete', 'Remove the focused marker'],
+];
 
 function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi }) {
   const { session, chords, keys, markers, midiTrack, recording } = full;
   const syncConfigured = useSync((s) => s.configured);
   const syncUser = useSync((s) => s.user);
   const [shareOpen, setShareOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // Phones: Share and Export move into the overflow menu so the title has room.
+  const roomy = useMediaQuery('(min-width: 640px)', true);
   const settings = useSettings(
     useShallow((s) => ({
       spellingFollowsKey: s.spellingFollowsKey,
@@ -260,61 +281,123 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
     return { chords: picked, key: { tonic: k.tonic, mode: k.mode } };
   }, [chords, keys, controller]);
 
+  const shareBlocked = !syncConfigured
+    ? 'Sharing needs cloud sync, which is not configured.'
+    : !syncUser
+      ? 'Sign in under Settings → Account & sync to share.'
+      : undefined;
+  const openShare = () => {
+    if (shareBlocked) toast(shareBlocked, { durationMs: 3500 });
+    else setShareOpen(true);
+  };
+
   return (
     <div className="flex h-full flex-col overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 pt-4 pb-[max(env(safe-area-inset-bottom),24px)] lg:px-8">
-        <header className="flex flex-wrap items-start gap-x-6 gap-y-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <Link
-              to="/library"
-              className="w-fit text-xs font-medium tracking-widest text-zinc-500 uppercase hover:text-zinc-300"
+      <Toolbar
+        leading={
+          <Link to="/library" className={`${PLAIN_LINK} -ml-3 gap-0.5 px-2`}>
+            <ChevronLeft className="size-6" aria-hidden />
+            <span className="max-sm:sr-only">Library</span>
+          </Link>
+        }
+        title={
+          <NameField
+            value={session.name}
+            onCommit={(name) => run(api.rename(name), 'rename the session')}
+            className="max-w-[calc(100vw-9rem)] text-center sm:max-w-md"
+          />
+        }
+        trailing={
+          <>
+            {roomy && (
+              <>
+                <Button
+                  icon
+                  variant="plain"
+                  aria-label="Share"
+                  title={shareBlocked ?? 'Share a read-only link'}
+                  onClick={openShare}
+                >
+                  <Share className="size-5" aria-hidden />
+                </Button>
+                <ExportMenu getFull={async () => full} icon={<Download className="size-5" />} />
+              </>
+            )}
+            <Menu
+              align="end"
+              width={260}
+              aria-label="More"
+              trigger={(t) => (
+                <Button icon variant="plain" aria-label="More" {...t}>
+                  <Ellipsis className="size-5" aria-hidden />
+                </Button>
+              )}
             >
-              ← Library
-            </Link>
-            <NameField
-              value={session.name}
-              onCommit={(name) => run(api.rename(name), 'rename the session')}
-              className="text-2xl font-semibold lg:text-3xl"
-            />
-            <p className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-zinc-400">
-              <span>{fmtDate(session.createdAt)}</span>
-              <span aria-label="Duration">{clockLabel(session.durationSec)}</span>
-              {keyList.length > 0 && (
-                <span data-testid="review-keys" className="text-violet-200">
+              {!roomy && (
+                <>
+                  <MenuItem icon={<Share />} onSelect={openShare}>
+                    Share link…
+                  </MenuItem>
+                  <ExportItems getFull={async () => full} />
+                  <MenuSeparator />
+                </>
+              )}
+              <MenuItem
+                icon={<Pencil />}
+                disabled={!currentRec}
+                onSelect={() => currentRec && setEditing(currentRec)}
+              >
+                Edit chord at playhead
+              </MenuItem>
+              <MenuItem
+                icon={<Bookmark />}
+                onSelect={() => void addMarker('bookmark', controller.position())}
+              >
+                Bookmark at playhead
+              </MenuItem>
+              <MenuItem icon={<Maximize2 />} onSelect={fitAll}>
+                Show whole session
+              </MenuItem>
+              <MenuSeparator />
+              <MenuItem icon={<Keyboard />} onSelect={() => setShortcutsOpen(true)}>
+                Keyboard shortcuts
+              </MenuItem>
+            </Menu>
+          </>
+        }
+      />
+      <ShareDialog open={shareOpen} onClose={() => setShareOpen(false)} sessionId={session.id} />
+
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 pt-4 pb-[max(env(safe-area-inset-bottom),32px)] lg:px-6">
+        <header className="flex flex-col gap-2">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-subhead text-label-2">
+            {keyList.length > 0 && (
+              <>
+                <span data-testid="review-keys" className="font-semibold text-label">
                   {keyList.map((k) => pretty(keyLabel(k, settings))).join(' · ')}
                 </span>
-              )}
-              {recording && <span>Audio</span>}
-              {hasMidi && <span>MIDI</span>}
-            </p>
-            <TagEditor
-              tags={session.tags}
-              onChange={(tags) => run(api.setTags(tags), 'save the tags')}
-              className="mt-1"
-            />
-          </div>
-          <ExportMenu
-            getFull={async () => full}
-            share={{
-              onSelect: () => setShareOpen(true),
-              disabledReason: !syncConfigured
-                ? 'Sharing needs cloud sync, which is not configured.'
-                : !syncUser
-                  ? 'Sign in under Settings → Account & sync to share.'
-                  : undefined,
-            }}
-          />
-          <ShareDialog
-            open={shareOpen}
-            onClose={() => setShareOpen(false)}
-            sessionId={session.id}
+                <span aria-hidden className="text-label-4">
+                  ·
+                </span>
+              </>
+            )}
+            <span aria-label="Duration" className="tabular">
+              {clockLabel(session.durationSec)}
+            </span>
+            <span aria-hidden className="text-label-4">
+              ·
+            </span>
+            <span>{fmtDate(session.createdAt)}</span>
+            {recording && <Badge className="ml-1">Audio</Badge>}
+            {hasMidi && <Badge className={recording ? '' : 'ml-1'}>MIDI</Badge>}
+          </p>
+          <TagEditor
+            tags={session.tags}
+            onChange={(tags) => run(api.setTags(tags), 'save the tags')}
           />
         </header>
 
-        <section
-          aria-label="Playback"
-          className="flex flex-col gap-4 rounded-2xl bg-zinc-900/40 p-4 ring-1 ring-zinc-900"
-        >
+        <section aria-label="Playback" className="flex flex-col gap-4">
           {hasAudio && (
             <audio
               ref={attachAudio}
@@ -339,101 +422,116 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
             onPiano={(on) => controller.setPianoOn(on)}
           />
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex min-h-11 items-baseline gap-3" aria-live="off">
-              <span className="text-xs tracking-widest text-zinc-500 uppercase">Now</span>
-              <span data-testid="playhead-chord" className="text-3xl font-semibold text-white">
-                {current?.symbol ?? '—'}
-              </span>
-              <span className="text-base text-zinc-400">{current?.numeral}</span>
-              {currentKey && (
-                <span className="text-sm text-violet-200">
-                  {pretty(keyLabel(currentKey, settings))}
+          <div className="overflow-hidden rounded-card bg-surface">
+            <div className="hairline-b flex min-h-14 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
+              <div className="flex min-w-0 items-baseline gap-2.5" aria-live="off">
+                <span className="text-caption font-medium tracking-wide text-label-3 uppercase">
+                  Now
                 </span>
+                <span
+                  data-testid="playhead-chord"
+                  className="text-title-2 font-bold tracking-tight text-label"
+                >
+                  {current?.symbol ?? '—'}
+                </span>
+                <span className="text-subhead font-medium text-accent">{current?.numeral}</span>
+                {currentKey && (
+                  <span className="text-subhead text-label-2">
+                    {pretty(keyLabel(currentKey, settings))}
+                  </span>
+                )}
+              </div>
+              {currentRec && (
+                <Button
+                  variant="plain"
+                  size="sm"
+                  leading={<Pencil className="size-3.5" aria-hidden />}
+                  onClick={() => setEditing(currentRec)}
+                >
+                  Edit chord
+                </Button>
               )}
+              <div className="ml-auto flex items-center" role="group" aria-label="Zoom">
+                <Button
+                  variant="plain"
+                  icon
+                  size="sm"
+                  aria-label="Zoom out"
+                  title="Zoom out (−)"
+                  onClick={() => zoom(1 / 1.5)}
+                >
+                  <ZoomOut className="size-[18px]" aria-hidden />
+                </Button>
+                <Button
+                  variant="plain"
+                  icon
+                  size="sm"
+                  aria-label="Zoom in"
+                  title="Zoom in (+)"
+                  onClick={() => zoom(1.5)}
+                >
+                  <ZoomIn className="size-[18px]" aria-hidden />
+                </Button>
+                <Button variant="plain" size="sm" onClick={fitAll} title="Show whole session">
+                  Fit
+                </Button>
+              </div>
             </div>
-            {currentRec && (
-              <Button variant="ghost" onClick={() => setEditing(currentRec)}>
-                Edit this chord
-              </Button>
-            )}
-            <div className="ml-auto flex items-center gap-1" role="group" aria-label="Zoom">
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Zoom out"
-                title="Zoom out (−)"
-                onClick={() => zoom(1 / 1.5)}
-              >
-                −
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Zoom in"
-                title="Zoom in (+)"
-                onClick={() => zoom(1.5)}
-              >
-                +
-              </Button>
-              <Button variant="ghost" onClick={fitAll}>
-                Fit
-              </Button>
+
+            <div ref={lanes} className="flex flex-col">
+              <div className="relative">
+                <TimeRuler
+                  viewport={viewport}
+                  onViewportChange={onViewportChange}
+                  width={width}
+                  duration={duration}
+                  onSeek={seek}
+                />
+                <ChordLane
+                  chords={chords}
+                  keys={keys}
+                  duration={duration}
+                  viewport={viewport}
+                  width={width}
+                  time={time}
+                  onSeek={seek}
+                  onEdit={setEditing}
+                  spellingFollowsKey={settings.spellingFollowsKey}
+                  showSlash={settings.showSlashChords}
+                  className="hairline-t"
+                />
+                <MarkerLane
+                  markers={markers}
+                  viewport={viewport}
+                  width={width}
+                  duration={duration}
+                  selectedId={selectedMarker}
+                  onSelect={setSelectedMarker}
+                  onSeek={seek}
+                  onMove={(mid, t) => void run(api.moveMarker(mid, t), 'move the marker')}
+                  onDelete={deleteMarker}
+                  className="hairline-t"
+                />
+                {/* Playhead across the DOM lanes (the roll draws its own). */}
+                <Playhead x={(time - viewport.start) * viewport.pxPerSec} width={width} />
+              </div>
+              {hasMidi && (
+                <div className="hairline-t pt-px">
+                  <PianoRoll
+                    index={noteIndex}
+                    viewport={viewport}
+                    onViewportChange={onViewportChange}
+                    time={time}
+                    onSeek={seek}
+                    playheadLabel={current && current.symbol !== '—' ? current.symbol : undefined}
+                    chordTimes={chordTimes}
+                    className="h-56 lg:h-72"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
-          <div
-            ref={lanes}
-            className="flex flex-col overflow-hidden rounded-xl bg-zinc-950 ring-1 ring-zinc-800"
-          >
-            <div className="relative">
-              <TimeRuler
-                viewport={viewport}
-                onViewportChange={onViewportChange}
-                width={width}
-                duration={duration}
-                onSeek={seek}
-              />
-              <ChordLane
-                chords={chords}
-                keys={keys}
-                duration={duration}
-                viewport={viewport}
-                width={width}
-                time={time}
-                onSeek={seek}
-                onEdit={setEditing}
-                spellingFollowsKey={settings.spellingFollowsKey}
-                showSlash={settings.showSlashChords}
-              />
-              <MarkerLane
-                markers={markers}
-                viewport={viewport}
-                width={width}
-                duration={duration}
-                selectedId={selectedMarker}
-                onSelect={setSelectedMarker}
-                onSeek={seek}
-                onMove={(mid, t) => void run(api.moveMarker(mid, t), 'move the marker')}
-                onDelete={deleteMarker}
-                className="border-t border-zinc-900"
-              />
-              {/* Playhead across the DOM lanes (the roll draws its own). */}
-              <Playhead x={(time - viewport.start) * viewport.pxPerSec} width={width} />
-            </div>
-            {hasMidi && (
-              <PianoRoll
-                index={noteIndex}
-                viewport={viewport}
-                onViewportChange={onViewportChange}
-                time={time}
-                onSeek={seek}
-                playheadLabel={current && current.symbol !== '—' ? current.symbol : undefined}
-                chordTimes={chordTimes}
-                className="h-56 border-t border-zinc-800 lg:h-72"
-              />
-            )}
-          </div>
           <MarkerToolbar
             time={Math.min(duration, time)}
             selected={markers.find((m) => m.id === selectedMarker) ?? null}
@@ -444,26 +542,35 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
             }
             onDeselect={() => setSelectedMarker(null)}
           />
-          <p className="hidden text-xs text-zinc-600 lg:block">
-            Space play/pause · ←/→ skip 5 s · B bookmark · +/− zoom · click a chord to jump,
-            right-click or long-press to fix it
+          <p className="hidden text-caption text-label-3 lg:block">
+            Click a chord to jump there; right-click or long-press it to fix it. Space plays, B
+            bookmarks.{' '}
+            <button
+              type="button"
+              onClick={() => setShortcutsOpen(true)}
+              className="text-accent hover:underline"
+            >
+              All shortcuts
+            </button>
           </p>
         </section>
 
-        <SummaryCard
-          summary={session.summary}
-          durationSec={session.durationSec}
-          spellingFollowsKey={settings.spellingFollowsKey}
-          showSlash={settings.showSlashChords}
-        />
-
-        <ReharmPanel
-          sources={reharmSources}
-          capture={captureAtPlayhead}
-          onAudition={auditionChord}
-          spellingFollowsKey={settings.spellingFollowsKey}
-          showSlash={settings.showSlashChords}
-        />
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <SummaryCard
+            summary={session.summary}
+            durationSec={session.durationSec}
+            spellingFollowsKey={settings.spellingFollowsKey}
+            showSlash={settings.showSlashChords}
+          />
+          <ReharmPanel
+            sources={reharmSources}
+            capture={captureAtPlayhead}
+            onAudition={auditionChord}
+            spellingFollowsKey={settings.spellingFollowsKey}
+            showSlash={settings.showSlashChords}
+            className="lg:pt-7"
+          />
+        </div>
       </div>
 
       {editing && (
@@ -480,6 +587,27 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
           onSave={(c) => void saveChord(c)}
         />
       )}
+
+      <Sheet
+        open={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
+        placement="center"
+        title="Keyboard shortcuts"
+      >
+        <Group className="pt-1">
+          {SHORTCUTS.map(([keys, what]) => (
+            <Row
+              key={keys}
+              label={what}
+              accessory={
+                <kbd className="rounded-[6px] bg-fill-3 px-2 py-0.5 font-sans text-footnote text-label">
+                  {keys}
+                </kbd>
+              }
+            />
+          ))}
+        </Group>
+      </Sheet>
     </div>
   );
 }
@@ -490,7 +618,7 @@ function Playhead({ x, width }: { x: number; width: number }) {
     <div
       aria-hidden
       data-testid="playhead"
-      className="pointer-events-none absolute inset-y-0 z-20 w-0.5 -translate-x-1/2 bg-violet-300"
+      className="pointer-events-none absolute inset-y-0 z-20 w-0.5 -translate-x-1/2 bg-accent"
       style={{ left: x }}
     />
   );

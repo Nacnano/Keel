@@ -9,7 +9,7 @@ export interface NameFieldProps {
 }
 
 /**
- * Inline editable name: looks like text, edits in place. Enter or blur saves, Escape reverts,
+ * Inline editable name: looks like a title, tap to edit in place. Enter or blur saves, Escape reverts,
  * an empty name reverts.
  */
 export function NameField({ value, onCommit, label = 'Session name', className }: NameFieldProps) {
@@ -46,9 +46,11 @@ export function NameField({ value, onCommit, label = 'Session name', className }
           e.currentTarget.blur();
         }
       }}
+      size={Math.max(8, Math.min(40, shown.length + 1))}
+      title="Rename"
       className={cx(
-        'min-h-11 w-full min-w-0 rounded-lg bg-transparent px-2 -mx-2 text-white',
-        'hover:bg-zinc-900 focus:bg-zinc-900 focus-visible:outline-2 focus-visible:outline-violet-300',
+        'min-h-9 max-w-full min-w-0 truncate rounded-[8px] bg-transparent px-2 text-label [field-sizing:content]',
+        'transition-colors duration-100 hover:bg-fill-4 focus:bg-fill-3',
         className,
       )}
     />
