@@ -5,20 +5,21 @@ Pure TypeScript. No DOM, no audio, no timers; imports only `@/core` and sibling 
 
 ## Modules
 
-| Module          | Main exports                                                                                                                                                                                                                               |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `vocab.ts`      | `CHORD_TEMPLATES: Record<ChordQuality, { intervals, weights, roles, level, symbol }>`, `QUALITY_ORDER`, `qualitiesForLevel(level)`, `TONE_WEIGHTS`, `isMinorQuality` / `isDominantQuality` / `isDiminishedQuality`, `templatePitchClasses` |
-| `keys.ts`       | `KRUMHANSL_MAJOR/MINOR`, `TEMPERLEY_MAJOR/MINOR`, `scaleOf(key, variant?)`, `relativeKey`, `parallelKey`, `keySignature`, `keyPrefersFlats`, `isDiatonic`, `diatonicChords(key, level, variant?)`, `ALL_KEYS`, `sameKey`, `mod12`          |
-| `notes.ts`      | `pc(name)`, `spell(pc, key?, opts?)`, `keyName(key, opts?)`, `tonicName`, `midiToPc`, `pcToMidi(pc, octave)`, `midiName`, `transpose`, `spellAbove`, `prettyAccidentals`                                                                   |
-| `chordName.ts`  | `chordSymbol(chord \| null, key?, opts?)`, `chordTones(chord)` / `chordTones(root, quality)`, `chordPitchClasses`, `spellChord(chord, key?, opts?)`, `spellBass`, `chordKey`, `sameChord`, `parseChord(symbol)`                            |
-| `identify.ts`   | `identifyChord(pcs, bass, level) → { chord, score }[]`, `bestChord`, `MIN_IDENTIFY_SCORE`                                                                                                                                                  |
-| `numerals.ts`   | `romanNumeral(chord, key, opts?)`, `scaleDegree(pc, key)`, `bassDegree(chord, key)`, `inversionFigure(chord)`, `NUMERAL_SUFFIX`                                                                                                            |
-| `suggest.ts`    | `suggestNext(key \| null, recent, level, max = 8) → { chord, reason }[]`                                                                                                                                                                   |
-| `timeline.ts`   | `compressTimeline(chords, maxCycle = 8) → { chords, repeat }[]`, `compressRepeats(xs, eq, maxCycle?, minCycle?)`, `expandTimeline`, `findCycles`, `collapseRuns`, `canonicalRotation`                                                      |
-| `scales.ts`     | `scalesForChord(chord, key?) → { id, name, root, label, pitchClasses, reason, score, rank }[]`, `scaleNotesSpelled(scale, key?, opts?)`, `SCALES`, `scalePitchClasses`                                                                     |
-| `voicings.ts`   | `voicings(chord, { style, register? }) → MidiNote[][]`, `VOICING_STYLES`, `splitHands(notes, splitAt?)`, `voicingLabel`, `voicingDescription`, `omittableTones`                                                                            |
-| `reharm.ts`     | `reharmonize(chords, key, { style: 'pop' \| 'jazz', maxResults? }) → { chords, numerals, reason, score, rules }[]`, `applyRule(rule, chords, key) → ReharmEdit[]`, `applyEdits`, `REHARM_RULES`, `STYLE_RULES`                             |
-| `modulation.ts` | `modulationHints(key, level, max?) → { to, pivot, pivotNumeralFrom, pivotNumeralTo, reason, direct }[]`                                                                                                                                    |
+| Module          | Main exports                                                                                                                                                                                                                                                                                                                          |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vocab.ts`      | `CHORD_TEMPLATES: Record<ChordQuality, { intervals, weights, roles, level, symbol }>`, `QUALITY_ORDER`, `qualitiesForLevel(level)`, `TONE_WEIGHTS`, `isMinorQuality` / `isDominantQuality` / `isDiminishedQuality`, `templatePitchClasses`                                                                                            |
+| `keys.ts`       | `KRUMHANSL_MAJOR/MINOR`, `TEMPERLEY_MAJOR/MINOR`, `scaleOf(key, variant?)`, `relativeKey`, `parallelKey`, `keySignature`, `keyPrefersFlats`, `isDiatonic`, `diatonicChords(key, level, variant?)`, `ALL_KEYS`, `sameKey`, `mod12`                                                                                                     |
+| `notes.ts`      | `pc(name)`, `spell(pc, key?, opts?)`, `keyName(key, opts?)`, `tonicName`, `midiToPc`, `pcToMidi(pc, octave)`, `midiName`, `transpose`, `spellAbove`, `prettyAccidentals`                                                                                                                                                              |
+| `chordName.ts`  | `chordSymbol(chord \| null, key?, opts?)`, `chordTones(chord)` / `chordTones(root, quality)`, `chordPitchClasses`, `spellChord(chord, key?, opts?)`, `spellBass`, `chordKey`, `sameChord`, `parseChord(symbol)`                                                                                                                       |
+| `identify.ts`   | `identifyChord(pcs, bass, level) → { chord, score }[]`, `bestChord`, `MIN_IDENTIFY_SCORE`                                                                                                                                                                                                                                             |
+| `numerals.ts`   | `romanNumeral(chord, key, opts?)`, `scaleDegree(pc, key)`, `bassDegree(chord, key)`, `inversionFigure(chord)`, `NUMERAL_SUFFIX`                                                                                                                                                                                                       |
+| `suggest.ts`    | `suggestNext(key \| null, recent, level, max = 8) → { chord, reason }[]`                                                                                                                                                                                                                                                              |
+| `timeline.ts`   | `compressTimeline(chords, maxCycle = 8) → { chords, repeat }[]`, `compressRepeats(xs, eq, maxCycle?, minCycle?)`, `expandTimeline`, `findCycles`, `collapseRuns`, `canonicalRotation`                                                                                                                                                 |
+| `scales.ts`     | `scalesForChord(chord, key?) → { id, name, root, label, pitchClasses, reason, score, rank }[]`, `scaleNotesSpelled(scale, key?, opts?)`, `SCALES`, `scalePitchClasses`                                                                                                                                                                |
+| `voicings.ts`   | `voicings(chord, { style, register? }) → MidiNote[][]`, `VOICING_STYLES`, `splitHands(notes, splitAt?)`, `voicingLabel`, `voicingDescription`, `omittableTones`                                                                                                                                                                       |
+| `reharm.ts`     | `reharmonize(chords, key, { style: 'pop' \| 'jazz', maxResults? }) → { chords, numerals, reason, score, rules }[]`, `applyRule(rule, chords, key) → ReharmEdit[]`, `applyEdits`, `REHARM_RULES`, `STYLE_RULES`                                                                                                                        |
+| `modulation.ts` | `modulationHints(key, level, max?) → { to, pivot, pivotNumeralFrom, pivotNumeralTo, reason, direct }[]`                                                                                                                                                                                                                               |
+| `train.ts`      | `randomChordQuestion(level, rng)`, `randomProgressionQuestion({ key?, keys?, level, style?, length?, rng })`, `randomKeyQuestion({ rng, keys?, level? })`, `gradeAnswer` / `gradeChordQuality` / `gradeProgression` / `gradeKey`, `progressionChoices`, `cadenceChords`, `keyPool`, `seededRng`, `CHORD_QUALITY_POOLS`, `qualityName` |
 
 ## Conventions
 
@@ -100,6 +101,14 @@ Inserted chords are sevenths; substitutes keep the original's triad / seventh sh
 step (level 2) or down a minor third (level 3); level 1 shows the first four. The pivot is the
 chord diatonic to both keys (minor counts harmonic V / vii°) that is most stable in the current
 key and most predominant-like in the new one; without one, the new key's V7 (`direct: true`).
+
+**Ear training** (`train.ts`). Generators take an injected `Rng` (`seededRng(seed)` for
+reproducible drills). Quality pools are curated per level (`CHORD_QUALITY_POOLS`). Progressions
+are common pop / jazz four-chord patterns (75%) or a random diatonic walk from the tonic, built
+from `diatonicChords(key, level)` plus the harmonic-minor V / V7 in minor; numerals come from
+`romanNumeral`, and `progressionChoices` lists every chip (tonic first). Key phrases are 4–6
+chords ending on V–I, IV–V–I or ii–V–I (V from harmonic minor in minor keys), so relative keys
+are distinguishable; `gradeKey` flags relative and parallel near-misses.
 
 ## Integration notes (replacing the `TODO(integration)` stand-ins)
 

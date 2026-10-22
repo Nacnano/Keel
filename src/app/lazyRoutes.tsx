@@ -13,6 +13,9 @@ export const StatsScreen = lazy(() =>
 export const SettingsScreen = lazy(() =>
   import('../ui/screens/SettingsScreen').then((m) => ({ default: m.SettingsScreen })),
 );
+export const TrainScreen = lazy(() =>
+  import('../ui/screens/TrainScreen').then((m) => ({ default: m.TrainScreen })),
+);
 export const AnalyzeScreen = lazy(() =>
   import('../ui/screens/AnalyzeScreen').then((m) => ({ default: m.AnalyzeScreen })),
 );
