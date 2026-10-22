@@ -184,9 +184,6 @@ export function LibraryScreen() {
 
   return (
     <div className="h-full overflow-y-auto">
-      {/* TODO(integration): drop once src/app/App.test.tsx stops asserting the placeholder copy. */}
-      <span hidden>Library screen placeholder</span>
-
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 pt-5 pb-24 lg:px-8">
         <header className="flex flex-wrap items-end gap-3">
           <div className="mr-auto">

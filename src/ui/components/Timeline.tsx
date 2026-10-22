@@ -109,7 +109,7 @@ export function Timeline({
 
   const chip = (rec: ChordRecord, key: Key | null, newest: boolean) => {
     const c = rec.chord!;
-    const symbol = pretty(chordSymbol(c, { key, spellingFollowsKey, showSlash }));
+    const symbol = pretty(chordSymbol(c, key, { spellingFollowsKey, showSlash }));
     const numeral = key ? pretty(romanNumeral(c, key)) : '';
     return (
       <button

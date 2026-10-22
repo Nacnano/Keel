@@ -61,26 +61,28 @@ export function compressRepeats<T>(
   minCycle = 1,
 ): RepeatSegment<T>[] {
   const n = xs.length;
+  const maxLen = Math.min(maxCycle, Math.floor(n / 2));
+  const w = maxLen + 1;
   // cost = 16 * shown items + cycle segments (integers, so ties are exact)
   const cost = new Array<number>(n + 1).fill(0);
   const choice = new Array<[len: number, rep: number]>(n + 1);
+  // bestRep[i*w+len]: among the passes 2..R of xs[i..i+len) repeating from i, the one that
+  // minimises cost[i + rep*len] (largest on ties); 0 when the cycle does not repeat. It
+  // follows from position i+len, so periodic input stays O(n * maxCycle^2), not O(n^2).
+  const bestRep = new Int32Array((n + 1) * w);
   for (let i = n - 1; i >= 0; i--) {
     let best = 16 + cost[i + 1];
     let pick: [number, number] = [1, 1];
-    const cands: Array<[number, number, number]> = [];
-    for (let len = Math.max(1, minCycle); len <= maxCycle && i + 2 * len <= n; len++) {
+    for (let len = Math.max(1, minCycle); len <= maxLen && i + 2 * len <= n; len++) {
+      let same = true;
+      for (let k = 0; k < len && same; k++) if (!eq(xs[i + k], xs[i + len + k])) same = false;
+      if (!same) continue;
+      const next = (i + len) * w + len;
+      const sub = bestRep[next];
+      const rep = sub >= 2 && cost[i + (sub + 1) * len] <= cost[i + 2 * len] ? sub + 1 : 2;
+      bestRep[i * w + len] = rep;
       if (len > 1 && isPeriodic(xs, i, len, eq)) continue;
-      let rep = 1;
-      while (i + (rep + 1) * len <= n) {
-        let same = true;
-        for (let k = 0; k < len && same; k++)
-          if (!eq(xs[i + k], xs[i + rep * len + k])) same = false;
-        if (!same) break;
-        rep++;
-        cands.push([16 * len + 1 + cost[i + rep * len], len, rep]);
-      }
-    }
-    for (const [c, len, rep] of cands) {
+      const c = 16 * len + 1 + cost[i + rep * len];
       // prefer cycles over loose items on ties, then more coverage, then shorter cycles
       const better =
         c < best ||

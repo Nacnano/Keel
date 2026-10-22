@@ -10,9 +10,14 @@ describe('App routes', () => {
     render(<RouterProvider router={r} />);
     expect(screen.getByTestId('chord-symbol')).toBeInTheDocument();
   });
-  it('renders the library at /library', () => {
+  it('renders the library at /library', async () => {
     const r = createMemoryRouter(routes, { initialEntries: ['/library'] });
     render(<RouterProvider router={r} />);
-    expect(screen.getByText(/Library screen placeholder/)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Library' })).toBeInTheDocument();
+  });
+  it('renders the settings screen at /settings', async () => {
+    const r = createMemoryRouter(routes, { initialEntries: ['/settings'] });
+    render(<RouterProvider router={r} />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument();
   });
 });

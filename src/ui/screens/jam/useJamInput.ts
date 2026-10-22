@@ -1,18 +1,21 @@
 import { useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router';
 import { liveInput } from '@/app/live/liveInput';
 import { isMockMode, useMockInput } from './useMockInput';
 import type { JamInput } from './useMockInput';
 
 function useLiveInput(): JamInput {
+  const navigate = useNavigate();
   useEffect(() => {
     void liveInput().refreshDevices();
   }, []);
   return useMemo(
     () => ({
       start: () => liveInput().start(),
-      stop: () => liveInput().stop(),
+      // The "Saved" toast offers "Open", which jumps to the session's review.
+      stop: () => liveInput().stop({ openReview: (id) => void navigate(`/review/${id}`) }),
     }),
-    [],
+    [navigate],
   );
 }
 
