@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { chordToMidiNotes, playChord } from './chordAudition';
+import { chordToMidiNotes, playChord, playVoicing } from './chordAudition';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -43,5 +43,33 @@ describe('playChord', () => {
     release();
     vi.advanceTimersByTime(2000);
     expect(player.noteOff).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('playVoicing', () => {
+  it('plays the exact notes, then releases them once', () => {
+    vi.useFakeTimers();
+    const player = { noteOn: vi.fn(), noteOff: vi.fn() };
+    const release = playVoicing(player, [36, 43, 64, 67, 71, 64], 800, 60);
+    expect(player.noteOn.mock.calls).toEqual([
+      [36, 60],
+      [43, 60],
+      [64, 60],
+      [67, 60],
+      [71, 60],
+    ]);
+    vi.advanceTimersByTime(800);
+    expect(player.noteOff.mock.calls.map((c) => c[0])).toEqual([36, 43, 64, 67, 71]);
+    release();
+    expect(player.noteOff).toHaveBeenCalledTimes(5);
+  });
+
+  it('can be released early', () => {
+    vi.useFakeTimers();
+    const player = { noteOn: vi.fn(), noteOff: vi.fn() };
+    const release = playVoicing(player, [48, 52]);
+    release();
+    vi.advanceTimersByTime(5000);
+    expect(player.noteOff).toHaveBeenCalledTimes(2);
   });
 });
