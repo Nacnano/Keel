@@ -13,6 +13,9 @@ export const StatsScreen = lazy(() =>
 export const SettingsScreen = lazy(() =>
   import('../ui/screens/SettingsScreen').then((m) => ({ default: m.SettingsScreen })),
 );
+export const AnalyzeScreen = lazy(() =>
+  import('../ui/screens/AnalyzeScreen').then((m) => ({ default: m.AnalyzeScreen })),
+);
 
 /** Shown while a lazily loaded route chunk downloads. */
 export function RouteFallback() {

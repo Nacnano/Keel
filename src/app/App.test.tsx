@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { routes } from './routes';
 
@@ -26,5 +26,15 @@ describe('App routes', () => {
     const r = createMemoryRouter(routes, { initialEntries: ['/settings'] });
     render(<RouterProvider router={r} />);
     expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument();
+  });
+  it('renders the analyze screen at /analyze', async () => {
+    const r = createMemoryRouter(routes, { initialEntries: ['/analyze'] });
+    const { container } = render(<RouterProvider router={r} />);
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Analyze a file' }),
+    ).toBeInTheDocument();
+    const view = within(container);
+    expect(view.getByLabelText('Choose an audio file')).toBeInTheDocument();
+    expect(view.getByRole('link', { name: 'Analyze' })).toHaveAttribute('aria-current', 'page');
   });
 });

@@ -15,6 +15,18 @@ export {
   type AnalyseOptions,
 } from './fileInput';
 export {
+  analyseFileToEvents,
+  analyseSamplesToEvents,
+  decodeFileToMono,
+  dropShortChords,
+  DEFAULT_MIN_CHORD_SEC,
+  type DecodedAudio,
+  type OfflineAnalysisOptions,
+  type OfflineAnalysisResult,
+  type OfflineFileOptions,
+  type OfflineStage,
+} from './offline';
+export {
   createChromaPipeline,
   resolveConfig,
   type ChromaPipeline,

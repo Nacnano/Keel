@@ -58,6 +58,13 @@ export {
 } from './export';
 export { chordSymbol, keyName } from './chordSymbol';
 export {
+  saveAnalysedSession,
+  draftFromAnalysis,
+  nameFromFile,
+  ANALYZED_TAG,
+  type AnalysedSessionInput,
+} from './importAnalysis';
+export {
   computeStats,
   localDay,
   rangeStart,
