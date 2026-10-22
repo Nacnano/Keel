@@ -1,0 +1,511 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-22T19:25:30.953647+00:00",
+  "title": "Design System: JamKey",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Bg",
+        "tonalRamp": [
+          "oklch(15% 0.0026 286.35)",
+          "oklch(26% 0.0026 286.35)",
+          "oklch(38% 0.0026 286.35)",
+          "oklch(49% 0.0026 286.35)",
+          "oklch(61% 0.0026 286.35)",
+          "oklch(72% 0.0026 286.35)",
+          "oklch(84% 0.0026 286.35)",
+          "oklch(95% 0.0026 286.35)"
+        ]
+      },
+      "bg-3": {
+        "role": "neutral",
+        "displayName": "Bg 3",
+        "tonalRamp": [
+          "oklch(15% 0.0066 286.27)",
+          "oklch(26% 0.0066 286.27)",
+          "oklch(38% 0.0066 286.27)",
+          "oklch(49% 0.0066 286.27)",
+          "oklch(61% 0.0066 286.27)",
+          "oklch(72% 0.0066 286.27)",
+          "oklch(84% 0.0066 286.27)",
+          "oklch(95% 0.0066 286.27)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Surface 2",
+        "tonalRamp": [
+          "oklch(15% 0.0066 286.27)",
+          "oklch(26% 0.0066 286.27)",
+          "oklch(38% 0.0066 286.27)",
+          "oklch(49% 0.0066 286.27)",
+          "oklch(61% 0.0066 286.27)",
+          "oklch(72% 0.0066 286.27)",
+          "oklch(84% 0.0066 286.27)",
+          "oklch(95% 0.0066 286.27)"
+        ]
+      },
+      "label": {
+        "role": "neutral",
+        "displayName": "Label",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(26% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(49% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(72% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "label-2": {
+        "role": "neutral",
+        "displayName": "Label 2",
+        "tonalRamp": [
+          "oklch(15% 0.0126 285.94)",
+          "oklch(26% 0.0126 285.94)",
+          "oklch(38% 0.0126 285.94)",
+          "oklch(49% 0.0126 285.94)",
+          "oklch(61% 0.0126 285.94)",
+          "oklch(72% 0.0126 285.94)",
+          "oklch(84% 0.0126 285.94)",
+          "oklch(95% 0.0126 285.94)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Accent",
+        "tonalRamp": [
+          "oklch(15% 0.1863 258.59)",
+          "oklch(26% 0.1863 258.59)",
+          "oklch(38% 0.1863 258.59)",
+          "oklch(49% 0.1863 258.59)",
+          "oklch(61% 0.1863 258.59)",
+          "oklch(72% 0.1863 258.59)",
+          "oklch(84% 0.1863 258.59)",
+          "oklch(95% 0.1863 258.59)"
+        ]
+      },
+      "action": {
+        "role": "primary",
+        "displayName": "Action",
+        "tonalRamp": [
+          "oklch(15% 0.1854 257.86)",
+          "oklch(26% 0.1854 257.86)",
+          "oklch(38% 0.1854 257.86)",
+          "oklch(49% 0.1854 257.86)",
+          "oklch(61% 0.1854 257.86)",
+          "oklch(72% 0.1854 257.86)",
+          "oklch(84% 0.1854 257.86)",
+          "oklch(95% 0.1854 257.86)"
+        ]
+      },
+      "danger-action": {
+        "role": "semantic",
+        "displayName": "Danger Action",
+        "tonalRamp": [
+          "oklch(15% 0.1861 28.39)",
+          "oklch(26% 0.1861 28.39)",
+          "oklch(38% 0.1861 28.39)",
+          "oklch(49% 0.1861 28.39)",
+          "oklch(61% 0.1861 28.39)",
+          "oklch(72% 0.1861 28.39)",
+          "oklch(84% 0.1861 28.39)",
+          "oklch(95% 0.1861 28.39)"
+        ]
+      },
+      "accent-fg": {
+        "role": "primary",
+        "displayName": "Accent Fg",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "live": {
+        "role": "semantic",
+        "displayName": "Live",
+        "tonalRamp": [
+          "oklch(15% 0.1981 28.51)",
+          "oklch(26% 0.1981 28.51)",
+          "oklch(38% 0.1981 28.51)",
+          "oklch(49% 0.1981 28.51)",
+          "oklch(61% 0.1981 28.51)",
+          "oklch(72% 0.1981 28.51)",
+          "oklch(84% 0.1981 28.51)",
+          "oklch(95% 0.1981 28.51)"
+        ]
+      },
+      "ok": {
+        "role": "semantic",
+        "displayName": "Ok",
+        "tonalRamp": [
+          "oklch(15% 0.1944 147.44)",
+          "oklch(26% 0.1944 147.44)",
+          "oklch(38% 0.1944 147.44)",
+          "oklch(49% 0.1944 147.44)",
+          "oklch(61% 0.1944 147.44)",
+          "oklch(72% 0.1944 147.44)",
+          "oklch(84% 0.1944 147.44)",
+          "oklch(95% 0.1944 147.44)"
+        ]
+      },
+      "warn": {
+        "role": "semantic",
+        "displayName": "Warn",
+        "tonalRamp": [
+          "oklch(15% 0.1752 62.57)",
+          "oklch(26% 0.1752 62.57)",
+          "oklch(38% 0.1752 62.57)",
+          "oklch(49% 0.1752 62.57)",
+          "oklch(61% 0.1752 62.57)",
+          "oklch(72% 0.1752 62.57)",
+          "oklch(84% 0.1752 62.57)",
+          "oklch(95% 0.1752 62.57)"
+        ]
+      },
+      "fill-3": {
+        "role": "semantic",
+        "displayName": "Fill 3"
+      },
+      "separator": {
+        "role": "semantic",
+        "displayName": "Separator"
+      },
+      "material": {
+        "role": "semantic",
+        "displayName": "Material"
+      },
+      "bg-dark": {
+        "role": "neutral",
+        "displayName": "Bg Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0039 286.05)",
+          "oklch(26% 0.0039 286.05)",
+          "oklch(38% 0.0039 286.05)",
+          "oklch(49% 0.0039 286.05)",
+          "oklch(61% 0.0039 286.05)",
+          "oklch(72% 0.0039 286.05)",
+          "oklch(84% 0.0039 286.05)",
+          "oklch(95% 0.0039 286.05)"
+        ]
+      },
+      "bg-3-dark": {
+        "role": "neutral",
+        "displayName": "Bg 3 Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0056 285.98)",
+          "oklch(26% 0.0056 285.98)",
+          "oklch(38% 0.0056 285.98)",
+          "oklch(49% 0.0056 285.98)",
+          "oklch(61% 0.0056 285.98)",
+          "oklch(72% 0.0056 285.98)",
+          "oklch(84% 0.0056 285.98)",
+          "oklch(95% 0.0056 285.98)"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Surface Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0038 286.09)",
+          "oklch(26% 0.0038 286.09)",
+          "oklch(38% 0.0038 286.09)",
+          "oklch(49% 0.0038 286.09)",
+          "oklch(61% 0.0038 286.09)",
+          "oklch(72% 0.0038 286.09)",
+          "oklch(84% 0.0038 286.09)",
+          "oklch(95% 0.0038 286.09)"
+        ]
+      },
+      "surface-2-dark": {
+        "role": "neutral",
+        "displayName": "Surface 2 Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0036 286.18)",
+          "oklch(26% 0.0036 286.18)",
+          "oklch(38% 0.0036 286.18)",
+          "oklch(49% 0.0036 286.18)",
+          "oklch(61% 0.0036 286.18)",
+          "oklch(72% 0.0036 286.18)",
+          "oklch(84% 0.0036 286.18)",
+          "oklch(95% 0.0036 286.18)"
+        ]
+      },
+      "label-dark": {
+        "role": "neutral",
+        "displayName": "Label Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "label-2-dark": {
+        "role": "neutral",
+        "displayName": "Label 2 Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0114 286.12)",
+          "oklch(26% 0.0114 286.12)",
+          "oklch(38% 0.0114 286.12)",
+          "oklch(49% 0.0114 286.12)",
+          "oklch(61% 0.0114 286.12)",
+          "oklch(72% 0.0114 286.12)",
+          "oklch(84% 0.0114 286.12)",
+          "oklch(95% 0.0114 286.12)"
+        ]
+      },
+      "accent-dark": {
+        "role": "primary",
+        "displayName": "Accent Dark",
+        "tonalRamp": [
+          "oklch(15% 0.1317 253.86)",
+          "oklch(26% 0.1317 253.86)",
+          "oklch(38% 0.1317 253.86)",
+          "oklch(49% 0.1317 253.86)",
+          "oklch(61% 0.1317 253.86)",
+          "oklch(72% 0.1317 253.86)",
+          "oklch(84% 0.1317 253.86)",
+          "oklch(95% 0.1317 253.86)"
+        ]
+      },
+      "accent-fg-dark": {
+        "role": "primary",
+        "displayName": "Accent Fg Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "live-dark": {
+        "role": "semantic",
+        "displayName": "Live Dark",
+        "tonalRamp": [
+          "oklch(15% 0.1847 25.94)",
+          "oklch(26% 0.1847 25.94)",
+          "oklch(38% 0.1847 25.94)",
+          "oklch(49% 0.1847 25.94)",
+          "oklch(61% 0.1847 25.94)",
+          "oklch(72% 0.1847 25.94)",
+          "oklch(84% 0.1847 25.94)",
+          "oklch(95% 0.1847 25.94)"
+        ]
+      },
+      "ok-dark": {
+        "role": "semantic",
+        "displayName": "Ok Dark",
+        "tonalRamp": [
+          "oklch(15% 0.2082 146.98)",
+          "oklch(26% 0.2082 146.98)",
+          "oklch(38% 0.2082 146.98)",
+          "oklch(49% 0.2082 146.98)",
+          "oklch(61% 0.2082 146.98)",
+          "oklch(72% 0.2082 146.98)",
+          "oklch(84% 0.2082 146.98)",
+          "oklch(95% 0.2082 146.98)"
+        ]
+      },
+      "warn-dark": {
+        "role": "semantic",
+        "displayName": "Warn Dark",
+        "tonalRamp": [
+          "oklch(15% 0.1711 67.22)",
+          "oklch(26% 0.1711 67.22)",
+          "oklch(38% 0.1711 67.22)",
+          "oklch(49% 0.1711 67.22)",
+          "oklch(61% 0.1711 67.22)",
+          "oklch(72% 0.1711 67.22)",
+          "oklch(84% 0.1711 67.22)",
+          "oklch(95% 0.1711 67.22)"
+        ]
+      },
+      "fill-3-dark": {
+        "role": "semantic",
+        "displayName": "Fill 3 Dark"
+      },
+      "separator-dark": {
+        "role": "semantic",
+        "displayName": "Separator Dark"
+      },
+      "material-dark": {
+        "role": "semantic",
+        "displayName": "Material Dark"
+      }
+    },
+    "shadows": [
+      {
+        "name": "elevated",
+        "value": "var(--jk-shadow)",
+        "purpose": "Sheets and popovers; semantic token changes with theme."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Sheet entrance and shared animation easing."
+      },
+      {
+        "name": "sheet-bottom",
+        "value": "320ms",
+        "purpose": "Bottom sheet entrance; reduced motion collapses durations."
+      },
+      {
+        "name": "button-transition",
+        "value": "150ms",
+        "purpose": "Background, color, filter and press feedback."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ],
+    "notes": [
+      "Tonal ramps are synthesized display metadata, not shipped CSS tokens.",
+      "Compact legacy target sizes are excluded from new-surface guidance."
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Shipped medium primary button treatment.",
+      "html": "<button class=\"ds-btn-primary\">Listening options</button>",
+      "css": ".ds-btn-primary{height:44px;padding:0 16px;border:0;border-radius:var(--radius-control,10px);background:var(--jk-action);color:var(--jk-accent-fg);font-family:var(--font-sans);font-size:15px;font-weight:600;transition:background-color 150ms,color 150ms,filter 150ms,transform 150ms}.ds-btn-primary:hover{filter:brightness(1.1)}.ds-btn-primary:active{filter:brightness(.95);transform:scale(.98)}.ds-btn-primary:disabled{opacity:.4;pointer-events:none}.ds-btn-primary:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
+    },
+    {
+      "name": "Tinted button",
+      "kind": "button",
+      "description": "Shipped medium tinted button treatment.",
+      "html": "<button class=\"ds-btn-tinted\">Listening options</button>",
+      "css": ".ds-btn-tinted{height:44px;padding:0 16px;border:0;border-radius:var(--radius-control,10px);background:color-mix(in srgb,var(--jk-accent) 15%,transparent);color:var(--jk-accent);font-family:var(--font-sans);font-size:15px;font-weight:600;transition:background-color 150ms,color 150ms,filter 150ms,transform 150ms}.ds-btn-tinted:hover{background:color-mix(in srgb,var(--jk-accent) 22%,transparent)}.ds-btn-tinted:active{background:color-mix(in srgb,var(--jk-accent) 28%,transparent);transform:scale(.98)}.ds-btn-tinted:disabled{opacity:.4;pointer-events:none}.ds-btn-tinted:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
+    },
+    {
+      "name": "Gray button",
+      "kind": "button",
+      "refersTo": "button-gray",
+      "description": "Shipped medium gray button treatment.",
+      "html": "<button class=\"ds-btn-gray\">Listening options</button>",
+      "css": ".ds-btn-gray{height:44px;padding:0 16px;border:0;border-radius:var(--radius-control,10px);background:var(--jk-fill-3);color:var(--jk-label);font-family:var(--font-sans);font-size:15px;font-weight:500;transition:background-color 150ms,color 150ms,filter 150ms,transform 150ms}.ds-btn-gray:hover{background:var(--jk-fill-2)}.ds-btn-gray:active{background:var(--jk-fill);transform:scale(.98)}.ds-btn-gray:disabled{opacity:.4;pointer-events:none}.ds-btn-gray:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
+    },
+    {
+      "name": "Plain button",
+      "kind": "button",
+      "description": "Shipped medium plain button treatment.",
+      "html": "<button class=\"ds-btn-plain\">Listening options</button>",
+      "css": ".ds-btn-plain{height:44px;padding:0 16px;border:0;border-radius:var(--radius-control,10px);background:transparent;color:var(--jk-accent);font-family:var(--font-sans);font-size:15px;font-weight:500;transition:background-color 150ms,color 150ms,filter 150ms,transform 150ms}.ds-btn-plain:hover{background:var(--jk-fill-4)}.ds-btn-plain:active{background:var(--jk-fill-3);transform:scale(.98)}.ds-btn-plain:disabled{opacity:.4;pointer-events:none}.ds-btn-plain:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
+    },
+    {
+      "name": "Native select",
+      "kind": "input",
+      "description": "Regular native select; compact legacy variant is intentionally excluded.",
+      "html": "<select class=\"ds-select\" aria-label=\"Instrument\"><option>Piano</option><option>Guitar</option></select>",
+      "css": ".ds-select{height:44px;padding:0 36px 0 12px;border:0;border-radius:10px;background:var(--jk-fill-3);color:var(--jk-label);font-family:var(--font-sans);font-size:15px}.ds-select:hover{background:var(--jk-fill-2)}.ds-select:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
+    },
+    {
+      "name": "Sidebar navigation",
+      "kind": "nav",
+      "description": "Three primary destinations; active state is semantic as well as colored.",
+      "html": "<nav aria-label=\"Sections\"><a class=\"ds-nav\" href=\"#listen\" aria-current=\"page\">Listen</a><a class=\"ds-nav\" href=\"#library\">Library</a><a class=\"ds-nav\" href=\"#tools\">Tools</a></nav>",
+      "css": ".ds-nav{display:flex;align-items:center;min-height:44px;padding:0 12px;border-radius:10px;text-decoration:none;font-family:var(--font-sans);font-size:15px;font-weight:500;color:var(--jk-label-2)}.ds-nav[aria-current]{background:color-mix(in srgb,var(--jk-accent) 10%,transparent);color:var(--jk-accent)}.ds-nav:hover{background:var(--jk-fill-4);color:var(--jk-label)}.ds-nav:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
+    },
+    {
+      "name": "Demo badge",
+      "kind": "chip",
+      "description": "Passive status, not an interactive chip.",
+      "html": "<span class=\"ds-badge\">Demo</span>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:9999px;background:var(--jk-fill-3);color:var(--jk-label-2);font-family:var(--font-sans);font-size:12px;font-weight:600}"
+    },
+    {
+      "name": "Grouped list",
+      "kind": "card",
+      "description": "Inset grouped surface and shared row seams.",
+      "html": "<section class=\"ds-group\"><div class=\"ds-row\">Microphone sensitivity</div><div class=\"ds-row\">Record audio</div></section>",
+      "css": ".ds-group{overflow:hidden;border-radius:12px;background:var(--jk-surface);color:var(--jk-label);font-family:var(--font-sans)}.ds-row{display:flex;align-items:center;min-height:44px;padding:10px 16px;font-size:17px}.ds-row+.ds-row{box-shadow:inset 0 .5px 0 var(--jk-separator)}"
+    },
+    {
+      "name": "Live chord",
+      "kind": "custom",
+      "description": "Focused chord with subordinate notation and non-color confidence label.",
+      "html": "<div class=\"ds-chord\"><div class=\"ds-symbol\">Cmaj7</div><div class=\"ds-numeral\">Imaj7</div><p class=\"ds-strength\">Strong chord match</p></div>",
+      "css": ".ds-chord{text-align:center;font-family:var(--font-sans);color:var(--jk-label)}.ds-symbol{font-size:clamp(96px,13vw,208px);font-weight:600;line-height:1;letter-spacing:-.03em}.ds-numeral{margin-top:12px;font-size:24px;font-weight:500;color:var(--jk-accent)}.ds-strength{margin-top:8px;font-size:13px;color:var(--jk-label-2)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Apple recording utility",
+    "overview": "JamKey follows the user-pinned Voice Memos / GarageBand utility direction: modern, calm and uncomplicated. Native system typography, semantic light/dark surfaces, grouped controls and restrained blue actions support use at a piano bench. These are interface references, with no Apple affiliation implied.\n\nThe shipped system gives the current task room, uses readable secondary labels, and moves infrequent controls into deliberate sheets. Chord recognition is presented as an estimate with explicit strength labels; screenshots and the demo establish interface behavior, not real-instrument accuracy.",
+    "keyCharacteristics": [
+      "Semantic light and dark surfaces.",
+      "One dominant action and an oversized live chord.",
+      "Grouped controls, labeled SVG icons and responsive sheets."
+    ],
+    "rules": [
+      {
+        "name": "The Action Contrast Rule",
+        "body": "Use action for a filled control with white text; use accent for text, selection and notation. Dark mode changes accent while action retains its light-root value.",
+        "section": "colors"
+      },
+      {
+        "name": "The Bench Hierarchy Rule",
+        "body": "The live chord dominates. Roman numeral, match strength and key remain subordinate; long chord symbols scale down without wrapping.",
+        "section": "typography"
+      },
+      {
+        "name": "The Surface Depth Rule",
+        "body": "Use tonal surfaces and hairlines for ordinary content; reserve elevated shadows for overlays and selection affordances.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep primary actions and navigation at least 44px high; large listening actions are 52px.",
+      "Do show chord match strength in words, alongside the estimate.",
+      "Do use the supplied semantic tokens for both themes and preserve visible keyboard focus.",
+      "Do keep the demo explicitly labeled and separate from microphone access and saving."
+    ],
+    "donts": [
+      "Don't invent accuracy claims or Apple affiliation.",
+      "Don't rely on color alone to communicate chord confidence or recording state.",
+      "Don't promote compact legacy control dimensions into the touch target standard."
+    ]
+  }
+}
