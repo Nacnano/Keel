@@ -60,36 +60,36 @@ leaves the device.
 
 ### Folder ownership
 
-| Folder | Workstream | Notes |
-|---|---|---|
-| `src/core/` | PR 1 only | Contracts, constants, mocks, test synth. **Frozen after PR 1.** Changes require a dedicated `core:` PR reviewed by the integrator. |
-| `src/theory/` | WS-A | Pure TS, no DOM, no audio. |
-| `src/audio/` | WS-B | Mic capture, worklet, DSP worker, chroma extraction, file decode. |
-| `src/analysis/` | WS-C | Chord + key estimation engine. |
-| `src/midi/` | WS-D | Web MIDI input, recorder, player. |
-| `src/ui/`, `src/state/` | WS-E | Components, screens, stores. |
-| `src/data/` | WS-F | Dexie schema, session recorder, export/import, audio recorder. |
-| `src/app/` | PR 1 skeleton, then WS-G | Routes, providers, wiring of real sources into stores. |
-| `docs/` | everyone | Each PR appends to `docs/PR_LOG.md`. |
+| Folder                  | Workstream               | Notes                                                                                                                              |
+| ----------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `src/core/`             | PR 1 only                | Contracts, constants, mocks, test synth. **Frozen after PR 1.** Changes require a dedicated `core:` PR reviewed by the integrator. |
+| `src/theory/`           | WS-A                     | Pure TS, no DOM, no audio.                                                                                                         |
+| `src/audio/`            | WS-B                     | Mic capture, worklet, DSP worker, chroma extraction, file decode.                                                                  |
+| `src/analysis/`         | WS-C                     | Chord + key estimation engine.                                                                                                     |
+| `src/midi/`             | WS-D                     | Web MIDI input, recorder, player.                                                                                                  |
+| `src/ui/`, `src/state/` | WS-E                     | Components, screens, stores.                                                                                                       |
+| `src/data/`             | WS-F                     | Dexie schema, session recorder, export/import, audio recorder.                                                                     |
+| `src/app/`              | PR 1 skeleton, then WS-G | Routes, providers, wiring of real sources into stores.                                                                             |
+| `docs/`                 | everyone                 | Each PR appends to `docs/PR_LOG.md`.                                                                                               |
 
 ### Stack
 
-| Concern | Choice |
-|---|---|
-| Build | Vite 6, React 19, TypeScript 5 strict, pnpm |
-| Styling | Tailwind 4, dark theme first |
-| State | Zustand |
-| Storage | Dexie 4 (IndexedDB) |
-| Routing | react-router 7 (data router, hash-free) |
-| Audio | Web Audio API, AudioWorklet, own FFT in a Worker (no WASM dependency) |
-| MIDI | Web MIDI API |
-| Piano sound | `smplr` (SplendidGrandPiano samples, lazy-loaded, cached by PWA) |
-| Sheet / piano roll | Canvas 2D (piano roll); VexFlow later for lead sheets |
-| Tests | Vitest (unit, jsdom where needed), Playwright smoke (later) |
-| Lint | ESLint flat config + typescript-eslint, Prettier |
-| PWA | vite-plugin-pwa |
-| Hosting | Vercel, SPA rewrite, preview deploy per PR |
-| CI | GitHub Actions: `pnpm lint && pnpm typecheck && pnpm test && pnpm build` |
+| Concern            | Choice                                                                   |
+| ------------------ | ------------------------------------------------------------------------ |
+| Build              | Vite 6, React 19, TypeScript 5 strict, pnpm                              |
+| Styling            | Tailwind 4, dark theme first                                             |
+| State              | Zustand                                                                  |
+| Storage            | Dexie 4 (IndexedDB)                                                      |
+| Routing            | react-router 7 (data router, hash-free)                                  |
+| Audio              | Web Audio API, AudioWorklet, own FFT in a Worker (no WASM dependency)    |
+| MIDI               | Web MIDI API                                                             |
+| Piano sound        | `smplr` (SplendidGrandPiano samples, lazy-loaded, cached by PWA)         |
+| Sheet / piano roll | Canvas 2D (piano roll); VexFlow later for lead sheets                    |
+| Tests              | Vitest (unit, jsdom where needed), Playwright smoke (later)              |
+| Lint               | ESLint flat config + typescript-eslint, Prettier                         |
+| PWA                | vite-plugin-pwa                                                          |
+| Hosting            | Vercel, SPA rewrite, preview deploy per PR                               |
+| CI                 | GitHub Actions: `pnpm lint && pnpm typecheck && pnpm test && pnpm build` |
 
 ---
 
@@ -102,19 +102,49 @@ before PR 1 merges if needed.
 
 ```ts
 export type PitchClass = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11; // 0 = C
-export type MidiNote = number;   // 0..127
-export type Seconds = number;    // AudioContext time unless stated
+export type MidiNote = number; // 0..127
+export type Seconds = number; // AudioContext time unless stated
 
 export type VocabLevel = 1 | 2 | 3;
 
 export type ChordQuality =
   // level 1
-  | '5' | 'maj' | 'min' | 'dim' | 'aug' | 'sus2' | 'sus4'
+  | '5'
+  | 'maj'
+  | 'min'
+  | 'dim'
+  | 'aug'
+  | 'sus2'
+  | 'sus4'
   // level 2
-  | 'maj7' | 'min7' | '7' | 'dim7' | 'm7b5' | 'mMaj7' | '6' | 'm6' | 'add9' | 'madd9'
+  | 'maj7'
+  | 'min7'
+  | '7'
+  | 'dim7'
+  | 'm7b5'
+  | 'mMaj7'
+  | '6'
+  | 'm6'
+  | 'add9'
+  | 'madd9'
   // level 3
-  | '9' | 'maj9' | 'min9' | '11' | 'min11' | '13' | 'maj13' | 'min13'
-  | '7b9' | '7#9' | '7#11' | '7b13' | '7alt' | 'maj7#11' | '6/9' | '7sus4' | '9sus4';
+  | '9'
+  | 'maj9'
+  | 'min9'
+  | '11'
+  | 'min11'
+  | '13'
+  | 'maj13'
+  | 'min13'
+  | '7b9'
+  | '7#9'
+  | '7#11'
+  | '7b13'
+  | '7alt'
+  | 'maj7#11'
+  | '6/9'
+  | '7sus4'
+  | '9sus4';
 
 export interface Chord {
   root: PitchClass;
@@ -131,7 +161,7 @@ export interface Key {
 }
 
 export interface KeyEstimate extends Key {
-  confidence: number;          // 0..1
+  confidence: number; // 0..1
   /** Relative major/minor of the winner, always filled. */
   relative: Key;
   /** Top alternatives, descending. */
@@ -154,14 +184,14 @@ export interface MidiNoteEvent {
   t: Seconds;
   type: 'on' | 'off';
   note: MidiNote;
-  velocity: number;            // 0..127
+  velocity: number; // 0..127
   channel: number;
 }
 
 export interface MidiControlEvent {
   t: Seconds;
   type: 'cc';
-  controller: number;          // 64 = sustain
+  controller: number; // 64 = sustain
   value: number;
   channel: number;
 }
@@ -174,7 +204,7 @@ export type Instrument = 'piano' | 'guitar';
 
 export type AnalysisEvent =
   | { type: 'chord'; t: Seconds; chord: Chord | null; confidence: number; source: InputSource }
-  | { type: 'key';   t: Seconds; key: KeyEstimate }
+  | { type: 'key'; t: Seconds; key: KeyEstimate }
   | { type: 'notes'; t: Seconds; pitchClasses: PitchClass[]; midiNotes?: MidiNote[] }
   | { type: 'level'; t: Seconds; energy: number };
 
@@ -182,7 +212,7 @@ export interface AnalysisConfig {
   vocabLevel: VocabLevel;
   mode: JamMode;
   instrument: Instrument;
-  a4: number;                  // Hz, default 440
+  a4: number; // Hz, default 440
   /** 0 = snappy, 1 = very stable. Default 0.5. */
   stability: number;
   showSlashChords: boolean;
@@ -206,7 +236,11 @@ export interface AudioInput {
   getContext(): AudioContext | null;
 }
 
-export interface MidiDeviceInfo { id: string; name: string; manufacturer: string }
+export interface MidiDeviceInfo {
+  id: string;
+  name: string;
+  manufacturer: string;
+}
 
 export interface MidiInput {
   isSupported(): boolean;
@@ -219,13 +253,13 @@ export interface MidiInput {
 }
 
 export interface MidiPlayer {
-  load(): Promise<void>;                       // fetch piano samples
+  load(): Promise<void>; // fetch piano samples
   play(events: MidiEvent[], opts?: { from?: Seconds; rate?: number }): void;
   seek(t: Seconds): void;
   pause(): void;
   stop(): void;
   onTick(cb: (t: Seconds) => void): () => void;
-  noteOn(note: MidiNote, velocity?: number): void;   // for "tap to hear" chords
+  noteOn(note: MidiNote, velocity?: number): void; // for "tap to hear" chords
   noteOff(note: MidiNote): void;
 }
 ```
@@ -234,9 +268,9 @@ export interface MidiPlayer {
 
 ```ts
 export interface Session {
-  id: string;                  // uuid v4
+  id: string; // uuid v4
   name: string;
-  createdAt: number;           // epoch ms
+  createdAt: number; // epoch ms
   endedAt: number | null;
   durationSec: number;
   mode: JamMode;
@@ -247,25 +281,46 @@ export interface Session {
   hasMidi: boolean;
   summary: SessionSummary | null;
   updatedAt: number;
-  deleted: boolean;            // soft delete, sync-ready
+  deleted: boolean; // soft delete, sync-ready
 }
 
 export interface ChordRecord {
-  id: string; sessionId: string;
-  t: number;                   // seconds from session start
+  id: string;
+  sessionId: string;
+  t: number; // seconds from session start
   chord: Chord | null;
   confidence: number;
   source: InputSource;
-  manual: boolean;             // true if edited in review
+  manual: boolean; // true if edited in review
 }
 
-export interface KeyRecord { id: string; sessionId: string; t: number; key: KeyEstimate }
+export interface KeyRecord {
+  id: string;
+  sessionId: string;
+  t: number;
+  key: KeyEstimate;
+}
 
-export type MarkerKind = 'bookmark' | 'intro' | 'verse' | 'pre' | 'chorus' | 'bridge' | 'outro' | 'custom';
-export interface Marker { id: string; sessionId: string; t: number; kind: MarkerKind; label?: string }
+export type MarkerKind =
+  'bookmark' | 'intro' | 'verse' | 'pre' | 'chorus' | 'bridge' | 'outro' | 'custom';
+export interface Marker {
+  id: string;
+  sessionId: string;
+  t: number;
+  kind: MarkerKind;
+  label?: string;
+}
 
-export interface MidiTrack { sessionId: string; events: MidiEvent[] }     // one row per session
-export interface AudioRecording { sessionId: string; blob: Blob; mimeType: string; durationSec: number }
+export interface MidiTrack {
+  sessionId: string;
+  events: MidiEvent[];
+} // one row per session
+export interface AudioRecording {
+  sessionId: string;
+  blob: Blob;
+  mimeType: string;
+  durationSec: number;
+}
 
 export interface SessionSummary {
   keys: Array<{ key: Key; seconds: number }>;
@@ -275,10 +330,17 @@ export interface SessionSummary {
 }
 
 export interface Settings {
-  a4: number; vocabLevel: VocabLevel; instrument: Instrument; mode: JamMode;
-  stability: number; showSlashChords: boolean; spellingFollowsKey: boolean;
-  audioDeviceId: string | null; midiDeviceId: string | null;
-  recordAudioByDefault: boolean; theme: 'dark' | 'light' | 'system';
+  a4: number;
+  vocabLevel: VocabLevel;
+  instrument: Instrument;
+  mode: JamMode;
+  stability: number;
+  showSlashChords: boolean;
+  spellingFollowsKey: boolean;
+  audioDeviceId: string | null;
+  midiDeviceId: string | null;
+  recordAudioByDefault: boolean;
+  theme: 'dark' | 'light' | 'system';
 }
 ```
 
@@ -315,18 +377,18 @@ Acceptance: `pnpm lint && pnpm typecheck && pnpm test && pnpm build` green in CI
 
 Owner: theory agent. Folder: `src/theory/`. Pure functions only.
 
-| Module | Exports | Tests |
-|---|---|---|
-| `notes.ts` | `pc(name)`, `spell(pc, key)`, `spellChord(chord, key, {spellingFollowsKey})`, `midiToPc`, `pcToMidi(pc, octave)` | spelling in Db vs C# contexts, enharmonics |
-| `vocab.ts` | `CHORD_TEMPLATES: Record<ChordQuality, {intervals: number[]; weights: number[]; level: VocabLevel; symbol: string}>`, `qualitiesForLevel(level)` | every quality has root + distinct intervals, levels nested |
-| `chordName.ts` | `chordSymbol(chord, key)` → `"Cmaj7"`, `"G/B"`, `"F#m7b5"`; `chordTones(chord)` | symbol rendering per quality |
-| `identify.ts` | `identifyChord(pcs: PitchClass[], bass: PitchClass \| null, level)` → `{chord, score}[]` exact set matching, inversion → slash | all L1/L2 chords in all inversions; dyads → `'5'` or null |
-| `keys.ts` | `KRUMHANSL_MAJOR/MINOR`, `TEMPERLEY_*` profiles, `scaleOf(key)`, `relativeKey(key)`, `parallelKey(key)`, `diatonicChords(key, level)` | diatonic sets for all 24 keys |
-| `numerals.ts` | `romanNumeral(chord, key)` → `"IV"`, `"V7/vi"`, `"bVII"`, `"ii°"`, `"♭VI"`; handles borrowed + secondary dominants | pop + jazz examples |
-| `suggest.ts` | `suggestNext(key, recent: Chord[], level)` → ranked `{chord, reason}[]` using diatonic, circle of fifths, secondary dominants, ii-V, tritone sub (L3), borrowed iv / bVII / bVI | deterministic rankings for I, vi, ii, V contexts |
-| `timeline.ts` | `compressTimeline(chords: Chord[])` → `Segment[]` where `{chords, repeat}` detects repeating cycles of length 1–8 | `C F G C F G` → `[C F G] ×2` |
-| `scales.ts` | `scalesForChord(chord, key)` → modes/scales ranked (for Insight phase; stub ok) | basic |
-| `voicings.ts` | `voicings(chord, {style:'rootless'\|'shell'\|'spread'\|'drop2'})` → `MidiNote[][]` (Insight phase; stub ok) | basic |
+| Module         | Exports                                                                                                                                                                         | Tests                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `notes.ts`     | `pc(name)`, `spell(pc, key)`, `spellChord(chord, key, {spellingFollowsKey})`, `midiToPc`, `pcToMidi(pc, octave)`                                                                | spelling in Db vs C# contexts, enharmonics                 |
+| `vocab.ts`     | `CHORD_TEMPLATES: Record<ChordQuality, {intervals: number[]; weights: number[]; level: VocabLevel; symbol: string}>`, `qualitiesForLevel(level)`                                | every quality has root + distinct intervals, levels nested |
+| `chordName.ts` | `chordSymbol(chord, key)` → `"Cmaj7"`, `"G/B"`, `"F#m7b5"`; `chordTones(chord)`                                                                                                 | symbol rendering per quality                               |
+| `identify.ts`  | `identifyChord(pcs: PitchClass[], bass: PitchClass \| null, level)` → `{chord, score}[]` exact set matching, inversion → slash                                                  | all L1/L2 chords in all inversions; dyads → `'5'` or null  |
+| `keys.ts`      | `KRUMHANSL_MAJOR/MINOR`, `TEMPERLEY_*` profiles, `scaleOf(key)`, `relativeKey(key)`, `parallelKey(key)`, `diatonicChords(key, level)`                                           | diatonic sets for all 24 keys                              |
+| `numerals.ts`  | `romanNumeral(chord, key)` → `"IV"`, `"V7/vi"`, `"bVII"`, `"ii°"`, `"♭VI"`; handles borrowed + secondary dominants                                                              | pop + jazz examples                                        |
+| `suggest.ts`   | `suggestNext(key, recent: Chord[], level)` → ranked `{chord, reason}[]` using diatonic, circle of fifths, secondary dominants, ii-V, tritone sub (L3), borrowed iv / bVII / bVI | deterministic rankings for I, vi, ii, V contexts           |
+| `timeline.ts`  | `compressTimeline(chords: Chord[])` → `Segment[]` where `{chords, repeat}` detects repeating cycles of length 1–8                                                               | `C F G C F G` → `[C F G] ×2`                               |
+| `scales.ts`    | `scalesForChord(chord, key)` → modes/scales ranked (for Insight phase; stub ok)                                                                                                 | basic                                                      |
+| `voicings.ts`  | `voicings(chord, {style:'rootless'\|'shell'\|'spread'\|'drop2'})` → `MidiNote[][]` (Insight phase; stub ok)                                                                     | basic                                                      |
 
 Acceptance: 100% of exported functions unit-tested; no imports outside `src/core` and `src/theory`.
 
@@ -382,11 +444,13 @@ Acceptance: manual test with a USB piano: notes light up, chords identified inst
 Owner: UI agent. Folders: `src/ui/`, `src/state/`. Builds against `src/core/mocks.ts`; must not import `audio/`, `midi/`, `analysis/` (the integrator wires them).
 
 Stores (`src/state/`):
+
 - `settingsStore` — persisted via `localStorage` for now; WS-F may later switch to Dexie `settings` table (keep the API `useSettings()` stable).
 - `jamStore` — `status: idle|starting|listening|error`, `source`, `currentChord`, `confidence`, `key`, `keyHistory`, `timeline: ChordRecord[]`, `activePitchClasses`, `activeMidiNotes`, `level`, `sessionStart`, actions `applyEvent(e: AnalysisEvent)`, `reset()`, `addMarker(kind)`.
 - `inputStore` — device lists and selection (filled by integrator).
 
 Components (`src/ui/components/`):
+
 - `ChordDisplay` — huge symbol, numeral under it, chord tones + bass small; dash when `chord === null` or confidence < 0.35; fade transitions, no layout shift.
 - `KeyBadge` — `G major / E minor` with winner bold, confidence bar, click → alternatives popover.
 - `Timeline` — horizontal, newest right, uses `theory/timeline.compressTimeline`, key-change markers (`→ A minor`), structure markers and bookmarks as pins; auto-scroll; tap a chord → audition (callback).
@@ -520,17 +584,17 @@ Report back: what landed, what deviated from the plan and why, open questions fo
 
 ## 8. Risks and mitigations
 
-| Risk | Mitigation |
-|---|---|
+| Risk                                                                        | Mitigation                                                                                                                                                                                                                             |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Chroma from a laptop mic on an acoustic piano is noisy; low bass resolution | Peak interpolation + harmonic weighting; bass from a dedicated low band; stability slider; MIDI path for the digital piano. If quality is insufficient, swap `chroma.ts` for `essentia.js` HPCP behind the same `AudioInput` contract. |
-| Relative major/minor ambiguity | Always show the pair; prefer major unless minor profile wins by margin and the tonic minor chord dominates recent chords. |
-| Safari AudioWorklet / sampleRate / autoplay quirks | Create AudioContext inside the user gesture; handle 44.1 kHz; test early in WS-B. |
-| Web MIDI missing on Safari | Feature-detect, show "MIDI needs Chrome" hint; mic fallback. |
-| Piano samples size (~ tens of MB) | Lazy-load on first playback, PWA cache, progress UI. |
-| Worklet/worker files in production build | Use `new URL(..., import.meta.url)` pattern; CI build + Playwright smoke later. |
-| IndexedDB quota on iPad | `storageEstimate()`, warn, cap recording length, soft-delete + purge. |
-| Vocals bleed into chord detection | Room mode heuristics are best-effort; document; melody tracking later. |
-| Parallel agents drift from contracts | `src/core` frozen; CI typecheck; integrator reviews every PR. |
+| Relative major/minor ambiguity                                              | Always show the pair; prefer major unless minor profile wins by margin and the tonic minor chord dominates recent chords.                                                                                                              |
+| Safari AudioWorklet / sampleRate / autoplay quirks                          | Create AudioContext inside the user gesture; handle 44.1 kHz; test early in WS-B.                                                                                                                                                      |
+| Web MIDI missing on Safari                                                  | Feature-detect, show "MIDI needs Chrome" hint; mic fallback.                                                                                                                                                                           |
+| Piano samples size (~ tens of MB)                                           | Lazy-load on first playback, PWA cache, progress UI.                                                                                                                                                                                   |
+| Worklet/worker files in production build                                    | Use `new URL(..., import.meta.url)` pattern; CI build + Playwright smoke later.                                                                                                                                                        |
+| IndexedDB quota on iPad                                                     | `storageEstimate()`, warn, cap recording length, soft-delete + purge.                                                                                                                                                                  |
+| Vocals bleed into chord detection                                           | Room mode heuristics are best-effort; document; melody tracking later.                                                                                                                                                                 |
+| Parallel agents drift from contracts                                        | `src/core` frozen; CI typecheck; integrator reviews every PR.                                                                                                                                                                          |
 
 ---
 
