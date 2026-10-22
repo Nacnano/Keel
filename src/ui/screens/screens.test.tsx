@@ -35,10 +35,12 @@ describe('JamScreen', () => {
     expect(screen.getByRole('img', { name: /Piano/ })).toBeInTheDocument();
   });
 
-  it('explains how to reach the demo when live input is not wired', () => {
+  it('reports a clear error when no live input is available (jsdom has no mic)', async () => {
     renderJam();
     fireEvent.click(screen.getByRole('button', { name: /Start/ }));
-    expect(screen.getByRole('alert')).toHaveTextContent('?mock=1');
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toMatch(/microphone|browser|input/i);
+    expect(jamStore.getState().status).toBe('error');
   });
 
   it('runs the mock stream with ?mock=1 and stops with Space', () => {
