@@ -24,6 +24,7 @@ export {
 export {
   listSessions,
   listTags,
+  loadStats,
   getSession,
   getSessionFull,
   renameSession,
@@ -56,3 +57,23 @@ export {
   type JamKeyExportV1,
 } from './export';
 export { chordSymbol, keyName } from './chordSymbol';
+export {
+  saveAnalysedSession,
+  draftFromAnalysis,
+  nameFromFile,
+  ANALYZED_TAG,
+  type AnalysedSessionInput,
+} from './importAnalysis';
+export {
+  computeStats,
+  localDay,
+  rangeStart,
+  LEAST_PLAYED_THRESHOLD_SEC,
+  type DayStat,
+  type KeyStat,
+  type ProgressionStat,
+  type QualityStat,
+  type Stats,
+  type StatsOptions,
+  type StatsRange,
+} from './stats';

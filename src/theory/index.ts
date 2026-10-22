@@ -14,3 +14,4 @@ export * from './scales';
 export * from './voicings';
 export * from './reharm';
 export * from './modulation';
+export * from './train';

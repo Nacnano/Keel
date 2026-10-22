@@ -10,8 +10,10 @@ text/JSON export and import. Row shapes are the frozen contracts in
 | `sessionRecorder.ts` | `startSession(meta)`: dedupes and buffers events, flushes every 2 s         |
 | `summary.ts`         | Pure `computeSummary(chords, keys, markers, durationSec)`                   |
 | `audioRecorder.ts`   | `createAudioRecorder(stream, opts)`: MediaRecorder, 30 min cap, 25 min warn |
-| `repo.ts`            | List/search, rename, tags, soft delete, chord/marker edits, settings        |
+| `stats.ts`           | Pure `computeStats(sessions, { since, now })`: time, days, streaks, keys    |
+| `repo.ts`            | List/search, rename, tags, soft delete, chord/marker edits, settings, stats |
 | `export.ts`          | `toText`, `toJSON`, `fromJSON`                                              |
+| `importAnalysis.ts`  | `saveAnalysedSession`, `draftFromAnalysis`: file analysis → session         |
 | `cycles.ts`          | Repeat detector (2–8 chords) for summary and text chart (`@/theory`)        |
 | `chordSymbol.ts`     | Chord/key names for export (`@/theory`)                                     |
 | `migrations.md`      | How to bump the Dexie version safely                                        |
@@ -96,6 +98,16 @@ chord or marker edit.
 - `fromJSON(jsonOrObject)`: validates, gives every row a fresh uuid, remaps
   `sessionId`, writes in one transaction, returns the new session id. Unknown
   versions throw `ImportError` with a clear message.
+
+## Analyzed files
+
+`saveAnalysedSession({ name, events, durationSec, mode, instrument, vocabLevel, audio? })`
+replays offline analysis events (`src/audio/offline.ts`, `t` = seconds into the file) through
+`startSession` with `t0 = 0` and a clock that follows the replay, then `stop({ endT:
+durationSec })`. Rows get the same dedupe and summary as a live jam, the session is tagged
+`analyzed`, and the file (if given) is stored as the session recording so review plays it.
+`draftFromAnalysis` returns the same `SessionFull` in memory (ids are placeholders) for the
+Analyze screen preview and `toText`.
 
 ## Tests
 
