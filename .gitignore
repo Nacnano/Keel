@@ -33,3 +33,6 @@ dev-dist
 
 # test output
 coverage
+
+# evaluation harness cache (piano samples, last run)
+eval/.cache
