@@ -11,7 +11,7 @@ export function chordText(
 ): { symbol: string; numeral: string } {
   if (!rec.chord) return { symbol: '—', numeral: '' };
   return {
-    symbol: pretty(chordSymbol(rec.chord, { key, ...opts })),
+    symbol: pretty(chordSymbol(rec.chord, key, opts)),
     numeral: key ? pretty(romanNumeral(rec.chord, key)) : '',
   };
 }

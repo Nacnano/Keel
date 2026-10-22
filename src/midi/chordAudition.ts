@@ -2,45 +2,21 @@
  * "Tap to hear" chord audition for the try-next row.
  */
 import type { Chord, ChordQuality, MidiNote, MidiPlayer } from '@/core/types';
+import { CHORD_TEMPLATES } from '@/theory';
 
-// TODO(integration): use @/theory/vocab
-/** Semitones above the root. Chord tones close-position, extensions in the next octave. */
-const INTERVALS: Record<ChordQuality, readonly number[]> = {
-  '5': [0, 7],
-  maj: [0, 4, 7],
-  min: [0, 3, 7],
-  dim: [0, 3, 6],
-  aug: [0, 4, 8],
-  sus2: [0, 2, 7],
-  sus4: [0, 5, 7],
-  maj7: [0, 4, 7, 11],
-  min7: [0, 3, 7, 10],
-  '7': [0, 4, 7, 10],
-  dim7: [0, 3, 6, 9],
-  m7b5: [0, 3, 6, 10],
-  mMaj7: [0, 3, 7, 11],
-  '6': [0, 4, 7, 9],
-  m6: [0, 3, 7, 9],
-  add9: [0, 4, 7, 14],
-  madd9: [0, 3, 7, 14],
-  '9': [0, 4, 7, 10, 14],
-  maj9: [0, 4, 7, 11, 14],
-  min9: [0, 3, 7, 10, 14],
-  '11': [0, 7, 10, 14, 17],
-  min11: [0, 3, 7, 10, 14, 17],
-  '13': [0, 4, 7, 10, 14, 21],
-  maj13: [0, 4, 7, 11, 14, 21],
-  min13: [0, 3, 7, 10, 14, 21],
-  '7b9': [0, 4, 7, 10, 13],
-  '7#9': [0, 4, 7, 10, 15],
-  '7#11': [0, 4, 7, 10, 18],
-  '7b13': [0, 4, 7, 10, 20],
-  '7alt': [0, 4, 10, 13, 15, 20],
-  'maj7#11': [0, 4, 7, 11, 18],
-  '6/9': [0, 4, 7, 9, 14],
-  '7sus4': [0, 5, 7, 10],
-  '9sus4': [0, 5, 7, 10, 14],
-};
+/**
+ * Semitones above the root from the `@/theory` templates: chord tones close-position,
+ * extensions (9, 11, 13, altered) in the next octave; an 11 chord drops its major third.
+ */
+function voicingIntervals(quality: ChordQuality): number[] {
+  const { intervals, roles } = CHORD_TEMPLATES[quality];
+  const out: number[] = [];
+  intervals.forEach((iv, k) => {
+    if (quality === '11' && roles[k] === 'third') return;
+    out.push(roles[k] === 'extension' ? iv + 12 : iv);
+  });
+  return out;
+}
 
 export interface PlayChordOptions {
   /** Octave of the root (scientific pitch: C4 = 60). Default 4. */
@@ -55,7 +31,7 @@ export interface PlayChordOptions {
  */
 export function chordToMidiNotes(chord: Chord, octave = 4): MidiNote[] {
   const root = (octave + 1) * 12 + chord.root;
-  const notes = INTERVALS[chord.quality].map((i) => root + i);
+  const notes = voicingIntervals(chord.quality).map((i) => root + i);
   if (chord.bass !== undefined && chord.bass !== chord.root) {
     notes.unshift(octave * 12 + chord.bass);
   }

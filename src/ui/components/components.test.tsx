@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { C_MAJOR_KEY } from '@/core/mocks';
 import type { Chord, ChordRecord, Key, Marker } from '@/core';
 import { ChordDisplay } from './ChordDisplay';
@@ -7,6 +7,8 @@ import { KeyBadge } from './KeyBadge';
 import { Piano } from './Piano';
 import { Timeline } from './Timeline';
 import { TryNext } from './TryNext';
+import { Toaster } from './Toast';
+import { toast, useToastStore } from './toastStore';
 
 afterEach(cleanup);
 
@@ -168,5 +170,25 @@ describe('TryNext', () => {
     expect(btn).toHaveTextContent('GV');
     fireEvent.click(btn);
     expect(onAudition).toHaveBeenCalledWith({ root: 7, quality: 'maj' });
+  });
+});
+
+describe('Toaster', () => {
+  afterEach(() => useToastStore.setState({ toasts: [] }));
+
+  it('dismisses a plain toast on tap', () => {
+    render(<Toaster />);
+    act(() => void toast('Saved', { durationMs: 0 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Saved' }));
+    expect(screen.queryByText('Saved')).toBeNull();
+  });
+
+  it('runs the action and dismisses the toast', () => {
+    const onClick = vi.fn();
+    render(<Toaster />);
+    act(() => void toast('Saved “Jam”', { durationMs: 0, action: { label: 'Open', onClick } }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Saved “Jam”')).toBeNull();
   });
 });

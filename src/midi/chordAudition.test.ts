@@ -12,6 +12,13 @@ describe('chordToMidiNotes', () => {
     expect(chordToMidiNotes({ root: 7, quality: '7' }, 3)).toEqual([55, 59, 62, 65]);
   });
 
+  it('puts extensions in the next octave and drops the third of an 11 chord', () => {
+    expect(chordToMidiNotes({ root: 0, quality: 'add9' })).toEqual([60, 64, 67, 74]);
+    expect(chordToMidiNotes({ root: 0, quality: '13' })).toEqual([60, 64, 67, 70, 74, 81]);
+    expect(chordToMidiNotes({ root: 0, quality: '6/9' })).toEqual([60, 64, 67, 69, 74]);
+    expect(chordToMidiNotes({ root: 0, quality: '11' })).toEqual([60, 67, 70, 74, 77]);
+  });
+
   it('adds the slash bass an octave below', () => {
     expect(chordToMidiNotes({ root: 0, quality: 'maj', bass: 4 })).toEqual([52, 60, 64, 67]);
     expect(chordToMidiNotes({ root: 2, quality: 'min', bass: 0 })).toEqual([48, 62, 65, 69]);

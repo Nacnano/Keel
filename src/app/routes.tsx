@@ -1,9 +1,15 @@
+import { Suspense } from 'react';
+import type { ComponentType, LazyExoticComponent } from 'react';
 import { createBrowserRouter } from 'react-router';
 import { AppShell } from './AppShell';
+import { LibraryScreen, ReviewScreen, RouteFallback, SettingsScreen } from './lazyRoutes';
 import { JamScreen } from '../ui/screens/JamScreen';
-import { ReviewScreen } from '../ui/screens/ReviewScreen';
-import { LibraryScreen } from '../ui/screens/LibraryScreen';
-import { SettingsScreen } from '../ui/screens/SettingsScreen';
+
+const suspended = (Screen: LazyExoticComponent<ComponentType>) => (
+  <Suspense fallback={<RouteFallback />}>
+    <Screen />
+  </Suspense>
+);
 
 export const routes = [
   {
@@ -11,9 +17,9 @@ export const routes = [
     Component: AppShell,
     children: [
       { index: true, Component: JamScreen },
-      { path: 'review/:id', Component: ReviewScreen },
-      { path: 'library', Component: LibraryScreen },
-      { path: 'settings', Component: SettingsScreen },
+      { path: 'review/:id', element: suspended(ReviewScreen) },
+      { path: 'library', element: suspended(LibraryScreen) },
+      { path: 'settings', element: suspended(SettingsScreen) },
     ],
   },
 ];

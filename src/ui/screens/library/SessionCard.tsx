@@ -91,7 +91,7 @@ export function SessionCard({
         <p className="flex flex-wrap items-baseline gap-x-2 text-base">
           {prog.chords.map((c, i) => (
             <span key={i} className="font-semibold text-zinc-100">
-              {pretty(chordSymbol(c, { key: home, spellingFollowsKey }))}
+              {pretty(chordSymbol(c, home, { spellingFollowsKey }))}
               {home && (
                 <span className="ml-1 text-xs font-normal text-zinc-500">
                   {pretty(romanNumeral(c, home))}

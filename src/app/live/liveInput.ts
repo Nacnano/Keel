@@ -35,9 +35,15 @@ export const MIDI_PRIORITY_SEC = 2;
 
 type Unsub = () => void;
 
+export interface StopOptions {
+  /** When set, the "Saved" toast gets an "Open" action that calls this with the session id. */
+  openReview?: (sessionId: string) => void;
+}
+
 export interface LiveInputController {
   start(): Promise<void>;
-  stop(): Promise<void>;
+  /** Stop listening and save the session. */
+  stop(opts?: StopOptions): Promise<void>;
   isRunning(): boolean;
   /** Re-read audio + MIDI device lists into the input store. */
   refreshDevices(): Promise<void>;
@@ -247,7 +253,7 @@ export function createLiveInput(): LiveInputController {
     }
   }
 
-  async function stop() {
+  async function stop(opts: StopOptions = {}) {
     if (!running) return;
     running = false;
     for (const u of subs) u();
@@ -276,7 +282,12 @@ export function createLiveInput(): LiveInputController {
       }
       const saved = await handle.stop({ endT });
       if (saved.durationSec >= 2 || saved.summary?.chordCount) {
-        toast(`Saved “${saved.name}” to the library`, { tone: 'success', durationMs: 2500 });
+        const { openReview } = opts;
+        toast(`Saved “${saved.name}” to the library`, {
+          tone: 'success',
+          durationMs: openReview ? 6000 : 2500,
+          action: openReview ? { label: 'Open', onClick: () => openReview(saved.id) } : undefined,
+        });
       }
     } catch (err) {
       toast(`Could not save the session: ${describeError(err)}`, { tone: 'error' });

@@ -13,10 +13,14 @@ describe('chordLabel', () => {
   it('renders symbols, slash chords and key-aware spelling', () => {
     expect(chordSymbol({ root: 0, quality: 'maj7' })).toBe('Cmaj7');
     expect(chordSymbol({ root: 7, quality: 'maj', bass: 11 })).toBe('G/B');
-    expect(chordSymbol({ root: 7, quality: 'maj', bass: 11 }, { showSlash: false })).toBe('G');
-    expect(chordSymbol({ root: 10, quality: 'maj' }, { key: F_MAJ })).toBe('Bb');
-    expect(chordSymbol({ root: 6, quality: 'm7b5' }, { key: E_MAJ })).toBe('F#m7b5');
-    expect(chordSymbol({ root: 10, quality: 'maj' }, { spellingFollowsKey: false })).toBe('A#');
+    expect(chordSymbol({ root: 7, quality: 'maj', bass: 11 }, null, { showSlash: false })).toBe(
+      'G',
+    );
+    expect(chordSymbol({ root: 10, quality: 'maj' }, F_MAJ)).toBe('Bb');
+    expect(chordSymbol({ root: 6, quality: 'm7b5' }, E_MAJ)).toBe('F#m7b5');
+    expect(chordSymbol({ root: 10, quality: 'maj' }, null, { spellingFollowsKey: false })).toBe(
+      'A#',
+    );
     expect(keyLabel({ tonic: 3, mode: 'major' })).toBe('Eb major');
     expect(chordTones({ root: 2, quality: 'min7' })).toEqual([2, 5, 9, 0]);
     expect(pretty('Bbm7b5')).toBe('B♭m7♭5');

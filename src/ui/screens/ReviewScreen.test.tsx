@@ -176,6 +176,24 @@ describe('ReviewScreen', () => {
     await waitFor(async () => expect((await db.sessions.get(ID))?.tags).toEqual(['ballad']));
   });
 
+  it('reharmonizes the top progression and the chords at the playhead', async () => {
+    await seed();
+    renderAt(`/review/${ID}`);
+    await screen.findByDisplayValue('Evening idea in C');
+    fireEvent.click(screen.getByRole('button', { name: /Reharmonize/ }));
+    expect(screen.getByRole('button', { name: 'Top 1 ×12' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getAllByTestId('reharm-alternative').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Use chords at playhead' }));
+    expect(screen.getByRole('button', { name: 'From playhead' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getAllByTestId('reharm-alternative').length).toBeGreaterThan(0);
+  });
+
   it('shows a not-found state for unknown ids', async () => {
     renderAt('/review/nope');
     expect(await screen.findByText('Session not found')).toBeInTheDocument();
