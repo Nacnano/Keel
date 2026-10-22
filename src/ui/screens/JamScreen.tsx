@@ -92,7 +92,7 @@ function StatusPill({
       </span>
       {listening && (
         <span
-          className="flex items-center gap-1.5 text-label-2"
+          className="hidden items-center gap-1.5 text-label-2 sm:flex"
           title={source === 'midi' ? 'MIDI' : 'Microphone'}
         >
           {source === 'midi' ? (
@@ -103,7 +103,7 @@ function StatusPill({
           <Meter level={level} active bars={7} />
         </span>
       )}
-      {mock && <Badge>Demo</Badge>}
+      {mock && <Badge className="hidden sm:inline-flex">Demo</Badge>}
     </div>
   );
 }
