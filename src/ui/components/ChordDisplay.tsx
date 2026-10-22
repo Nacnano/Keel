@@ -36,11 +36,11 @@ export function ChordDisplay({
   className,
 }: ChordDisplayProps) {
   const shown = chord && confidence >= MIN_DISPLAY_CONFIDENCE ? chord : null;
-  const spell = { key: keyContext, spellingFollowsKey };
-  const symbol = shown ? pretty(chordSymbol(shown, { ...spell, showSlash })) : DASH;
+  const spell = { spellingFollowsKey };
+  const symbol = shown ? pretty(chordSymbol(shown, keyContext, { ...spell, showSlash })) : DASH;
   const numeral = shown && keyContext ? pretty(romanNumeral(shown, keyContext)) : '';
-  const tones = shown ? chordTones(shown).map((pc) => pretty(noteName(pc, spell))) : [];
-  const bass = shown ? pretty(noteName(shown.bass ?? shown.root, spell)) : '';
+  const tones = shown ? chordTones(shown).map((pc) => pretty(noteName(pc, keyContext, spell))) : [];
+  const bass = shown ? pretty(noteName(shown.bass ?? shown.root, keyContext, spell)) : '';
   const symbolRef = useFadeOnChange<HTMLSpanElement>(symbol);
   // Long symbols ("Cmaj7#11/E") shrink so they never wrap or overflow the column.
   const len = [...symbol].length;

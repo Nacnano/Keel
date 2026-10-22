@@ -6,7 +6,7 @@ import { v4 as uuid } from 'uuid';
 import type { ChordRecord, KeyRecord, Marker, MidiTrack, Session } from '@/core/session';
 import type { Chord, Key } from '@/core/types';
 import { db } from './db';
-import { chordKey, chordSymbol, keyName, keyPrefersFlats } from './chordSymbol';
+import { chordKey, chordSymbol, keyName } from './chordSymbol';
 import { collapseRuns, findCycles } from './cycles';
 import { normalizeTags, type SessionFull } from './repo';
 import { computeSummary } from './summary';
@@ -40,10 +40,10 @@ function formatDate(epochMs: number): string {
 const MAX_CHORDS_PER_LINE = 8;
 
 /** Chord lines for one block: repeating cycles become `| … | ×n`. */
-function chordLines(chords: Chord[], flats: boolean): string[] {
+function chordLines(chords: Chord[], key: Key | null): string[] {
   const seq = collapseRuns(chords, chordKey);
   const keys = seq.map(chordKey);
-  const bar = (cs: Chord[]) => `| ${cs.map((c) => chordSymbol(c, flats)).join(' ')} |`;
+  const bar = (cs: Chord[]) => `| ${cs.map((c) => chordSymbol(c, key)).join(' ')} |`;
   const lines: string[] = [];
   const literal = (from: number, to: number) => {
     for (let i = from; i < to; i += MAX_CHORDS_PER_LINE) {
@@ -109,7 +109,7 @@ export function toText(full: SessionFull): string {
 
   let prefix = '';
   const emitBlock = (until: number) => {
-    const lines = chordLines(takeChordsUntil(until), keyPrefersFlats(currentKey));
+    const lines = chordLines(takeChordsUntil(until), currentKey);
     if (lines.length) {
       out.push(prefix ? `${prefix} ${lines[0]}` : lines[0], ...lines.slice(1));
     } else if (prefix) {

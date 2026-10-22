@@ -92,7 +92,7 @@ export function SummaryCard({
                     {p.chords.map((c, j) => (
                       <span key={j} className="flex flex-col items-center leading-tight">
                         <span className="text-base font-semibold text-white">
-                          {pretty(chordSymbol(c, { key: home, spellingFollowsKey, showSlash }))}
+                          {pretty(chordSymbol(c, home, { spellingFollowsKey, showSlash }))}
                         </span>
                         <span className="text-xs text-zinc-500">
                           {home ? pretty(romanNumeral(c, home)) : ''}

@@ -1,5 +1,5 @@
-// TODO(integration): replace with MidiPlayer.noteOn/noteOff from @/midi (sampled piano).
-// Minimal Web Audio preview so "tap to hear" works in mock mode.
+// Oscillator fallback for "tap to hear" (mock mode, or before the sampled piano loads);
+// the live app routes through src/app/live/audition.ts, which prefers the @/midi player.
 import type { Chord } from '@/core';
 import { chordTones } from './chordLabel';
 

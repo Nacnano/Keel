@@ -12,8 +12,8 @@ text/JSON export and import. Row shapes are the frozen contracts in
 | `audioRecorder.ts`   | `createAudioRecorder(stream, opts)`: MediaRecorder, 30 min cap, 25 min warn |
 | `repo.ts`            | List/search, rename, tags, soft delete, chord/marker edits, settings        |
 | `export.ts`          | `toText`, `toJSON`, `fromJSON`                                              |
-| `cycles.ts`          | Small repeat detector (2–8 chords) for summary and text chart               |
-| `chordSymbol.ts`     | Local chord/key names for export                                            |
+| `cycles.ts`          | Repeat detector (2–8 chords) for summary and text chart (`@/theory`)        |
+| `chordSymbol.ts`     | Chord/key names for export (`@/theory`)                                     |
 | `migrations.md`      | How to bump the Dexie version safely                                        |
 
 ## Tables (v1)
@@ -104,7 +104,8 @@ chord or marker edit.
 `resetDb()` and `cloneableBlob()` (jsdom's `Blob` does not survive
 fake-indexeddb's structured clone).
 
-## Integration TODOs
+## Theory integration
 
-- `TODO(integration)`: replace `chordSymbol.ts` with `@/theory/chordName` and
-  `cycles.ts` with `@/theory/timeline` once WS-A lands.
+`chordSymbol.ts` and `cycles.ts` re-export `chordSymbol`, `chordKey`, `keyName`,
+`findCycles`, `canonicalRotation` and `collapseRuns` from `@/theory`. Text export spells
+chords for the key in force (`Bb` in F major, neutral `C# Eb F# Ab Bb` with no key).

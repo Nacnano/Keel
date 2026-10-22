@@ -57,7 +57,7 @@ export function ChordPicker({
     initial ? (Math.max(initialLevel, levelOf(initial.quality)) as VocabLevel) : initialLevel,
   );
 
-  const spell = { key: keyContext, spellingFollowsKey };
+  const spell = { spellingFollowsKey };
   const qualities = useMemo(() => {
     const list = qualitiesForLevel(level);
     return list.includes(quality) ? list : [...list, quality];
@@ -68,12 +68,15 @@ export function ChordPicker({
     : bass !== null && bass !== root
       ? { root, quality, bass }
       : { root, quality };
-  const preview = chord ? pretty(chordSymbol(chord, spell)) : 'N.C.';
+  const preview = chord ? pretty(chordSymbol(chord, keyContext, spell)) : 'N.C.';
   const numeral = chord && keyContext ? pretty(romanNumeral(chord, keyContext)) : '';
 
   const bassOptions = [
     { value: '', label: 'Root (no slash)' },
-    ...ALL_PITCH_CLASSES.map((pc) => ({ value: String(pc), label: pretty(noteName(pc, spell)) })),
+    ...ALL_PITCH_CLASSES.map((pc) => ({
+      value: String(pc),
+      label: pretty(noteName(pc, keyContext, spell)),
+    })),
   ];
 
   return (
@@ -124,7 +127,7 @@ export function ChordPicker({
                       : 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700',
                   )}
                 >
-                  {pretty(noteName(pc, spell))}
+                  {pretty(noteName(pc, keyContext, spell))}
                 </button>
               ))}
             </div>
@@ -162,7 +165,7 @@ export function ChordPicker({
                       : 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700',
                   )}
                 >
-                  {pretty(chordSymbol({ root, quality: q }, spell))}
+                  {pretty(chordSymbol({ root, quality: q }, keyContext, spell))}
                 </button>
               ))}
             </div>
