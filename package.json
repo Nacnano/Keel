@@ -28,7 +28,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router": "^7",
-    "smplr": "^0.16",
+    "smplr": "^0.26",
     "uuid": "^13",
     "zustand": "^5"
   },
