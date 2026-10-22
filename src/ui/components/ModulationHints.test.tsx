@@ -25,8 +25,17 @@ describe('ModulationHints', () => {
     expect(screen.getByRole('button', { name: /^B♭ major: hear pivot E♭/ })).toBeInTheDocument();
   });
 
-  it('is hidden without a key', () => {
-    const { container } = render(<ModulationHints keyContext={null} level={2} />);
-    expect(container).toBeEmptyDOMElement();
+  it('shows rows with the destination key and the pivot', () => {
+    render(<ModulationHints keyContext={C_MAJOR_KEY} level={2} />);
+    const g = screen.getByRole('button', { name: /^G major: hear pivot C/ });
+    expect(g).toHaveTextContent('G major');
+    expect(g).toHaveTextContent('via C · I → IV');
+  });
+
+  it('explains itself without a key', () => {
+    render(<ModulationHints keyContext={null} level={2} />);
+    expect(screen.queryByRole('region', { name: 'Modulation hints' })).toBeNull();
+    expect(screen.queryAllByTestId('modulation-hint')).toHaveLength(0);
+    expect(screen.getByText(/appear once a key is found/)).toBeInTheDocument();
   });
 });

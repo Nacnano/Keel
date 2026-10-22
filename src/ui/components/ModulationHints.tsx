@@ -1,4 +1,5 @@
 import { useId, useMemo } from 'react';
+import { Play } from 'lucide-react';
 import type { Chord, Key, VocabLevel } from '@/core';
 import {
   chordSymbol,
@@ -17,7 +18,7 @@ export interface ModulationHintsProps {
   className?: string;
 }
 
-function HintChip({
+function HintRow({
   hint,
   from,
   spellingFollowsKey,
@@ -28,45 +29,44 @@ function HintChip({
   spellingFollowsKey: boolean;
   onAudition?(chord: Chord): void;
 }) {
-  const tipId = useId();
+  const reasonId = useId();
   const to = prettyAccidentals(keyName(hint.to, { spellingFollowsKey }));
   const pivot = prettyAccidentals(chordSymbol(hint.pivot, from, { spellingFollowsKey }));
   const numerals = prettyAccidentals(`${hint.pivotNumeralFrom} → ${hint.pivotNumeralTo}`);
+  const reason = prettyAccidentals(hint.reason);
   return (
-    <li className="group relative">
+    <li>
       <button
         type="button"
         data-testid="modulation-hint"
         aria-label={`${to}: hear pivot ${pivot}, ${numerals}`}
-        aria-describedby={tipId}
+        aria-describedby={reasonId}
+        title={reason}
         onClick={() => onAudition?.(hint.pivot)}
-        className={cx(
-          'flex min-h-9 items-baseline gap-1.5 rounded-lg bg-zinc-900/70 px-2.5 py-1 text-sm ring-1 ring-zinc-800',
-          'transition-colors duration-150 hover:bg-zinc-800 hover:ring-violet-400/40',
-          'focus-visible:outline-2 focus-visible:outline-violet-300',
-        )}
+        className="group flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left transition-colors duration-100 hover:bg-fill-4 active:bg-fill-3"
       >
-        <span className="font-medium text-zinc-200">{to}</span>
-        <span className="text-zinc-600">via</span>
-        <span className="font-semibold text-zinc-100">{pivot}</span>
-        <span className="text-xs text-violet-300/70">{numerals}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-headline text-label">{to}</span>
+          <span className="mt-0.5 block text-footnote text-label-2">
+            via <span className="font-semibold text-label">{pivot}</span> ·{' '}
+            <span className="text-accent">{numerals}</span>
+          </span>
+          <span id={reasonId} className="sr-only">
+            {reason}
+          </span>
+        </span>
+        <span
+          aria-hidden
+          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-fill-3 text-accent transition-colors duration-100 group-hover:bg-fill-2"
+        >
+          <Play className="size-3.5 fill-current" />
+        </span>
       </button>
-      <span
-        id={tipId}
-        role="tooltip"
-        className={cx(
-          'pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 -translate-x-1/2 rounded-lg',
-          'bg-zinc-800 px-2.5 py-1 text-xs whitespace-nowrap text-zinc-200 shadow-lg',
-          'opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100',
-        )}
-      >
-        {prettyAccidentals(hint.reason)}
-      </span>
     </li>
   );
 }
 
-/** Compact "modulate to" chips under Try next; tap to hear the pivot chord. Hidden without a key. */
+/** Keys to modulate to from the current key; tap a row to hear the pivot chord. */
 export function ModulationHints({
   keyContext,
   level,
@@ -81,13 +81,18 @@ export function ModulationHints({
     [tonic, mode],
   );
   const hints = useMemo(() => (from ? modulationHints(from, level) : []), [from, level]);
-  if (!from || hints.length === 0) return null;
+  if (!from || hints.length === 0) {
+    return (
+      <p className={cx('text-subhead text-label-3', className)}>
+        Keys to modulate to appear once a key is found.
+      </p>
+    );
+  }
   return (
-    <section aria-label="Modulation hints" className={cx('flex flex-col gap-1.5', className)}>
-      <h2 className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Modulate to</h2>
-      <ul className="flex flex-wrap gap-1.5">
+    <section aria-label="Modulation hints" className={className}>
+      <ul className="flex flex-col overflow-hidden rounded-cell bg-fill-4 [&>li+li]:hairline-t">
         {hints.map((h) => (
-          <HintChip
+          <HintRow
             key={`${h.to.tonic}:${h.to.mode}`}
             hint={h}
             from={from}

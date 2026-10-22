@@ -1,47 +1,40 @@
 import { useId } from 'react';
-import type { SelectHTMLAttributes } from 'react';
+import { Select as KitSelect, type SelectProps as KitSelectProps } from '@/ui/kit';
 import { cx } from '../lib/cx';
 
 export interface SelectOption {
   value: string;
   label: string;
+  disabled?: boolean;
 }
 
-export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'onChange'> {
+export interface SelectProps extends Omit<KitSelectProps, 'options' | 'inline'> {
   label: string;
   options: ReadonlyArray<SelectOption>;
-  value: string;
-  onChange(value: string): void;
   hint?: string;
 }
 
-/** Native select (best on iPad) with a label and an optional hint line. */
-export function Select({ label, options, value, onChange, hint, className, ...rest }: SelectProps) {
-  const id = useId();
+/**
+ * Labelled select over the kit pop-up button (label above, optional hint below).
+ * For a bare control in a row or toolbar, use `Select` from `@/ui/kit`.
+ */
+export function Select({ label, options, hint, className, id, ...rest }: SelectProps) {
+  const autoId = useId();
+  const selectId = id ?? autoId;
+  const hintId = `${selectId}-hint`;
   return (
     <div className={cx('flex flex-col gap-1.5', className)}>
-      <label htmlFor={id} className="text-sm font-medium text-zinc-300">
+      <label htmlFor={selectId} className="text-subhead font-medium text-label">
         {label}
       </label>
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-describedby={hint ? `${id}-hint` : undefined}
-        className={cx(
-          'min-h-11 rounded-xl bg-zinc-900 px-3 text-sm text-zinc-100 ring-1 ring-zinc-800',
-          'focus-visible:outline-2 focus-visible:outline-violet-300 disabled:opacity-50',
-        )}
+      <KitSelect
+        id={selectId}
+        options={[...options]}
+        aria-describedby={hint ? hintId : undefined}
         {...rest}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      />
       {hint && (
-        <p id={`${id}-hint`} className="text-xs text-zinc-500">
+        <p id={hintId} className="text-footnote text-label-2">
           {hint}
         </p>
       )}
