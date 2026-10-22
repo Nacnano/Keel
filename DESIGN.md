@@ -150,36 +150,35 @@ latency-free. The mic pipeline stays as fallback for acoustic piano and guitar.
 
 ## 6. Decisions (2026-10-22)
 
-| Topic | Decision |
-|---|---|
-| Input | Mic **and** Web MIDI both in phase 1. MIDI is Chrome/Edge on laptop only; iPad Safari uses mic. |
-| Devices | Laptop (Chrome) and iPad (Safari). Installable PWA, layout works on both. |
-| Chord vocabulary | All three levels implemented; user picks the level in settings and on the jam screen. Default level 2. |
-| Notation | Roman numerals always shown. Spelling follows the key. Chord tones + bass in small text. Key shown as major/relative-minor pair with the stronger one bold. |
-| Timing | Untimed chord sequence with repeats compressed in MVP. Bar alignment later. |
-| Recording | Session audio recording, opt-in toggle per session, stored locally only. |
-| Play-along | Not in scope for now (no backing looper, drone, metronome). |
-| Live helpers | Try-next chord suggestions and live scale helper on the jam screen. |
-| Extras | Analyze audio files (mp3 etc.), ear training. Guitar fretboard/tuner/capo deferred. |
-| Review | Session summary (keys, repeated progressions, sections), modulation hints, song-structure markers (verse/chorus/bridge). |
-| Storage | Local-first in IndexedDB, plus cloud sync via Supabase with Google login. Chord data syncs; audio does not. |
-| Stack | Vite + React + TypeScript + Tailwind, static deploy on Vercel. |
-| Misc | English UI, A4 = 440 Hz default, low-confidence shows a dash instead of a guess. |
-
+| Topic            | Decision                                                                                                                                                    |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Input            | Mic **and** Web MIDI both in phase 1. MIDI is Chrome/Edge on laptop only; iPad Safari uses mic.                                                             |
+| Devices          | Laptop (Chrome) and iPad (Safari). Installable PWA, layout works on both.                                                                                   |
+| Chord vocabulary | All three levels implemented; user picks the level in settings and on the jam screen. Default level 2.                                                      |
+| Notation         | Roman numerals always shown. Spelling follows the key. Chord tones + bass in small text. Key shown as major/relative-minor pair with the stronger one bold. |
+| Timing           | Untimed chord sequence with repeats compressed in MVP. Bar alignment later.                                                                                 |
+| Recording        | Session audio recording, opt-in toggle per session, stored locally only.                                                                                    |
+| Play-along       | Not in scope for now (no backing looper, drone, metronome).                                                                                                 |
+| Live helpers     | Try-next chord suggestions and live scale helper on the jam screen.                                                                                         |
+| Extras           | Analyze audio files (mp3 etc.), ear training. Guitar fretboard/tuner/capo deferred.                                                                         |
+| Review           | Session summary (keys, repeated progressions, sections), modulation hints, song-structure markers (verse/chorus/bridge).                                    |
+| Storage          | Local-first in IndexedDB, plus cloud sync via Supabase with Google login. Chord data syncs; audio does not.                                                 |
+| Stack            | Vite + React + TypeScript + Tailwind, static deploy on Vercel.                                                                                              |
+| Misc             | English UI, A4 = 440 Hz default, low-confidence shows a dash instead of a guess.                                                                            |
 
 ### Decisions, round 2
 
-| Topic | Decision |
-|---|---|
-| Setups | (a) Digital piano over USB with speakers on: MIDI primary, mic available. (b) Acoustic piano: mic only. Input device selector in settings. |
-| Contexts | Solo; band jam with friends; jamming along to a song playing in the room; singing while playing. Explicit **Solo / Room** mode switch: Room mode uses the mic mix, reports the room key, and down-weights the vocal range for chord detection. |
-| Style | Pop/rock/ballads and jazz/neo-soul/R&B. Default chord level 2; suggestion engine includes ii-V-I, tritone subs, borrowed iv/bVII, and secondary dominants. |
-| MIDI capture | Record full MIDI performance with playback through a built-in piano sound; piano roll view with scrub and chord-at-moment; lead sheet rendering (chords + melody from MIDI). MIDI/MusicXML export deferred. |
-| Control | One hand is free during jams. Large touch/click targets, keyboard shortcuts. No pedal, gesture, or voice control. |
-| Detection | Show inversions as slash chords (C/E). Key history shown on the timeline at each modulation. On-screen piano with detected notes in the MVP. |
-| Helpers | Voicing suggestions for the current chord (rootless, shell, spread, drop-2). Reharmonization of captured progressions. Practice stats (time played, keys and progressions used most). Jam prompt deferred. |
-| Sharing | Public read-only share link for a chart via Supabase. PDF/Notion export deferred. |
-| Vocals | Melody tracking of the voice deferred; for now vocals are filtered out of chord detection in Room/singing mode. |
+| Topic        | Decision                                                                                                                                                                                                                                       |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Setups       | (a) Digital piano over USB with speakers on: MIDI primary, mic available. (b) Acoustic piano: mic only. Input device selector in settings.                                                                                                     |
+| Contexts     | Solo; band jam with friends; jamming along to a song playing in the room; singing while playing. Explicit **Solo / Room** mode switch: Room mode uses the mic mix, reports the room key, and down-weights the vocal range for chord detection. |
+| Style        | Pop/rock/ballads and jazz/neo-soul/R&B. Default chord level 2; suggestion engine includes ii-V-I, tritone subs, borrowed iv/bVII, and secondary dominants.                                                                                     |
+| MIDI capture | Record full MIDI performance with playback through a built-in piano sound; piano roll view with scrub and chord-at-moment; lead sheet rendering (chords + melody from MIDI). MIDI/MusicXML export deferred.                                    |
+| Control      | One hand is free during jams. Large touch/click targets, keyboard shortcuts. No pedal, gesture, or voice control.                                                                                                                              |
+| Detection    | Show inversions as slash chords (C/E). Key history shown on the timeline at each modulation. On-screen piano with detected notes in the MVP.                                                                                                   |
+| Helpers      | Voicing suggestions for the current chord (rootless, shell, spread, drop-2). Reharmonization of captured progressions. Practice stats (time played, keys and progressions used most). Jam prompt deferred.                                     |
+| Sharing      | Public read-only share link for a chart via Supabase. PDF/Notion export deferred.                                                                                                                                                              |
+| Vocals       | Melody tracking of the voice deferred; for now vocals are filtered out of chord detection in Room/singing mode.                                                                                                                                |
 
 ### Revised phases
 
