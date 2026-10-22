@@ -29,7 +29,7 @@ function Chip({
   onAudition?(chord: Chord): void;
 }) {
   const tipId = useId();
-  const symbol = pretty(chordSymbol(s.chord, { key: keyContext, spellingFollowsKey }));
+  const symbol = pretty(chordSymbol(s.chord, keyContext, { spellingFollowsKey }));
   const numeral = keyContext ? pretty(romanNumeral(s.chord, keyContext)) : '';
   return (
     <li className="group relative">
