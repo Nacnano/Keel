@@ -2,9 +2,124 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+  JamKey visual system (2026-10-23 redesign).
+  Apple HIG-style semantic colours. Light values on :root, dark values on .dark.
+  Tailwind utilities map to these through @theme below (e.g. bg-bg, text-label-2).
+*/
 :root {
+  color-scheme: light;
+  --jk-bg: #f2f2f7;
+  --jk-bg-2: #ffffff;
+  --jk-bg-3: #f2f2f7;
+  --jk-surface: #ffffff;
+  --jk-surface-2: #f2f2f7;
+  --jk-label: #000000;
+  --jk-label-2: rgba(60, 60, 67, 0.6);
+  --jk-label-3: rgba(60, 60, 67, 0.3);
+  --jk-label-4: rgba(60, 60, 67, 0.18);
+  --jk-fill: rgba(120, 120, 128, 0.2);
+  --jk-fill-2: rgba(120, 120, 128, 0.16);
+  --jk-fill-3: rgba(120, 120, 128, 0.12);
+  --jk-fill-4: rgba(120, 120, 128, 0.08);
+  --jk-separator: rgba(60, 60, 67, 0.29);
+  --jk-separator-opaque: #c6c6c8;
+  --jk-accent: #007aff;
+  --jk-accent-fg: #ffffff;
+  --jk-live: #ff3b30;
+  --jk-ok: #34c759;
+  --jk-warn: #ff9500;
+  --jk-material: rgba(249, 249, 249, 0.78);
+  --jk-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.dark {
   color-scheme: dark;
-  --jk-accent: #a78bfa;
+  --jk-bg: #000000;
+  --jk-bg-2: #1c1c1e;
+  --jk-bg-3: #2c2c2e;
+  --jk-surface: #1c1c1e;
+  --jk-surface-2: #2c2c2e;
+  --jk-label: #ffffff;
+  --jk-label-2: rgba(235, 235, 245, 0.6);
+  --jk-label-3: rgba(235, 235, 245, 0.3);
+  --jk-label-4: rgba(235, 235, 245, 0.18);
+  --jk-fill: rgba(120, 120, 128, 0.36);
+  --jk-fill-2: rgba(120, 120, 128, 0.32);
+  --jk-fill-3: rgba(120, 120, 128, 0.24);
+  --jk-fill-4: rgba(120, 120, 128, 0.18);
+  --jk-separator: rgba(84, 84, 88, 0.6);
+  --jk-separator-opaque: #38383a;
+  --jk-accent: #0a84ff;
+  --jk-accent-fg: #ffffff;
+  --jk-live: #ff453a;
+  --jk-ok: #30d158;
+  --jk-warn: #ff9f0a;
+  --jk-material: rgba(28, 28, 30, 0.72);
+  --jk-shadow: 0 14px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+@theme inline {
+  --color-bg: var(--jk-bg);
+  --color-bg-2: var(--jk-bg-2);
+  --color-bg-3: var(--jk-bg-3);
+  --color-surface: var(--jk-surface);
+  --color-surface-2: var(--jk-surface-2);
+  --color-label: var(--jk-label);
+  --color-label-2: var(--jk-label-2);
+  --color-label-3: var(--jk-label-3);
+  --color-label-4: var(--jk-label-4);
+  --color-fill: var(--jk-fill);
+  --color-fill-2: var(--jk-fill-2);
+  --color-fill-3: var(--jk-fill-3);
+  --color-fill-4: var(--jk-fill-4);
+  --color-separator: var(--jk-separator);
+  --color-separator-opaque: var(--jk-separator-opaque);
+  --color-accent: var(--jk-accent);
+  --color-accent-fg: var(--jk-accent-fg);
+  --color-live: var(--jk-live);
+  --color-ok: var(--jk-ok);
+  --color-warn: var(--jk-warn);
+  --color-material: var(--jk-material);
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', ui-sans-serif, system-ui,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  /* Apple text styles (rem). */
+  --text-large-title: 2.125rem;
+  --text-large-title--line-height: 1.2;
+  --text-large-title--letter-spacing: -0.02em;
+  --text-title-1: 1.75rem;
+  --text-title-1--line-height: 1.22;
+  --text-title-1--letter-spacing: -0.015em;
+  --text-title-2: 1.375rem;
+  --text-title-2--line-height: 1.27;
+  --text-title-2--letter-spacing: -0.01em;
+  --text-title-3: 1.25rem;
+  --text-title-3--line-height: 1.25;
+  --text-headline: 1.0625rem;
+  --text-headline--line-height: 1.3;
+  --text-headline--font-weight: 600;
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.35;
+  --text-callout: 1rem;
+  --text-callout--line-height: 1.35;
+  --text-subhead: 0.9375rem;
+  --text-subhead--line-height: 1.35;
+  --text-footnote: 0.8125rem;
+  --text-footnote--line-height: 1.35;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.35;
+
+  --radius-control: 10px;
+  --radius-cell: 12px;
+  --radius-card: 16px;
+  --radius-sheet: 20px;
+
+  --shadow-elevated: var(--jk-shadow);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 html,
@@ -15,15 +130,175 @@ body,
 }
 
 body {
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    'Helvetica Neue',
-    Arial,
-    sans-serif;
+  font-family: var(--font-sans);
+  background: var(--jk-bg);
+  color: var(--jk-label);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   overscroll-behavior: none;
+  caret-color: var(--jk-accent);
+  accent-color: var(--jk-accent);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--jk-accent) 30%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--jk-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Thin, palette-matched scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--jk-fill) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--jk-fill);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Utilities that Tailwind does not ship. */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+@utility material {
+  background: var(--jk-material);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+@utility hairline-t {
+  box-shadow: inset 0 0.5px 0 var(--jk-separator);
+}
+@utility hairline-b {
+  box-shadow: inset 0 -0.5px 0 var(--jk-separator);
+}
+@utility safe-b {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+}
+
+@keyframes jk-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes jk-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes jk-slide-in-right {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes jk-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes jk-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+@utility anim-fade-in {
+  animation: jk-fade-in 180ms var(--ease-out-expo) both;
+}
+@utility anim-rise {
+  animation: jk-rise 260ms var(--ease-out-expo) both;
+}
+@utility anim-slide-in-right {
+  animation: jk-slide-in-right 280ms var(--ease-out-expo) both;
+}
+@utility anim-slide-up {
+  animation: jk-slide-up 320ms var(--ease-out-expo) both;
+}
+@utility anim-pulse-soft {
+  animation: jk-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Range input used by kit/Slider. */
+.jk-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--jk-accent) 0 var(--pct, 50%),
+    var(--jk-fill) var(--pct, 50%) 100%
+  );
+}
+.jk-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--jk-fill);
+}
+.jk-slider::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--jk-accent);
+}
+.jk-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -11px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.15),
+    0 1px 1px rgba(0, 0, 0, 0.16),
+    0 0 0 0.5px rgba(0, 0, 0, 0.04);
+}
+.jk-slider::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.15),
+    0 1px 1px rgba(0, 0, 0, 0.16);
 }
