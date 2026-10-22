@@ -36,7 +36,9 @@ describe('analyseSamplesToEvents', () => {
     expect(res.sampleRate).toBe(SR);
     expect(res.durationSec).toBeCloseTo(samples.length / SR, 6);
     expect(res.events.every((e) => e.type === 'chord' || e.type === 'key')).toBe(true);
-    expect(res.events.map((e) => e.t)).toEqual([...res.events.map((e) => e.t)].sort((a, b) => a - b));
+    expect(res.events.map((e) => e.t)).toEqual(
+      [...res.events.map((e) => e.t)].sort((a, b) => a - b),
+    );
 
     const chords = chordsOf(res.events);
     const sequence = chords.filter((c) => c.chord).map((c) => label(c.chord));

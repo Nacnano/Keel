@@ -56,3 +56,10 @@ export {
   type JamKeyExportV1,
 } from './export';
 export { chordSymbol, keyName } from './chordSymbol';
+export {
+  saveAnalysedSession,
+  draftFromAnalysis,
+  nameFromFile,
+  ANALYZED_TAG,
+  type AnalysedSessionInput,
+} from './importAnalysis';

@@ -94,7 +94,11 @@ export async function decodeFileToMono(
 ): Promise<DecodedAudio> {
   const buffer = await decodeAudio(file, sampleRate);
   const samples = mixToMono(buffer);
-  return { samples, sampleRate: buffer.sampleRate, durationSec: samples.length / buffer.sampleRate };
+  return {
+    samples,
+    sampleRate: buffer.sampleRate,
+    durationSec: samples.length / buffer.sampleRate,
+  };
 }
 
 /** Mono samples → chord and key events. Pure apart from the event-loop yields. */
