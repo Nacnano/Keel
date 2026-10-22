@@ -83,6 +83,8 @@ export interface Settings {
   instrument: Instrument;
   mode: JamMode;
   stability: number;
+  /** Microphone sensitivity 0..1 (how far above the noise floor a sound must be). Default 0.5. */
+  sensitivity: number;
   showSlashChords: boolean;
   spellingFollowsKey: boolean;
   audioDeviceId: string | null;

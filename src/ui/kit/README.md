@@ -5,19 +5,19 @@ primitives and tokens; no raw `zinc-*`/`violet-*` classes, no ad-hoc borders.
 
 ## Tokens (Tailwind utilities)
 
-| Role | Utilities |
-| --- | --- |
-| Page background | `bg-bg` (black in dark, `#f2f2f7` light) |
-| Grouped cell / card | `bg-surface` (`#1c1c1e`), elevated `bg-surface-2` (`#2c2c2e`) |
-| Fills for controls | `bg-fill` … `bg-fill-4` (strong → faint) |
-| Text | `text-label`, `text-label-2` (secondary), `text-label-3` (tertiary), `text-label-4` (quaternary) |
-| Separators | `hairline-t` / `hairline-b` utilities (0.5 px inset), colour `separator` |
-| Accent (one) | `text-accent`, `bg-accent`, `bg-accent/15` for tinted; `accent-fg` for text on accent |
-| Semantic | `live` (red: recording, stop, errors), `ok` (green), `warn` (orange) |
-| Materials | `material` (translucent blur for toolbars, tab bar, popovers, toasts) |
-| Radius | `rounded-control` 10, `rounded-cell` 12, `rounded-card` 16, `rounded-sheet` 20 |
-| Type | `text-large-title`, `title-1/2/3`, `headline`, `body`, `callout`, `subhead`, `footnote`, `caption`; `tabular` for numbers |
-| Motion | `anim-fade-in`, `anim-rise`, `anim-slide-in-right`, `anim-slide-up`, `anim-pulse-soft`; `ease-out-expo` |
+| Role                | Utilities                                                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Page background     | `bg-bg` (black in dark, `#f2f2f7` light)                                                                                  |
+| Grouped cell / card | `bg-surface` (`#1c1c1e`), elevated `bg-surface-2` (`#2c2c2e`)                                                             |
+| Fills for controls  | `bg-fill` … `bg-fill-4` (strong → faint)                                                                                  |
+| Text                | `text-label`, `text-label-2` (secondary), `text-label-3` (tertiary), `text-label-4` (quaternary)                          |
+| Separators          | `hairline-t` / `hairline-b` utilities (0.5 px inset), colour `separator`                                                  |
+| Accent (one)        | `text-accent`, `bg-accent`, `bg-accent/15` for tinted; `accent-fg` for text on accent                                     |
+| Semantic            | `live` (red: recording, stop, errors), `ok` (green), `warn` (orange)                                                      |
+| Materials           | `material` (translucent blur for toolbars, tab bar, popovers, toasts)                                                     |
+| Radius              | `rounded-control` 10, `rounded-cell` 12, `rounded-card` 16, `rounded-sheet` 20                                            |
+| Type                | `text-large-title`, `title-1/2/3`, `headline`, `body`, `callout`, `subhead`, `footnote`, `caption`; `tabular` for numbers |
+| Motion              | `anim-fade-in`, `anim-rise`, `anim-slide-in-right`, `anim-slide-up`, `anim-pulse-soft`; `ease-out-expo`                   |
 
 ## Primitives (`@/ui/kit`)
 
