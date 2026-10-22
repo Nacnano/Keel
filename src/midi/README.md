@@ -4,15 +4,15 @@ Exact input path for digital pianos over USB. Produces `MidiEvent`s and
 `ChromaFrame`s with `exact: true`, so the analysis engine can skip spectral
 guesswork.
 
-| Module             | What it does                                                                                     |
-| ------------------ | ------------------------------------------------------------------------------------------------ |
-| `parse.ts`         | Pure parser: raw bytes + `timeStamp` → `MidiEvent \| null` (note on/off, vel-0 = off, CC).       |
-| `heldNotes.ts`     | Pure held-note model: key down OR sustain down; `toFrame(t)` → velocity-weighted exact chroma.   |
-| `midiInput.ts`     | `createMidiInput(): WebMidiInput` (`MidiInput` + `onDevicesChange`, `getDeviceId`, `heldNotes`). |
-| `recorder.ts`      | `createMidiRecorder()` → events relative to session start, `toTrack(sessionId)`.                 |
-| `schedule.ts`      | Pure scheduling: `resolveSustain`, `scheduleWindow`, `soundingAt`.                               |
-| `player.ts`        | `createMidiPlayer(ctx?)`: smplr SplendidGrandPiano, look-ahead scheduler, `onTick` 30 Hz.        |
-| `chordAudition.ts` | `playChord(player, chord, { octave, durationMs, velocity })` for "tap to hear".                  |
+| Module             | What it does                                                                                                                                             |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `parse.ts`         | Pure parser: raw bytes + `timeStamp` → `MidiEvent \| null` (note on/off, vel-0 = off, CC).                                                               |
+| `heldNotes.ts`     | Pure held-note model: key down OR sustain down; `toFrame(t)` → velocity-weighted exact chroma.                                                           |
+| `midiInput.ts`     | `createMidiInput(): WebMidiInput` (`MidiInput` + `onDevicesChange`, `getDeviceId`, `heldNotes`).                                                         |
+| `recorder.ts`      | `createMidiRecorder()` → events relative to session start, `toTrack(sessionId)`.                                                                         |
+| `schedule.ts`      | Pure scheduling: `resolveSustain`, `scheduleWindow`, `soundingAt`.                                                                                       |
+| `player.ts`        | `createMidiPlayer(ctx?)`: smplr SplendidGrandPiano, look-ahead scheduler, `onTick` 30 Hz.                                                                |
+| `chordAudition.ts` | `playChord(player, chord, { octave, durationMs, velocity })` for "tap to hear"; `playVoicing(player, notes, durationMs?, velocity?)` for exact voicings. |
 
 ## Usage
 
