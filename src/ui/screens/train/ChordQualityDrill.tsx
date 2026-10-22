@@ -9,7 +9,7 @@ import {
   randomChordQuestion,
 } from '@/theory';
 import type { ChordQuestion, QualityGrade } from '@/theory';
-import { Button } from '@/ui/components/Button';
+import { Button } from '@/ui/kit';
 import { Piano } from '@/ui/components/Piano';
 import { qualityClip, qualityNotes } from './playback';
 import { Chip, Feedback, PlayControls } from './parts';
@@ -36,14 +36,13 @@ export function ChordQualityDrill({ level, bpm, playback, lifetime, onGraded, rn
   );
 
   return (
-    <div className="flex flex-col gap-5">
-      <ScoreBar score={t.score} streak={t.streak} lifetime={lifetime} />
-      <PlayControls trainer={t} />
+    <div className="flex flex-col gap-6">
+      <PlayControls trainer={t} prompt="What kind of chord is this?" />
       {q && (
         <div
           role="group"
           aria-label="Chord quality"
-          className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+          className="grid grid-cols-2 gap-2 sm:grid-cols-3"
         >
           {choices.map((quality) => {
             const right = feedback && quality === q.chord.quality;
@@ -58,7 +57,7 @@ export function ChordQualityDrill({ level, bpm, playback, lifetime, onGraded, rn
               >
                 <span>{qualityName(quality)}</span>
                 {suffix && (
-                  <span aria-hidden className="text-xs text-zinc-400">
+                  <span aria-hidden className="text-subhead font-normal text-label-2">
                     {prettyAccidentals(suffix)}
                   </span>
                 )}
@@ -77,9 +76,11 @@ export function ChordQualityDrill({ level, bpm, playback, lifetime, onGraded, rn
           }
           actions={
             <>
-              <Button onClick={() => t.playClip(qualityClip(q.chord, bpm))}>Play correct</Button>
+              <Button variant="plain" onClick={() => t.playClip(qualityClip(q.chord, bpm))}>
+                Play correct
+              </Button>
               {!grade.correct && answer && (
-                <Button onClick={() => playQuality(answer)}>
+                <Button variant="plain" onClick={() => playQuality(answer)}>
                   Play yours ({qualityName(answer)})
                 </Button>
               )}
@@ -87,11 +88,11 @@ export function ChordQualityDrill({ level, bpm, playback, lifetime, onGraded, rn
           }
         >
           <p>
-            <span className="font-semibold text-white">
+            <span className="font-semibold text-label">
               {prettyAccidentals(chordSymbol(q.chord))}
             </span>
             {!grade.correct && answer && <> · you picked {qualityName(answer)}</>}
-            <span className="text-zinc-500"> · tap any chip to hear that quality on this root</span>
+            <span className="text-label-3"> · tap any answer to hear it on this root</span>
           </p>
           <Piano
             range={[36, 96]}
@@ -101,6 +102,7 @@ export function ChordQualityDrill({ level, bpm, playback, lifetime, onGraded, rn
           />
         </Feedback>
       )}
+      <ScoreBar score={t.score} streak={t.streak} lifetime={lifetime} />
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { BarChart3 } from 'lucide-react';
 import { loadStats, type Stats, type StatsRange } from '@/data';
 import { chordSymbol, keyName, prettyAccidentals as pretty, romanNumeral } from '@/theory';
 import { useSettings } from '@/state/settingsStore';
-import { Segmented } from '../components/Segmented';
+import { Badge, Button, EmptyState, Group, PageHeader, Row, Segmented } from '../kit';
 import { cx } from '../lib/cx';
 import { DayStrip } from './stats/DayStrip';
 import { durationLabel, durationSpoken, jamInKeyHref, qualityName } from './stats/format';
@@ -26,6 +27,7 @@ const NUDGES = 3;
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 const days = (n: number) => `${n} day${n === 1 ? '' : 's'}`;
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /** `/stats`: practice stats computed on this device from saved sessions. */
 export function StatsScreen() {
@@ -59,193 +61,180 @@ export function StatsScreen() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 pt-5 pb-24 lg:px-8">
-        <header className="flex flex-wrap items-end gap-3">
-          <div className="mr-auto">
-            <h1 className="text-2xl font-semibold text-white">Stats</h1>
-            <p className="text-sm text-zinc-500">Worked out on this device from your saved jams.</p>
-          </div>
-          {!nothingSaved && (
-            <Segmented<StatsRange>
-              aria-label="Time range"
-              options={RANGE_OPTIONS}
-              value={range}
-              onChange={setRange}
-            />
+      <div className="mx-auto max-w-2xl pb-[max(env(safe-area-inset-bottom),32px)]">
+        <PageHeader
+          title="Stats"
+          actions={
+            !nothingSaved && (
+              <Segmented<StatsRange>
+                size="sm"
+                aria-label="Time range"
+                options={RANGE_OPTIONS}
+                value={range}
+                onChange={setRange}
+              />
+            )
+          }
+        />
+
+        <div className="flex flex-col gap-6 px-4 pt-2">
+          {error && (
+            <div role="alert" className="rounded-cell bg-live/12 px-4 py-3 text-subhead text-live">
+              Could not read your sessions: {error}
+            </div>
           )}
-        </header>
 
-        {error && (
-          <div
-            role="alert"
-            className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200 ring-1 ring-rose-500/30"
-          >
-            Could not read your sessions: {error}
-          </div>
-        )}
-
-        {stats === null ? (
-          !error && (
-            <p role="status" className="py-16 text-center text-zinc-500">
-              Loading…
-            </p>
-          )
-        ) : nothingSaved ? (
-          <div className="flex flex-col items-center gap-4 py-16 text-center">
-            <h2 className="text-xl font-semibold text-white">No jams to count yet</h2>
-            <p className="max-w-md text-sm text-zinc-400">
-              Once you save a few jams, this page shows how long you play, your streaks, the keys
-              you lean on and the progressions you come back to.
-            </p>
-            <Link
-              to="/"
-              className="inline-flex min-h-11 items-center rounded-xl bg-violet-400 px-5 text-sm font-semibold text-zinc-950 hover:bg-violet-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
-            >
-              Start a jam
-            </Link>
-          </div>
-        ) : (
-          <>
-            <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <Tile
-                label="Time played"
-                value={durationLabel(stats.totalSeconds)}
-                spoken={durationSpoken(stats.totalSeconds)}
-              />
-              <Tile label="Sessions" value={String(stats.sessionCount)} />
-              <Tile
-                label="Current streak"
-                value={days(stats.streak.current)}
-                accent={stats.streak.current > 0}
-              />
-              <Tile label="Longest streak" value={days(stats.streak.longest)} />
-            </dl>
-
-            {emptyRange ? (
-              <div className="flex flex-col items-center gap-3 py-10 text-center">
-                <p className="text-zinc-300">No jams {RANGE_TEXT[range]}.</p>
-                <button
-                  type="button"
-                  onClick={() => setRange('all')}
-                  className="min-h-11 rounded-xl px-4 text-sm text-violet-200 hover:bg-zinc-800/70 focus-visible:outline-2 focus-visible:outline-violet-300"
+          {stats === null ? (
+            !error && (
+              <p role="status" className="py-16 text-center text-subhead text-label-2">
+                Loading…
+              </p>
+            )
+          ) : nothingSaved ? (
+            <EmptyState
+              icon={<BarChart3 aria-hidden />}
+              title="No jams to count yet"
+              description="Save a few jams and this page shows how long you play, your streaks, the keys you lean on and the progressions you come back to."
+              action={
+                <Link
+                  to="/"
+                  className="inline-flex h-11 items-center rounded-control bg-accent px-5 text-subhead font-semibold text-accent-fg transition-[filter] hover:brightness-110"
                 >
-                  Show all time
-                </button>
-              </div>
-            ) : (
-              <>
-                <Card title="Time per day">
-                  <DayStrip days={stats.perDay} />
-                </Card>
+                  Start a jam
+                </Link>
+              }
+            />
+          ) : (
+            <>
+              <Group footer="Worked out on this device from your saved jams.">
+                <SummaryRow
+                  label="Time played"
+                  value={durationLabel(stats.totalSeconds)}
+                  spoken={durationSpoken(stats.totalSeconds)}
+                />
+                <SummaryRow label="Sessions" value={String(stats.sessionCount)} />
+                <SummaryRow
+                  label="Current streak"
+                  value={days(stats.streak.current)}
+                  accent={stats.streak.current > 0}
+                />
+                <SummaryRow label="Longest streak" value={days(stats.streak.longest)} />
+              </Group>
 
-                <div className="grid gap-5 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-                  <Card title="Keys you play">
+              {emptyRange ? (
+                <EmptyState
+                  className="py-10"
+                  title={`No jams ${RANGE_TEXT[range]}.`}
+                  action={
+                    <Button variant="gray" onClick={() => setRange('all')}>
+                      Show all time
+                    </Button>
+                  }
+                />
+              ) : (
+                <>
+                  <Group title="Time per day" flush>
+                    <div className="px-4 pt-4 pb-3">
+                      <DayStrip days={stats.perDay} />
+                    </div>
+                  </Group>
+
+                  <Group title="Keys you play">
                     {stats.keys.length === 0 ? (
                       <Muted>No keys detected yet.</Muted>
                     ) : (
-                      <KeyList stats={stats} spellingFollowsKey={spellingFollowsKey} />
+                      <KeyRows stats={stats} spellingFollowsKey={spellingFollowsKey} />
                     )}
-                  </Card>
+                  </Group>
 
-                  <Card title="Top progressions">
+                  <Group title="Top progressions">
                     {stats.progressions.length === 0 ? (
                       <Muted>
                         No repeating progressions yet. Loop a few chords and they show here.
                       </Muted>
                     ) : (
-                      <ol className="flex flex-col gap-2">
-                        {stats.progressions.slice(0, TOP_PROGRESSIONS).map((p, i) => (
-                          <li
-                            key={i}
-                            data-testid="stats-progression"
-                            className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-zinc-950/60 px-3 py-2"
-                          >
-                            <span className="flex flex-wrap gap-3">
-                              {p.chords.map((c, j) => (
-                                <span key={j} className="flex flex-col items-center leading-tight">
-                                  <span className="text-base font-semibold text-white">
-                                    {pretty(
-                                      chordSymbol(c, p.key, { spellingFollowsKey, showSlash }),
-                                    )}
-                                  </span>
-                                  <span className="text-xs text-zinc-500">
-                                    {p.key ? pretty(romanNumeral(c, p.key)) : ''}
-                                  </span>
+                      stats.progressions.slice(0, TOP_PROGRESSIONS).map((p, i) => (
+                        <div
+                          key={i}
+                          data-testid="stats-progression"
+                          className="flex min-h-11 items-center gap-3 px-4 py-2.5"
+                        >
+                          <span className="flex min-w-0 flex-1 flex-wrap gap-x-3.5 gap-y-1">
+                            {p.chords.map((c, j) => (
+                              <span key={j} className="flex flex-col items-center leading-tight">
+                                <span className="text-body font-semibold text-label">
+                                  {pretty(chordSymbol(c, p.key, { spellingFollowsKey, showSlash }))}
                                 </span>
-                              ))}
-                            </span>
-                            <span className="ml-auto text-right text-sm text-zinc-400 tabular-nums">
-                              ×{p.count}
-                              <span className="block text-xs text-zinc-500">
-                                {p.sessions} session{p.sessions === 1 ? '' : 's'}
-                                {p.key && ` · ${pretty(keyName(p.key, { spellingFollowsKey }))}`}
+                                <span className="text-caption font-medium text-accent">
+                                  {p.key ? pretty(romanNumeral(c, p.key)) : ''}
+                                </span>
                               </span>
+                            ))}
+                          </span>
+                          <span className="shrink-0 text-right leading-tight">
+                            <span className="block text-body text-label-2 tabular">×{p.count}</span>
+                            <span className="block text-caption text-label-3">
+                              {plural(p.sessions, 'session')}
+                              {p.key && ` · ${pretty(keyName(p.key, { spellingFollowsKey }))}`}
                             </span>
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </Group>
+
+                  <Group title="Chord qualities" flush>
+                    {stats.chordQualities.length === 0 ? (
+                      <Muted>Chord colours show up once you have repeating progressions.</Muted>
+                    ) : (
+                      <ul
+                        className="flex flex-wrap gap-1.5 px-4 py-3"
+                        aria-label="Chord qualities by use"
+                      >
+                        {stats.chordQualities.map((q) => (
+                          <li key={q.quality} data-testid="stats-quality">
+                            <Badge className="h-7 gap-1.5 px-3 text-footnote">
+                              {qualityName(q.quality)}
+                              <span className="font-medium text-label-3 tabular">{q.count}</span>
+                            </Badge>
                           </li>
                         ))}
-                      </ol>
+                      </ul>
                     )}
-                  </Card>
-                </div>
+                  </Group>
+                </>
+              )}
 
-                <Card title="Chord qualities">
-                  {stats.chordQualities.length === 0 ? (
-                    <Muted>Chord colours show up once you have repeating progressions.</Muted>
-                  ) : (
-                    <ul className="flex flex-wrap gap-1.5" aria-label="Chord qualities by use">
-                      {stats.chordQualities.map((q) => (
-                        <li
-                          key={q.quality}
-                          data-testid="stats-quality"
-                          className="inline-flex min-h-9 items-center gap-2 rounded-full bg-zinc-900 px-3 text-sm text-zinc-200 ring-1 ring-zinc-800"
-                        >
-                          {qualityName(q.quality)}
-                          <span className="text-xs text-zinc-500 tabular-nums">{q.count}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </Card>
-              </>
-            )}
-
-            {stats.leastPlayedKeys.length > 0 && (
-              <section
-                aria-labelledby="stats-nudge"
-                className="rounded-2xl bg-violet-400/5 p-4 ring-1 ring-violet-400/20"
-              >
-                <h2 id="stats-nudge" className="mb-1 text-base font-semibold text-violet-100">
-                  Try jamming in…
-                </h2>
-                <p className="mb-3 text-sm text-zinc-400">
-                  Keys you have spent under five minutes in, closest to your usual ones first.
-                </p>
-                <ul className="flex flex-wrap gap-2">
+              {stats.leastPlayedKeys.length > 0 && (
+                <Group
+                  title="Try jamming in…"
+                  aria-label="Try jamming in…"
+                  footer="Keys you have spent under five minutes in, closest to your usual ones first."
+                >
                   {stats.leastPlayedKeys.slice(0, NUDGES).map((k) => {
                     const name = pretty(keyName(k, { spellingFollowsKey }));
                     return (
-                      <li key={`${k.tonic}:${k.mode}`}>
-                        <Link
-                          to={jamInKeyHref(k)}
-                          aria-label={`Jam in ${name}`}
-                          className="inline-flex min-h-11 items-center rounded-xl bg-zinc-900 px-4 text-sm font-medium text-white ring-1 ring-zinc-800 hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-violet-300"
-                        >
-                          {name}
-                        </Link>
-                      </li>
+                      <Link
+                        key={`${k.tonic}:${k.mode}`}
+                        to={jamInKeyHref(k)}
+                        aria-label={`Jam in ${name}`}
+                        className="block transition-colors duration-100 hover:bg-fill-4 active:bg-fill-3"
+                      >
+                        <Row label={name} chevron />
+                      </Link>
                     );
                   })}
-                </ul>
-              </section>
-            )}
-          </>
-        )}
+                </Group>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function Tile({
+function SummaryRow({
   label,
   value,
   spoken,
@@ -257,72 +246,60 @@ function Tile({
   accent?: boolean;
 }) {
   return (
-    <div data-testid="stats-tile" className="rounded-2xl bg-zinc-900/50 p-4 ring-1 ring-zinc-800">
-      <dt className="text-xs font-medium tracking-widest text-zinc-500 uppercase">{label}</dt>
-      <dd
-        aria-label={spoken}
-        className={cx(
-          'mt-1 text-3xl font-semibold tabular-nums',
-          accent ? 'text-violet-200' : 'text-white',
-        )}
-      >
-        {value}
-      </dd>
-    </div>
-  );
-}
-
-function Card({ title, children }: { title: string; children: ReactNode }) {
-  const id = `stats-${title.toLowerCase().replace(/\s+/g, '-')}`;
-  return (
-    <section aria-labelledby={id} className="rounded-2xl bg-zinc-900/40 p-4 ring-1 ring-zinc-900">
-      <h2 id={id} className="mb-3 text-xs font-medium tracking-widest text-zinc-500 uppercase">
-        {title}
-      </h2>
-      {children}
-    </section>
+    <Row
+      data-testid="stats-tile"
+      label={label}
+      accessory={
+        <span aria-label={spoken} className={cx('tabular', accent && 'font-semibold text-accent')}>
+          {value}
+        </span>
+      }
+    />
   );
 }
 
 function Muted({ children }: { children: ReactNode }) {
-  return <p className="text-sm text-zinc-500">{children}</p>;
+  return <p className="px-4 py-3 text-subhead text-label-2">{children}</p>;
 }
 
-function KeyList({ stats, spellingFollowsKey }: { stats: Stats; spellingFollowsKey: boolean }) {
+function KeyRows({ stats, spellingFollowsKey }: { stats: Stats; spellingFollowsKey: boolean }) {
   const max = Math.max(1, ...stats.keys.map((k) => k.seconds));
   const total = Math.max(
     1,
     stats.keys.reduce((n, k) => n + k.seconds, 0),
   );
-  return (
-    <ul className="flex flex-col gap-2.5">
-      {stats.keys.map((k) => {
-        const name = pretty(keyName(k.key, { spellingFollowsKey }));
-        const pct = Math.round((k.seconds / total) * 100);
-        return (
-          <li key={`${k.key.tonic}:${k.key.mode}`} data-testid="stats-key">
-            <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="font-medium text-white">{name}</span>
-              <span className="text-zinc-400 tabular-nums">
-                {durationLabel(k.seconds)} · {pct}%
-              </span>
-            </div>
+  return stats.keys.map((k) => {
+    const name = pretty(keyName(k.key, { spellingFollowsKey }));
+    const pct = Math.round((k.seconds / total) * 100);
+    return (
+      <Row
+        key={`${k.key.tonic}:${k.key.mode}`}
+        data-testid="stats-key"
+        stacked
+        label={
+          <span className="flex items-baseline justify-between gap-3">
+            <span>{name}</span>
+            <span className="text-subhead text-label-2 tabular">
+              {durationLabel(k.seconds)} · {pct}%
+            </span>
+          </span>
+        }
+        accessory={
+          <div
+            role="meter"
+            aria-label={`${name}: ${durationSpoken(k.seconds)}, ${pct}% of key time, ${plural(k.sessions, 'session')}`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={pct}
+            className="h-1 overflow-hidden rounded-full bg-fill-3"
+          >
             <div
-              role="meter"
-              aria-label={`${name}: ${durationSpoken(k.seconds)}, ${pct}% of key time, ${k.sessions} session${k.sessions === 1 ? '' : 's'}`}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={pct}
-              className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-800"
-            >
-              <div
-                className="h-full rounded-full bg-violet-400"
-                style={{ width: `${(k.seconds / max) * 100}%` }}
-              />
-            </div>
-          </li>
-        );
-      })}
-    </ul>
-  );
+              className="h-full rounded-full bg-accent"
+              style={{ width: `${(k.seconds / max) * 100}%` }}
+            />
+          </div>
+        }
+      />
+    );
+  });
 }

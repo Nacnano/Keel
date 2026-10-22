@@ -10,8 +10,7 @@ import {
   tonicName,
 } from '@/theory';
 import type { KeyGrade, KeyQuestion } from '@/theory';
-import { Button } from '@/ui/components/Button';
-import { Segmented } from '@/ui/components/Segmented';
+import { Button, Segmented } from '@/ui/kit';
 import { cx } from '@/ui/lib/cx';
 import { chordsClip } from './playback';
 import { Feedback, PlayControls } from './parts';
@@ -47,12 +46,12 @@ export function KeyDrill({ level, keys, bpm, playback, lifetime, onGraded, rng }
   const cadenceIn = (k: Key) => chordsClip(cadenceChords(k, level), { bpm, beats: 1 });
 
   return (
-    <div className="flex flex-col gap-5">
-      <ScoreBar score={t.score} streak={t.streak} lifetime={lifetime} />
-      <PlayControls trainer={t} />
+    <div className="flex flex-col gap-6">
+      <PlayControls trainer={t} prompt="Which key is this in?" />
       {q && (
         <div className="flex flex-col items-center gap-4">
           <Segmented<KeyMode>
+            size="sm"
             aria-label="Key mode"
             options={MODE_OPTIONS}
             value={mode}
@@ -82,22 +81,30 @@ export function KeyDrill({ level, keys, bpm, playback, lifetime, onGraded, rng }
                   }}
                   className={cx(
                     'absolute flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full',
-                    'text-sm font-semibold transition-colors duration-150 select-none',
-                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300',
+                    'text-subhead font-semibold transition-[background-color,color,transform] duration-150 select-none',
+                    'active:scale-95 disabled:cursor-default',
                     right
-                      ? 'bg-emerald-500/25 text-emerald-100 ring-2 ring-emerald-400/70'
+                      ? 'bg-ok text-white'
                       : wrong
-                        ? 'bg-rose-500/25 text-rose-100 ring-2 ring-rose-400/70'
-                        : 'bg-zinc-800/90 text-zinc-100 ring-1 ring-zinc-700 hover:bg-zinc-700',
+                        ? 'bg-live text-white'
+                        : feedback
+                          ? 'bg-fill-4 text-label-3'
+                          : 'bg-fill-3 text-label hover:bg-accent/15 hover:text-accent active:bg-accent active:text-accent-fg',
                   )}
                 >
                   {shortName(k)}
                 </button>
               );
             })}
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-xs text-zinc-500">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-[22%] rounded-full ring-1 ring-separator"
+            />
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-center text-footnote text-label-2">
               {feedback ? (
-                <span className="text-base font-semibold text-white">{pretty(keyName(q.key))}</span>
+                <span className="text-headline font-semibold text-label">
+                  {pretty(keyName(q.key))}
+                </span>
               ) : (
                 <span>
                   Tap the key
@@ -119,9 +126,11 @@ export function KeyDrill({ level, keys, bpm, playback, lifetime, onGraded, rng }
           }
           actions={
             <>
-              <Button onClick={() => t.playClip(cadenceIn(q.key))}>Play correct</Button>
+              <Button variant="plain" onClick={() => t.playClip(cadenceIn(q.key))}>
+                Play correct
+              </Button>
               {!grade.correct && answer && (
-                <Button onClick={() => t.playClip(cadenceIn(answer))}>
+                <Button variant="plain" onClick={() => t.playClip(cadenceIn(answer))}>
                   Play yours ({shortName(answer)})
                 </Button>
               )}
@@ -142,6 +151,7 @@ export function KeyDrill({ level, keys, bpm, playback, lifetime, onGraded, rng }
           </p>
         </Feedback>
       )}
+      <ScoreBar score={t.score} streak={t.streak} lifetime={lifetime} />
     </div>
   );
 }

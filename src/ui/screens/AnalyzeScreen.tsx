@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
+import { AlertCircle, Pause, Play } from 'lucide-react';
 import {
   analyseSamplesToEvents,
   decodeFileToMono,
@@ -12,12 +13,9 @@ import {
 import type { JamMode, VocabLevel } from '@/core';
 import { draftFromAnalysis, nameFromFile, saveAnalysedSession } from '@/data/importAnalysis';
 import { useSettings } from '@/state/settingsStore';
-import { Button } from '../components/Button';
 import { KeyBadge } from '../components/KeyBadge';
-import { LevelSelector } from '../components/LevelSelector';
-import { ModeToggle } from '../components/ModeToggle';
-import { Switch } from '../components/Switch';
 import { toast } from '../components/toastStore';
+import { Button, Group, PageHeader, Row, Segmented, Slider, Switch } from '../kit';
 import { chordSymbol, keyLabel, pretty } from '../lib/chordLabel';
 import { cx } from '../lib/cx';
 import { romanNumeral } from '../lib/numeral';
@@ -150,74 +148,131 @@ export function AnalyzeScreen() {
   };
 
   const busy = phase.kind === 'working';
+  const options = (
+    <AnalyzeOptions level={level} mode={mode} onLevel={changeLevel} onMode={changeMode} />
+  );
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 pt-4 pb-[max(env(safe-area-inset-bottom),24px)] lg:px-8">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-semibold text-white lg:text-3xl">Analyze a file</h1>
-            <p className="text-sm text-zinc-400">
-              Key and chord chart of a song, with the same detector as the jam screen.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <LevelSelector value={level} onChange={changeLevel} />
-            <ModeToggle value={mode} onChange={changeMode} />
-          </div>
-        </header>
+    <div className="h-full overflow-y-auto">
+      <div className="mx-auto max-w-3xl pb-[max(env(safe-area-inset-bottom),32px)]">
+        <PageHeader title="Analyze a file" subtitle="Key and chords from a song" />
 
-        {phase.kind === 'done' && file ? (
-          <>
-            <DropZone onFile={pick} compact />
-            <AnalyzeResult
-              key={`${file.name}:${file.size}:${file.lastModified}`}
-              file={file}
-              result={phase.result}
-              level={phase.level}
-              mode={phase.mode}
-              instrument={instrument}
-              spellingFollowsKey={settings.spellingFollowsKey}
-              showSlash={showSlashChords}
-              onReset={reset}
-            />
-          </>
-        ) : (
-          <DropZone onFile={pick} disabled={busy} />
-        )}
+        <div className="flex flex-col gap-6 px-4 pt-2">
+          {phase.kind === 'done' && file ? (
+            <>
+              <DropZone onFile={pick} compact />
+              <AnalyzeResult
+                key={`${file.name}:${file.size}:${file.lastModified}`}
+                file={file}
+                result={phase.result}
+                level={phase.level}
+                mode={phase.mode}
+                instrument={instrument}
+                spellingFollowsKey={settings.spellingFollowsKey}
+                showSlash={showSlashChords}
+                options={options}
+                onReset={reset}
+              />
+            </>
+          ) : (
+            <>
+              <DropZone onFile={pick} disabled={busy} />
 
-        {phase.kind === 'working' && (
-          <Progress
-            stage={phase.stage}
-            fraction={phase.fraction}
-            name={file?.name}
-            onCancel={reset}
-          />
-        )}
+              {phase.kind === 'working' && (
+                <Progress
+                  stage={phase.stage}
+                  fraction={phase.fraction}
+                  name={file?.name}
+                  onCancel={reset}
+                />
+              )}
 
-        {phase.kind === 'large' && (
-          <Notice tone="warn" title={`${phase.file.name} is ${formatBytes(phase.file.size)}`}>
-            <p>
-              Files over {formatBytes(LARGE_FILE_BYTES)} are decoded to raw audio in memory (often
-              ten times the file size), which can be slow or fail on a phone or tablet.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button variant="primary" onClick={() => void start(phase.file)}>
-                Analyze anyway
-              </Button>
-              <Button variant="ghost" onClick={reset}>
-                Choose another file
-              </Button>
-            </div>
-          </Notice>
-        )}
+              {phase.kind === 'large' && (
+                <Notice
+                  tone="warn"
+                  title={`${phase.file.name} is ${formatBytes(phase.file.size)}`}
+                  actions={
+                    <>
+                      <Button variant="filled" size="sm" onClick={() => void start(phase.file)}>
+                        Analyze anyway
+                      </Button>
+                      <Button variant="plain" size="sm" onClick={reset}>
+                        Choose another file
+                      </Button>
+                    </>
+                  }
+                >
+                  Files over {formatBytes(LARGE_FILE_BYTES)} are decoded to raw audio in memory
+                  (often ten times the file size), which can be slow or fail on a phone or tablet.
+                </Notice>
+              )}
 
-        {phase.kind === 'error' && (
-          <Notice tone="error" title={phase.title}>
-            <p>{phase.message}</p>
-          </Notice>
-        )}
+              {phase.kind === 'error' && (
+                <Notice tone="error" title={phase.title}>
+                  {phase.message}
+                </Notice>
+              )}
+
+              {options}
+            </>
+          )}
+        </div>
       </div>
     </div>
+  );
+}
+
+const LEVELS = [
+  { value: 1 as const, label: 'Triads' },
+  { value: 2 as const, label: '7ths' },
+  { value: 3 as const, label: 'Jazz' },
+];
+
+const MODES = [
+  { value: 'solo' as const, label: 'Solo' },
+  { value: 'room' as const, label: 'Room' },
+];
+
+function AnalyzeOptions({
+  level,
+  mode,
+  onLevel,
+  onMode,
+}: {
+  level: VocabLevel;
+  mode: JamMode;
+  onLevel(l: VocabLevel): void;
+  onMode(m: JamMode): void;
+}) {
+  return (
+    <Group
+      title="Options"
+      footer="Room suits a full mix with vocals; Solo suits a single instrument. Changing either re-analyses the file."
+    >
+      <Row
+        label="Chord detail"
+        accessory={
+          <Segmented<VocabLevel>
+            size="sm"
+            aria-label="Chord detail"
+            options={LEVELS}
+            value={level}
+            onChange={onLevel}
+          />
+        }
+      />
+      <Row
+        label="Recording"
+        accessory={
+          <Segmented<JamMode>
+            size="sm"
+            aria-label="Listening mode"
+            options={MODES}
+            value={mode}
+            onChange={onMode}
+          />
+        }
+      />
+    </Group>
   );
 }
 
@@ -235,17 +290,14 @@ function Progress({
   const pct = Math.round(Math.max(0, Math.min(1, fraction)) * 100);
   const label = stage === 'decoding' ? 'Decoding' : 'Analysing';
   return (
-    <section
-      aria-label="Progress"
-      className="flex flex-col gap-3 rounded-2xl bg-zinc-900/40 p-5 ring-1 ring-zinc-900"
-    >
-      <div className="flex items-baseline justify-between gap-4">
-        <p role="status" className="text-sm text-zinc-200">
+    <section aria-label="Progress" className="flex flex-col gap-2 px-1">
+      <div className="flex items-center justify-between gap-4">
+        <p role="status" className="min-w-0 truncate text-subhead text-label">
           {label}
-          {name ? <span className="text-zinc-500"> {name}</span> : null}
+          {name ? <span className="text-label-2"> {name}</span> : null}
           {stage === 'analysing' ? ` · ${pct}%` : '…'}
         </p>
-        <Button variant="ghost" onClick={onCancel}>
+        <Button variant="plain" size="sm" onClick={onCancel}>
           Cancel
         </Button>
       </div>
@@ -255,12 +307,12 @@ function Progress({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={stage === 'analysing' ? pct : undefined}
-        className="h-2 overflow-hidden rounded-full bg-zinc-800"
+        className="h-1 overflow-hidden rounded-full bg-fill-3"
       >
         <div
           className={cx(
-            'h-full rounded-full bg-violet-400 transition-[width] duration-200',
-            stage === 'decoding' && 'w-1/3 animate-pulse',
+            'h-full rounded-full bg-accent transition-[width] duration-200',
+            stage === 'decoding' && 'anim-pulse-soft w-1/3',
           )}
           style={stage === 'analysing' ? { width: `${pct}%` } : undefined}
         />
@@ -269,27 +321,39 @@ function Progress({
   );
 }
 
+/** Inline tinted row for a warning or an error (announced, but not a modal alert). */
 function Notice({
   tone,
   title,
   children,
+  actions,
 }: {
   tone: 'warn' | 'error';
   title: string;
   children: ReactNode;
+  actions?: ReactNode;
 }) {
   return (
     <section
       role="alert"
       className={cx(
-        'rounded-2xl p-5 text-sm ring-1',
-        tone === 'error'
-          ? 'bg-rose-500/10 text-rose-100 ring-rose-500/30'
-          : 'bg-amber-400/10 text-amber-100 ring-amber-400/30',
+        'flex items-start gap-3 rounded-cell px-4 py-3',
+        tone === 'error' ? 'bg-live/12' : 'bg-warn/12',
       )}
     >
-      <h2 className="mb-1 text-base font-semibold text-white">{title}</h2>
-      {children}
+      <AlertCircle
+        aria-hidden
+        className={cx('mt-0.5 size-5 shrink-0', tone === 'error' ? 'text-live' : 'text-warn')}
+      />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <h2
+          className={cx('text-subhead font-semibold', tone === 'error' ? 'text-live' : 'text-warn')}
+        >
+          {title}
+        </h2>
+        <p className="text-subhead text-label-2">{children}</p>
+        {actions && <div className="flex flex-wrap gap-2 pt-1">{actions}</div>}
+      </div>
     </section>
   );
 }
@@ -302,6 +366,8 @@ interface AnalyzeResultProps {
   instrument: 'piano' | 'guitar';
   spellingFollowsKey: boolean;
   showSlash: boolean;
+  /** Chord detail + mode controls, shown between the chart and the save actions. */
+  options: ReactNode;
   onReset(): void;
 }
 
@@ -313,6 +379,7 @@ function AnalyzeResult({
   instrument,
   spellingFollowsKey,
   showSlash,
+  options,
   onReset,
 }: AnalyzeResultProps) {
   const navigate = useNavigate();
@@ -320,7 +387,7 @@ function AnalyzeResult({
   const [keepAudio, setKeepAudio] = useState(true);
   const [saving, setSaving] = useState(false);
   const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null);
-  const { time, seek } = useAudioTime(audioEl);
+  const { time, playing, seek } = useAudioTime(audioEl);
 
   // The <audio> plays the dropped file through an object URL that lives as long as the view.
   useEffect(() => {
@@ -378,6 +445,11 @@ function AnalyzeResult({
       toast(`Could not save: ${errorText(err)}`, { tone: 'error' });
     }
   };
+  const toggle = () => {
+    if (!audioEl) return;
+    if (audioEl.paused) void audioEl.play()?.catch(() => {});
+    else audioEl.pause();
+  };
   const copy = async () => {
     const how = await copyChart(draft);
     toast(how === 'copied' ? 'Chord chart copied' : 'Clipboard unavailable: chart downloaded', {
@@ -386,60 +458,73 @@ function AnalyzeResult({
     });
   };
 
+  const nameId = useId();
   return (
-    <div data-testid="analyze-result" className="flex flex-col gap-5">
-      <section
-        aria-label="Player"
-        className="flex flex-col gap-4 rounded-2xl bg-zinc-900/40 p-4 ring-1 ring-zinc-900"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-          <KeyBadge keyEstimate={key} spellingFollowsKey={spellingFollowsKey} className="-ml-3" />
-          <div className="flex min-h-11 items-baseline gap-3" aria-live="off">
-            <span className="text-xs tracking-widest text-zinc-500 uppercase">Now</span>
-            <span data-testid="analyze-now" className="text-3xl font-semibold text-white">
+    <div data-testid="analyze-result" className="flex flex-col gap-6">
+      <section aria-label="Player" className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+          <KeyBadge keyEstimate={key} spellingFollowsKey={spellingFollowsKey} className="-ml-2.5" />
+          <div className="flex min-h-11 items-baseline gap-2.5" aria-live="off">
+            <span className="text-footnote font-medium tracking-wide text-label-3 uppercase">
+              Now
+            </span>
+            <span data-testid="analyze-now" className="text-title-1 font-bold text-label">
               {now ? pretty(chordSymbol(now, key, { spellingFollowsKey, showSlash })) : '—'}
             </span>
             {now && key && (
-              <span className="text-base text-zinc-400">{pretty(romanNumeral(now, key))}</span>
+              <span className="text-callout font-medium text-accent">
+                {pretty(romanNumeral(now, key))}
+              </span>
             )}
           </div>
-          <span className="text-sm text-zinc-500 tabular-nums">
-            {clockLabel(time)} / {clockLabel(result.durationSec)}
-          </span>
         </div>
-        <audio
-          ref={setAudioEl}
-          controls
-          preload="auto"
-          aria-label={`Play ${file.name}`}
-          className="w-full [color-scheme:dark]"
-        />
+
+        <div className="flex items-center gap-3 rounded-card bg-surface px-3 py-2.5">
+          <Button
+            variant="filled"
+            icon
+            round
+            aria-label={playing ? `Pause ${file.name}` : `Play ${file.name}`}
+            onClick={toggle}
+          >
+            {playing ? (
+              <Pause className="size-5 fill-current" aria-hidden />
+            ) : (
+              <Play className="ml-0.5 size-5 fill-current" aria-hidden />
+            )}
+          </Button>
+          <span className="w-11 text-right text-footnote text-label-2 tabular" aria-hidden>
+            {clockLabel(time)}
+          </span>
+          <Slider
+            aria-label="Seek"
+            aria-valuetext={`${clockLabel(time)} of ${clockLabel(result.durationSec)}`}
+            className="min-w-0 flex-1"
+            min={0}
+            max={Math.max(0.1, result.durationSec)}
+            step={0.1}
+            value={Math.min(time, result.durationSec)}
+            onChange={seek}
+          />
+          <span className="w-11 text-footnote text-label-3 tabular" aria-hidden>
+            {clockLabel(result.durationSec)}
+          </span>
+          {/* Playback engine only; the row above is its interface. */}
+          <audio ref={setAudioEl} preload="auto" className="hidden" />
+        </div>
+
         {spans.length > 0 && (
-          <ul aria-label="Key history" className="flex flex-wrap gap-2">
-            {spans.map((s) => {
-              const active = time >= s.start && time < s.end;
-              return (
-                <li key={s.rec.id}>
-                  <button
-                    type="button"
-                    data-testid="key-span"
-                    onClick={() => seek(s.start)}
-                    className={cx(
-                      'flex min-h-11 items-baseline gap-2 rounded-xl px-3 text-sm ring-1 transition-colors',
-                      'focus-visible:outline-2 focus-visible:outline-violet-300',
-                      active
-                        ? 'bg-violet-400/15 text-violet-100 ring-violet-300/50'
-                        : 'bg-zinc-900 text-zinc-300 ring-zinc-800 hover:bg-zinc-800',
-                    )}
-                  >
-                    <span className="font-medium">{pretty(keyLabel(s.rec.key, opts))}</span>
-                    <span className="text-xs text-zinc-500 tabular-nums">
-                      {clockLabel(s.start)}–{clockLabel(s.end)}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
+          <ul aria-label="Key history" className="flex flex-wrap gap-1.5">
+            {spans.map((s) => (
+              <li key={s.rec.id}>
+                <KeySpanButton
+                  label={pretty(keyLabel(s.rec.key, opts))}
+                  range={`${clockLabel(s.start)}–${clockLabel(s.end)}`}
+                  active={time >= s.start && time < s.end}
+                  onClick={() => seek(s.start)}
+                />
+              </li>
+            ))}
           </ul>
         )}
       </section>
@@ -452,36 +537,72 @@ function AnalyzeResult({
         showSlash={showSlash}
       />
 
-      <section
-        aria-label="Save"
-        className="flex flex-col gap-3 rounded-2xl bg-zinc-900/40 p-4 ring-1 ring-zinc-900"
-      >
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs tracking-widest text-zinc-500 uppercase">Name</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="min-h-11 rounded-xl bg-zinc-950 px-3 text-zinc-100 ring-1 ring-zinc-800 focus:ring-violet-300 focus:outline-none"
-          />
-        </label>
-        <Switch
-          label="Keep the audio in the library"
-          description={`Review plays the song (${formatBytes(file.size)} on this device).`}
-          checked={keepAudio}
-          onChange={setKeepAudio}
+      {options}
+
+      <Group title="Save">
+        <Row
+          label={<label htmlFor={nameId}>Name</label>}
+          accessory={
+            <input
+              id={nameId}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="h-8 w-48 rounded-[8px] bg-fill-3 px-2.5 text-right text-body text-label sm:w-64"
+            />
+          }
         />
-        <div className="flex flex-wrap gap-2">
-          <Button variant="primary" onClick={() => void save()} disabled={saving}>
-            {saving ? 'Saving…' : 'Save to library'}
-          </Button>
-          <Button onClick={() => void copy()} disabled={!chart.items.length}>
-            Copy chart
-          </Button>
-          <Button variant="ghost" onClick={onReset} className="ml-auto">
-            Clear
-          </Button>
-        </div>
-      </section>
+        <Row
+          label="Keep the audio in the library"
+          detail={`Review plays the song (${formatBytes(file.size)} on this device).`}
+          accessory={
+            <Switch
+              aria-label="Keep the audio in the library"
+              checked={keepAudio}
+              onChange={setKeepAudio}
+            />
+          }
+        />
+      </Group>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="filled" onClick={() => void save()} loading={saving}>
+          Save to library
+        </Button>
+        <Button variant="gray" onClick={() => void copy()} disabled={!chart.items.length}>
+          Copy chart
+        </Button>
+        <Button variant="plain" onClick={onReset} className="ml-auto">
+          Clear
+        </Button>
+      </div>
     </div>
+  );
+}
+
+function KeySpanButton({
+  label,
+  range,
+  active,
+  onClick,
+}: {
+  label: string;
+  range: string;
+  active: boolean;
+  onClick(): void;
+}) {
+  return (
+    <button
+      type="button"
+      data-testid="key-span"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cx(
+        'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-footnote font-medium transition-colors',
+        active ? 'bg-accent/15 text-accent' : 'bg-fill-3 text-label hover:bg-fill-2',
+      )}
+    >
+      {label}
+      <span className={cx('tabular', active ? 'text-accent/70' : 'text-label-3')}>{range}</span>
+    </button>
   );
 }

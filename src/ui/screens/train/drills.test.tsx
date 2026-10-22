@@ -143,7 +143,7 @@ describe('ProgressionDrill', () => {
     const slots = within(screen.getByRole('list', { name: 'Progression slots' })).getAllByRole(
       'button',
     );
-    expect(slots.map((s) => s.className.includes('emerald'))).toEqual([true, true, true, false]);
+    expect(slots.map((s) => s.dataset.mark)).toEqual(['right', 'right', 'right', 'wrong']);
   });
 
   it('tapping a slot re-targets it', () => {
