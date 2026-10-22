@@ -9,6 +9,7 @@ import { KeyBadge } from '../components/KeyBadge';
 import { LevelSelector } from '../components/LevelSelector';
 import { ModeToggle } from '../components/ModeToggle';
 import { Piano } from '../components/Piano';
+import { ScaleHelper } from '../components/ScaleHelper';
 import { SourceIndicator } from '../components/SourceIndicator';
 import { Timeline } from '../components/Timeline';
 import { toast } from '../components/toastStore';
@@ -21,6 +22,7 @@ import { suggestNext } from '../lib/suggest';
 import { useMediaQuery } from '../lib/useMediaQuery';
 import { useJamInput } from './jam/useJamInput';
 import { useJamShortcuts } from './jam/useJamShortcuts';
+import { useScalesPref } from './jam/useScalesPref';
 
 const PIANO_PREF_KEY = 'jamkey.ui.piano';
 
@@ -107,6 +109,7 @@ export function JamScreen() {
   const input = useJamInput();
   const wide = useMediaQuery('(min-width: 1024px)', true);
   const [pianoVisible, setPianoVisible] = useState(readPianoPref);
+  const [scalesOpen, toggleScales] = useScalesPref(wide);
 
   // Per-session recording choice starts from the settings default.
   useEffect(() => {
@@ -151,6 +154,7 @@ export function JamScreen() {
     setLevel: (vocabLevel: VocabLevel) => update({ vocabLevel }),
     togglePiano: () => setPianoVisible((v) => !v),
     toggleMode: () => update({ mode: settings.mode === 'solo' ? 'room' : 'solo' }),
+    toggleScales,
   });
 
   const recent = useMemo(
@@ -216,6 +220,14 @@ export function JamScreen() {
             onAudition={audition}
             spellingFollowsKey={settings.spellingFollowsKey}
           />
+          <ScaleHelper
+            chord={jam.currentChord}
+            confidence={jam.confidence}
+            keyContext={jam.keyEstimate}
+            spellingFollowsKey={settings.spellingFollowsKey}
+            open={scalesOpen}
+            onToggle={toggleScales}
+          />
         </section>
 
         <section
@@ -262,7 +274,8 @@ export function JamScreen() {
           onTogglePiano={() => setPianoVisible((v) => !v)}
         />
         <p className="hidden text-xs text-zinc-600 lg:block">
-          Space start/stop · R reset · B bookmark · 1 2 3 chord level · K keyboard · M Solo/Room
+          Space start/stop · R reset · B bookmark · 1 2 3 chord level · K keyboard · M Solo/Room · S
+          scales
         </p>
       </footer>
     </div>

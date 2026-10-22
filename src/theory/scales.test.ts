@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Chord, Key, PitchClass } from '@/core';
 import { chordTones, parseChord } from './chordName';
-import { SCALES, scalePitchClasses, scalesForChord } from './scales';
+import { SCALES, scaleNotesSpelled, scalePitchClasses, scalesForChord } from './scales';
 import type { ScaleId } from './scales';
 import { QUALITY_ORDER } from './vocab';
 
@@ -115,5 +115,100 @@ describe('scalesForChord: key context and special qualities', () => {
 
   it('is deterministic', () => {
     expect(scalesForChord(ch('Dm7'), C)).toEqual(scalesForChord(ch('Dm7'), C));
+  });
+});
+
+const A_MINOR: Key = { tonic: 9, mode: 'minor' };
+const C_MINOR: Key = { tonic: 0, mode: 'minor' };
+const F: Key = { tonic: 5, mode: 'major' };
+const Gb: Key = { tonic: 6, mode: 'major' };
+
+describe('scalesForChord: rank and position-aware reasons', () => {
+  it('rank is 1-based and follows the order', () => {
+    const out = scalesForChord(ch('G7'), C);
+    expect(out.map((s) => s.rank)).toEqual(out.map((_, i) => i + 1));
+  });
+
+  it('names the chord position and the parent scale', () => {
+    expect(top('Dm7', C).reason).toBe('ii7 in C major: mode 2 of C major; every note in the key');
+    expect(top('G7', C).reason).toContain('V7 in C major: mode 5 of C major');
+    expect(top('Fmaj7', C).reason).toContain('IVmaj7 in C major: mode 4 of C major');
+    const alt = scalesForChord(ch('G7'), C).find((s) => s.id === 'altered');
+    expect(alt?.reason).toContain('mode 7 of Ab melodic minor');
+  });
+
+  it('V7 in minor -> harmonic minor (mode 5), in any minor key', () => {
+    for (const [sym, key, tonic] of [
+      ['E7', A_MINOR, 'A'],
+      ['G7', C_MINOR, 'C'],
+    ] as const) {
+      const s = top(sym, key);
+      expect(s.id).toBe('phrygianDominant');
+      expect(s.reason).toContain(`mode 5 of ${tonic} harmonic minor`);
+      expect(s.reason).toContain('every note in the key');
+    }
+    // same chord in a major key stays mixolydian
+    expect(top('G7', C).id).toBe('mixolydian');
+  });
+
+  it('pentatonics and blues over maj / min / 7', () => {
+    const ids = (s: string, k: Key | null = C) => scalesForChord(ch(s), k).map((x) => x.id);
+    expect(ids('C')).toContain('majorPentatonic');
+    expect(ids('Am')).toEqual(expect.arrayContaining(['minorPentatonic', 'blues']));
+    expect(ids('G7')).toEqual(expect.arrayContaining(['majorPentatonic', 'blues']));
+    expect(ids('C9', null)).toContain('majorPentatonic');
+    const mp = scalesForChord(ch('G7'), C).find((s) => s.id === 'majorPentatonic');
+    expect(mp?.reason).toContain('open colour (skips a chord tone)');
+    // major pentatonic misses the major seventh, so it is not offered over maj7
+    expect(ids('Cmaj7')).not.toContain('majorPentatonic');
+  });
+
+  it('symmetric and melodic-minor choices for altered chords', () => {
+    expect(top('Bdim7', A_MINOR).id).toBe('diminishedWholeHalf');
+    expect(top('G7b9', C).id).toBe('diminishedHalfWhole');
+    expect(top('Gaug', C).id).toBe('wholeTone');
+    expect(top('G7#11', C).id).toBe('lydianDominant');
+    expect(top('G7alt', C).id).toBe('altered');
+  });
+});
+
+describe('scaleNotesSpelled', () => {
+  const notes = (sym: string, k: Key | null, id?: ScaleId) => {
+    const all = scalesForChord(ch(sym), k);
+    const s = id ? all.find((x) => x.id === id) : all[0];
+    if (!s) throw new Error(`${sym} ${id}`);
+    return scaleNotesSpelled(s, k).join(' ');
+  };
+
+  it('one letter per degree for seven-note scales', () => {
+    expect(notes('Dm7', C)).toBe('D E F G A B C');
+    expect(notes('Bbmaj7', F)).toBe('Bb C D E F G A');
+    expect(notes('E7', A_MINOR)).toBe('E F G# A B C D');
+    expect(notes('G7', C, 'lydianDominant')).toBe('G A B C# D E F');
+    expect(notes('Db7', Gb)).toBe('Db Eb F Gb Ab Bb Cb');
+  });
+
+  it('falls back to the key spelling for odd enharmonics', () => {
+    expect(notes('G7alt', C)).toBe('G Ab Bb B Db Eb F');
+  });
+
+  it('pentatonic, blues and symmetric scales use the key spelling', () => {
+    expect(notes('Am', C, 'minorPentatonic')).toBe('A C D E G');
+    expect(notes('Am', C, 'blues')).toBe('A C D Eb E G');
+    expect(notes('Gaug', C)).toBe('G A B Db Eb F');
+  });
+
+  it('respects spellingFollowsKey: false and works without a key', () => {
+    const s = scalesForChord(ch('Bbmaj7'), F)[0];
+    expect(scaleNotesSpelled(s, F, { spellingFollowsKey: false })).toEqual([
+      'A#',
+      'C',
+      'D',
+      'E',
+      'F',
+      'G',
+      'A',
+    ]);
+    expect(notes('Dm7', null)).toBe('D E F G A B C');
   });
 });
