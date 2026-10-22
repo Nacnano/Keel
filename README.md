@@ -43,9 +43,14 @@ Node 22, pnpm 11.
 
 ## Deploy
 
-Static site. On Vercel: import the GitHub repo, framework Vite, build
-`pnpm build`, output `dist`. `vercel.json` already has the SPA rewrite. Add
-`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` only if you set up sync.
+Production: **https://music.nacnano.dev** (Vercel project `jamkey`, connected to this
+repo). Every PR gets a preview deployment; every merge to `main` deploys to production.
+`vercel.json` has the SPA rewrite. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+in the Vercel project settings only if you set up sync.
+
+DNS for the custom domain lives in Cloudflare: a `CNAME` for `music` pointing at the
+value shown by `vercel domains inspect music.nacnano.dev`, with the Cloudflare proxy
+turned off (DNS only).
 
 ## Browser support
 
