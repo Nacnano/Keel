@@ -1,16 +1,16 @@
 import { useEffect, useMemo } from 'react';
-import type { ReactNode } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
+import type { VocabLevel } from '@/core';
 import { keyPool } from '@/theory';
 import type { KeySet, ModeSet, Rng } from '@/theory';
-import { LevelSelector } from '../components/LevelSelector';
-import { Segmented } from '../components/Segmented';
+import { Button, Group, PageHeader, Popover, Row, Segmented } from '../kit';
 import { ChordQualityDrill } from './train/ChordQualityDrill';
 import { KeyDrill } from './train/KeyDrill';
 import { ProgressionDrill } from './train/ProgressionDrill';
 import { createPianoPlayback, TEMPO_BPM } from './train/playback';
 import type { Playback, Tempo } from './train/playback';
 import { useTrainStorage } from './train/stats';
-import type { DrillId } from './train/stats';
+import type { DrillId, TrainPrefs } from './train/stats';
 import type { DrillProps } from './train/parts';
 
 const DRILL_OPTIONS = [
@@ -41,12 +41,102 @@ const TEMPO_OPTIONS = [
   { value: 'fast' as const, label: 'Fast', title: `${TEMPO_BPM.fast} bpm` },
 ];
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+const LEVEL_OPTIONS = [
+  { value: 1 as const, label: 'Triads' },
+  { value: 2 as const, label: '7ths' },
+  { value: 3 as const, label: 'Jazz' },
+];
+
+interface TrainOptionsProps {
+  drill: DrillId;
+  prefs: TrainPrefs;
+  setPrefs(patch: Partial<TrainPrefs>): void;
+}
+
+/** Level, key set, modes and tempo, behind one toolbar button. */
+function TrainOptions({ drill, prefs, setPrefs }: TrainOptionsProps) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">{label}</span>
-      {children}
-    </div>
+    <Popover
+      align="end"
+      width={320}
+      aria-label="Training options"
+      trigger={(t) => (
+        <Button
+          variant="plain"
+          leading={<SlidersHorizontal className="size-[18px]" aria-hidden />}
+          {...t}
+        >
+          Options
+        </Button>
+      )}
+    >
+      <div className="flex flex-col gap-3 py-1">
+        <Group title="Chords">
+          <Row
+            label="Detail"
+            stacked
+            accessory={
+              <Segmented<VocabLevel>
+                fill
+                size="sm"
+                aria-label="Chord detail"
+                options={LEVEL_OPTIONS}
+                value={prefs.level}
+                onChange={(level) => setPrefs({ level })}
+              />
+            }
+          />
+        </Group>
+        {drill !== 'quality' && (
+          <Group title="Keys">
+            <Row
+              label="Tonics"
+              stacked
+              accessory={
+                <Segmented<KeySet>
+                  fill
+                  size="sm"
+                  aria-label="Key set"
+                  options={KEYSET_OPTIONS}
+                  value={prefs.keySet}
+                  onChange={(keySet) => setPrefs({ keySet })}
+                />
+              }
+            />
+            <Row
+              label="Modes"
+              stacked
+              accessory={
+                <Segmented<ModeSet>
+                  fill
+                  size="sm"
+                  aria-label="Modes"
+                  options={MODES_OPTIONS}
+                  value={prefs.modes}
+                  onChange={(modes) => setPrefs({ modes })}
+                />
+              }
+            />
+          </Group>
+        )}
+        <Group title="Playback">
+          <Row
+            label="Tempo"
+            stacked
+            accessory={
+              <Segmented<Tempo>
+                fill
+                size="sm"
+                aria-label="Tempo"
+                options={TEMPO_OPTIONS}
+                value={prefs.tempo}
+                onChange={(tempo) => setPrefs({ tempo })}
+              />
+            }
+          />
+        </Group>
+      </div>
+    </Popover>
   );
 }
 
@@ -76,63 +166,32 @@ export function TrainScreen({ playback: injected, rng }: TrainScreenProps = {}) 
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 pb-[max(env(safe-area-inset-bottom),24px)]">
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-semibold tracking-tight text-white">Train</h1>
-            <p className="text-sm text-zinc-500">{DRILL_HINT[drill]}</p>
-          </div>
-          <Segmented
-            aria-label="Drill"
-            options={DRILL_OPTIONS}
-            value={drill}
-            onChange={(d: DrillId) => {
-              playback.stop();
-              setPrefs({ drill: d });
-            }}
-          />
-        </header>
-
-        <section
-          aria-label="Difficulty"
-          className="flex flex-wrap gap-x-6 gap-y-4 rounded-2xl bg-zinc-900/40 p-4 ring-1 ring-zinc-900"
-        >
-          <Field label="Chords">
-            <LevelSelector value={prefs.level} onChange={(level) => setPrefs({ level })} />
-          </Field>
-          {drill !== 'quality' && (
+      <div className="mx-auto max-w-3xl pb-[max(env(safe-area-inset-bottom),32px)]">
+        <PageHeader
+          title="Train"
+          subtitle={DRILL_HINT[drill]}
+          actions={
             <>
-              <Field label="Keys">
-                <Segmented<KeySet>
-                  aria-label="Key set"
-                  options={KEYSET_OPTIONS}
-                  value={prefs.keySet}
-                  onChange={(keySet) => setPrefs({ keySet })}
-                />
-              </Field>
-              <Field label="Modes">
-                <Segmented<ModeSet>
-                  aria-label="Modes"
-                  options={MODES_OPTIONS}
-                  value={prefs.modes}
-                  onChange={(modes) => setPrefs({ modes })}
-                />
-              </Field>
+              <Segmented
+                size="sm"
+                aria-label="Drill"
+                options={DRILL_OPTIONS}
+                value={drill}
+                onChange={(d: DrillId) => {
+                  playback.stop();
+                  setPrefs({ drill: d });
+                }}
+              />
+              <TrainOptions drill={drill} prefs={prefs} setPrefs={setPrefs} />
             </>
-          )}
-          <Field label="Tempo">
-            <Segmented<Tempo>
-              aria-label="Tempo"
-              options={TEMPO_OPTIONS}
-              value={prefs.tempo}
-              onChange={(tempo) => setPrefs({ tempo })}
-            />
-          </Field>
-        </section>
+          }
+        />
 
-        {drill === 'quality' && <ChordQualityDrill key="quality" {...props} />}
-        {drill === 'progression' && <ProgressionDrill key="progression" {...props} />}
-        {drill === 'key' && <KeyDrill key="key" {...props} />}
+        <div className="mx-auto w-full max-w-xl px-4 pt-6">
+          {drill === 'quality' && <ChordQualityDrill key="quality" {...props} />}
+          {drill === 'progression' && <ProgressionDrill key="progression" {...props} />}
+          {drill === 'key' && <KeyDrill key="key" {...props} />}
+        </div>
       </div>
     </div>
   );

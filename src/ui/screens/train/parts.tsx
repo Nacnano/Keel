@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
+import { Check, CircleCheck, CircleX, Play, RotateCcw, X } from 'lucide-react';
 import type { Key, VocabLevel } from '@/core';
 import type { Rng } from '@/theory';
-import { Button } from '@/ui/components/Button';
+import { Button } from '@/ui/kit';
 import { cx } from '@/ui/lib/cx';
 import type { Playback } from './playback';
 import type { DrillStats } from './stats';
@@ -22,51 +23,63 @@ export interface DrillProps {
 }
 
 const STATUS: Record<string, string> = {
+  idle: 'Tap to hear the first one',
   loading: 'Loading piano…',
   playing: 'Listen…',
   answering: 'Your answer?',
+  feedback: 'Tap to hear it again',
 };
 
-/** Start / replay / next buttons and a live status line. */
+/**
+ * The drill's centre: one large round play / replay button, the question as a title and a
+ * live status line; Next appears once the answer is graded.
+ */
 export function PlayControls<Q, A, G extends Graded>({
   trainer,
+  prompt,
   startLabel = 'Start',
 }: {
   trainer: Trainer<Q, A, G>;
+  prompt: ReactNode;
   startLabel?: string;
 }) {
   const { phase, sounding } = trainer;
   const status =
     phase === 'playing' ? (sounding ? STATUS.playing : STATUS.loading) : (STATUS[phase] ?? '');
+  const idle = phase === 'idle';
+  const feedback = phase === 'feedback';
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      {phase === 'idle' ? (
-        <Button variant="primary" size="lg" onClick={trainer.next}>
-          {startLabel}
-        </Button>
-      ) : (
-        <>
-          <Button size="lg" onClick={trainer.replay} aria-label="Replay">
-            <span aria-hidden>↻</span> Replay
-          </Button>
-          {phase === 'feedback' && (
-            <Button variant="primary" size="lg" onClick={trainer.next}>
-              Next
-            </Button>
-          )}
-        </>
-      )}
-      <span
-        role="status"
-        className="text-xs font-semibold tracking-[0.2em] text-zinc-400 uppercase"
+    <div className="flex flex-col items-center gap-4 text-center">
+      <Button
+        variant={feedback ? 'gray' : 'filled'}
+        icon
+        round
+        aria-label={idle ? startLabel : 'Replay'}
+        onClick={idle ? trainer.next : trainer.replay}
+        className={cx('size-20', phase === 'playing' && sounding && 'anim-pulse-soft')}
       >
-        {status}
-      </span>
+        {idle ? (
+          <Play className="ml-1 size-8 fill-current" aria-hidden />
+        ) : (
+          <RotateCcw className="size-7" aria-hidden />
+        )}
+      </Button>
+      <div className="flex flex-col gap-1">
+        <h2 className="text-title-2 font-bold text-label">{prompt}</h2>
+        <p role="status" className="text-subhead text-label-2">
+          {status}
+        </p>
+      </div>
+      {feedback && (
+        <Button variant="filled" size="lg" className="min-w-40" onClick={trainer.next}>
+          Next
+        </Button>
+      )}
     </div>
   );
 }
 
-/** Right / wrong panel with the correct answer and listening actions. */
+/** Right / wrong row with the correct answer and listening actions. */
 export function Feedback({
   correct,
   title,
@@ -78,24 +91,28 @@ export function Feedback({
   children?: ReactNode;
   actions?: ReactNode;
 }) {
+  const Icon = correct ? CircleCheck : CircleX;
   return (
     <section
       aria-label="Feedback"
-      className={cx(
-        'flex flex-col gap-3 rounded-2xl p-4 ring-1',
-        correct ? 'bg-emerald-500/10 ring-emerald-500/30' : 'bg-rose-500/10 ring-rose-500/30',
-      )}
+      className="anim-rise flex flex-col gap-2 rounded-card bg-surface px-4 py-3.5"
     >
-      <p className={cx('text-base font-semibold', correct ? 'text-emerald-200' : 'text-rose-200')}>
+      <p
+        className={cx(
+          'flex items-center gap-2 text-headline font-semibold',
+          correct ? 'text-ok' : 'text-live',
+        )}
+      >
+        <Icon className="size-5 shrink-0" aria-hidden />
         {title}
       </p>
-      {children && <div className="text-sm text-zinc-300">{children}</div>}
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {children && <div className="text-subhead text-label-2">{children}</div>}
+      {actions && <div className="-mx-3 flex flex-wrap gap-1">{actions}</div>}
     </section>
   );
 }
 
-/** Tappable answer chip with right / wrong marking during feedback. */
+/** Answer button (gray, large) with right / wrong marking during feedback. */
 export function Chip({
   children,
   onClick,
@@ -114,29 +131,29 @@ export function Chip({
   className?: string;
 }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="gray"
+      size="lg"
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      aria-pressed={selected}
+      pressed={selected}
       data-mark={mark ?? undefined}
       className={cx(
-        'flex min-h-12 flex-col items-center justify-center rounded-xl px-3 py-2 text-sm font-medium',
-        'transition-colors duration-150 select-none',
-        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300',
-        'disabled:cursor-default',
-        mark === 'right'
-          ? 'bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-400/60'
-          : mark === 'wrong'
-            ? 'bg-rose-500/20 text-rose-100 ring-1 ring-rose-400/60'
-            : selected
-              ? 'bg-violet-400/20 text-violet-100 ring-1 ring-violet-300/60'
-              : 'bg-zinc-800/80 text-zinc-100 hover:bg-zinc-700/80 disabled:hover:bg-zinc-800/80',
+        'w-full px-3',
+        mark === 'right' && 'ring-2 ring-ok ring-inset',
+        mark === 'wrong' && 'ring-2 ring-live ring-inset',
         className,
       )}
+      trailing={
+        mark === 'right' ? (
+          <Check className="size-4 shrink-0 text-ok" aria-hidden />
+        ) : mark === 'wrong' ? (
+          <X className="size-4 shrink-0 text-live" aria-hidden />
+        ) : undefined
+      }
     >
       {children}
-    </button>
+    </Button>
   );
 }

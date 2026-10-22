@@ -21,7 +21,10 @@ describe('TrainScreen', () => {
   it('switches drills and shows key settings only where they apply', async () => {
     render(<TrainScreen playback={createManualPlayback()} rng={seededRng(1)} />);
     expect(screen.getByRole('heading', { level: 1, name: 'Train' })).toBeInTheDocument();
-    expect(screen.getByRole('radiogroup', { name: 'Chord vocabulary level' })).toBeInTheDocument();
+    // Difficulty lives behind the Options popover, not inline.
+    expect(screen.queryByRole('radiogroup', { name: 'Chord detail' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Options' }));
+    expect(screen.getByRole('radiogroup', { name: 'Chord detail' })).toBeInTheDocument();
     expect(screen.queryByRole('radiogroup', { name: 'Key set' })).toBeNull();
 
     fireEvent.click(screen.getByRole('radio', { name: 'Progression numerals' }));

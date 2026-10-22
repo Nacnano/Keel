@@ -9,7 +9,7 @@ import {
   randomProgressionQuestion,
 } from '@/theory';
 import type { ProgressionGrade, ProgressionQuestion } from '@/theory';
-import { Button } from '@/ui/components/Button';
+import { Button } from '@/ui/kit';
 import { cx } from '@/ui/lib/cx';
 import { chordsClip } from './playback';
 import { Chip, Feedback, PlayControls } from './parts';
@@ -67,40 +67,43 @@ export function ProgressionDrill({
     q && filled ? slots.map((n) => chordForNumeral(q, n!)!).filter(Boolean) : null;
 
   return (
-    <div className="flex flex-col gap-5">
-      <ScoreBar score={t.score} streak={t.streak} lifetime={lifetime} />
-      <PlayControls trainer={t} />
+    <div className="flex flex-col gap-6">
+      <PlayControls trainer={t} prompt="Which numerals do you hear?" />
       {q && (
         <>
-          <p className="text-sm text-zinc-400">
-            Key: <span className="font-semibold text-white">{pretty(keyName(q.key))}</span>
-            <span className="text-zinc-500"> · a cadence sets the key, then the progression</span>
+          <p className="-mt-3 text-center text-subhead text-label-2">
+            In <span className="font-semibold text-label">{pretty(keyName(q.key))}</span>
+            <span className="text-label-3"> · a cadence sets the key first</span>
           </p>
-          <ol aria-label="Progression slots" className="grid grid-cols-4 gap-2">
+          <ol
+            aria-label="Progression slots"
+            className="grid grid-cols-4 gap-0.5 rounded-[12px] bg-fill-3 p-0.5"
+          >
             {slots.map((s, i) => {
               const mark = feedback ? (grade.slots[i] ? 'right' : 'wrong') : null;
+              const current = !feedback && i === active;
               return (
                 <li key={i}>
                   <button
                     type="button"
                     aria-label={`Chord ${i + 1}: ${s ?? 'empty'}`}
-                    aria-current={!feedback && i === active ? 'true' : undefined}
+                    aria-current={current ? 'true' : undefined}
+                    data-mark={mark ?? undefined}
                     disabled={!!feedback}
                     onClick={() => setActive(i)}
                     className={cx(
-                      'flex min-h-20 w-full flex-col items-center justify-center rounded-2xl text-xl font-semibold',
-                      'ring-1 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-violet-300',
-                      mark === 'right' && 'bg-emerald-500/15 text-emerald-100 ring-emerald-400/50',
-                      mark === 'wrong' && 'bg-rose-500/15 text-rose-100 ring-rose-400/50',
-                      !mark &&
-                        (i === active
-                          ? 'bg-violet-400/10 text-white ring-violet-300/70'
-                          : 'bg-zinc-900 text-zinc-100 ring-zinc-800'),
+                      'flex min-h-18 w-full flex-col items-center justify-center rounded-[10px] text-title-2 font-semibold',
+                      'transition-[background-color,color,box-shadow] duration-150',
+                      current &&
+                        'bg-surface-2 shadow-[0_1px_3px_rgba(0,0,0,0.25),0_0_0_0.5px_rgba(0,0,0,0.06)] dark:bg-[#636366]',
+                      mark === 'right' && 'bg-ok/15 text-ok',
+                      mark === 'wrong' && 'bg-live/15 text-live',
+                      !mark && (s ? 'text-label' : 'text-label-3'),
                     )}
                   >
                     <span>{s ? pretty(s) : '?'}</span>
                     {feedback && (
-                      <span className="mt-1 text-xs font-medium text-zinc-300">
+                      <span className="mt-0.5 text-caption font-medium text-label-2">
                         {pretty(q.numerals[i])} · {pretty(chordSymbol(q.chords[i], q.key))}
                       </span>
                     )}
@@ -111,11 +114,7 @@ export function ProgressionDrill({
           </ol>
           {!feedback && (
             <>
-              <div
-                role="group"
-                aria-label="Numerals"
-                className="grid grid-cols-4 gap-2 sm:grid-cols-8"
-              >
+              <div role="group" aria-label="Numerals" className="grid grid-cols-4 gap-2">
                 {q.choices.map((c) => (
                   <Chip
                     key={c.numeral}
@@ -127,12 +126,17 @@ export function ProgressionDrill({
                   </Chip>
                 ))}
               </div>
-              <div className="flex gap-2">
-                <Button variant="primary" disabled={!filled} onClick={() => t.submit(slots)}>
+              <div className="flex justify-center gap-2">
+                <Button
+                  variant="tinted"
+                  className="min-w-32"
+                  disabled={!filled}
+                  onClick={() => t.submit(slots)}
+                >
                   Check
                 </Button>
                 <Button
-                  variant="ghost"
+                  variant="plain"
                   onClick={() => {
                     setSlots(Array(LENGTH).fill(null));
                     setActive(0);
@@ -155,23 +159,26 @@ export function ProgressionDrill({
           }
           actions={
             <>
-              <Button onClick={() => t.playClip(chordsClip(q.chords, { bpm }))}>
+              <Button variant="plain" onClick={() => t.playClip(chordsClip(q.chords, { bpm }))}>
                 Play correct
               </Button>
               {!grade.correct && yours && (
-                <Button onClick={() => t.playClip(chordsClip(yours, { bpm }))}>Play yours</Button>
+                <Button variant="plain" onClick={() => t.playClip(chordsClip(yours, { bpm }))}>
+                  Play yours
+                </Button>
               )}
             </>
           }
         >
           <p>
             {q.numerals.map(pretty).join(' – ')}{' '}
-            <span className="text-zinc-500">
+            <span className="text-label-3">
               ({q.chords.map((c) => pretty(chordSymbol(c, q.key))).join(' ')})
             </span>
           </p>
         </Feedback>
       )}
+      <ScoreBar score={t.score} streak={t.streak} lifetime={lifetime} />
     </div>
   );
 }
