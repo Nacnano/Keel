@@ -150,6 +150,8 @@ export function SettingsScreen() {
     : inputs.midiDevices.length === 0
       ? 'Connect a digital piano over USB for exact input.'
       : 'Exact and instant; the microphone stays as a fallback.';
+  const sensitivityWord =
+    settings.sensitivity < 0.34 ? 'Low' : settings.sensitivity > 0.66 ? 'High' : 'Medium';
   const stabilityWord =
     settings.stability < 0.34 ? 'Snappy' : settings.stability > 0.66 ? 'Very stable' : 'Balanced';
 
@@ -194,6 +196,28 @@ export function SettingsScreen() {
                     set('midiDeviceId', v || null);
                     inputs.selectMidiDevice(v || null);
                   }}
+                />
+              }
+            />
+            <Row
+              stacked
+              label={
+                <span className="flex items-baseline justify-between gap-3">
+                  <span>Sensitivity</span>
+                  <span className="text-subhead text-label-2">{sensitivityWord}</span>
+                </span>
+              }
+              accessory={
+                <Slider
+                  aria-label="Microphone sensitivity"
+                  aria-valuetext={`${sensitivityWord} (${Math.round(settings.sensitivity * 100)}%)`}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={settings.sensitivity}
+                  onChange={(v) => set('sensitivity', v)}
+                  minLabel="Ignores room noise"
+                  maxLabel="Hears soft playing"
                 />
               }
             />

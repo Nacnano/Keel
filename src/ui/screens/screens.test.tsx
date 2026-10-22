@@ -131,6 +131,12 @@ describe('SettingsScreen', () => {
 
     fireEvent.click(screen.getByRole('radio', { name: 'Light' }));
     expect(settingsStore.getState().theme).toBe('light');
+
+    fireEvent.change(screen.getByRole('slider', { name: 'Microphone sensitivity' }), {
+      target: { value: '0.8' },
+    });
+    expect(settingsStore.getState().sensitivity).toBe(0.8);
+    expect(screen.getByText('High')).toBeInTheDocument();
   });
 
   it('shows the version and lists the jam shortcuts in a sheet', () => {
