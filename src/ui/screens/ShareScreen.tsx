@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { formatTime, fromJSON } from '@/data/export';
@@ -68,27 +68,41 @@ function Frame({ children }: { children: ReactNode }) {
 /** Public, read-only chart at `/s/:code`. Works logged out. */
 export function ShareScreen() {
   const { code = '' } = useParams();
+  // Keyed so a new code starts from a clean loading state.
+  return <SharedChartView key={code} code={code} />;
+}
+
+function SharedChartView({ code }: { code: string }) {
   const navigate = useNavigate();
   const [state, setState] = useState<LoadState>(() =>
     isSyncConfigured() ? { kind: 'loading' } : { kind: 'unconfigured' },
   );
+  const [attempt, setAttempt] = useState(0);
   const [importing, setImporting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!isSyncConfigured()) return setState({ kind: 'unconfigured' });
-    setState({ kind: 'loading' });
-    try {
-      const share = await fetchShare(code);
-      setState(share ? { kind: 'ready', share } : { kind: 'not-found' });
-    } catch (err) {
-      setState({ kind: 'error', message: err instanceof Error ? err.message : String(err) });
-    }
-  }, [code]);
-
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!isSyncConfigured()) return;
+    let cancelled = false;
+    fetchShare(code).then(
+      (share) => {
+        if (!cancelled) setState(share ? { kind: 'ready', share } : { kind: 'not-found' });
+      },
+      (err: unknown) => {
+        if (!cancelled) {
+          setState({ kind: 'error', message: err instanceof Error ? err.message : String(err) });
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [code, attempt]);
+
+  const retry = () => {
+    setState({ kind: 'loading' });
+    setAttempt((a) => a + 1);
+  };
 
   const model = useMemo(
     () => (state.kind === 'ready' ? buildShareChart(state.share.payload.chart) : null),
@@ -117,7 +131,7 @@ export function ShareScreen() {
           <h1 className="text-xl font-semibold text-white">{title}</h1>
           <p className="text-sm text-zinc-400">{body}</p>
           <div className="flex gap-2">
-            {state.kind === 'error' && <Button onClick={() => void load()}>Try again</Button>}
+            {state.kind === 'error' && <Button onClick={retry}>Try again</Button>}
             <Link
               to="/"
               className="inline-flex min-h-11 items-center rounded-xl px-4 text-sm text-violet-300 hover:bg-zinc-800/70"
