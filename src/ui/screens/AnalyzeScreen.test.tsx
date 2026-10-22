@@ -51,7 +51,7 @@ const renderScreen = () =>
   );
 
 const drop = (file: File) =>
-  fireEvent.change(screen.getByLabelText(/Choose an? (audio )?file/), {
+  fireEvent.change(screen.getByLabelText(/^Choose (an|another) audio file$/), {
     target: { files: [file] },
   });
 
@@ -85,7 +85,8 @@ describe('AnalyzeScreen', () => {
       'accept',
       expect.stringContaining('audio/*'),
     );
-    expect(screen.getByRole('radiogroup', { name: 'Chord vocabulary level' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Chord detail' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Listening mode' })).toBeInTheDocument();
     expect(screen.queryByTestId('analyze-result')).not.toBeInTheDocument();
   });
 
@@ -116,13 +117,17 @@ describe('AnalyzeScreen', () => {
     fireEvent.click(cells[2]);
     expect(screen.getByTestId('analyze-now')).toHaveTextContent('Am');
     expect(within(result).getAllByTestId('chart-chord')[2]).toHaveAttribute('aria-current', 'true');
+
+    // The seek slider in the transport row moves the playhead too.
+    fireEvent.change(screen.getByRole('slider', { name: 'Seek' }), { target: { value: '3' } });
+    expect(screen.getByTestId('analyze-now')).toHaveTextContent('G');
   });
 
   it('re-analyses (without decoding again) when the vocabulary level changes', async () => {
     renderScreen();
     drop(song());
     await screen.findByTestId('analyze-result');
-    fireEvent.click(screen.getByRole('radio', { name: /Chord level 3/ }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Jazz' }));
     await waitFor(() =>
       expect(analyse).toHaveBeenLastCalledWith(
         expect.any(Float32Array),

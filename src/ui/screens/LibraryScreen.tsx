@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
+import { ChartColumn, LibraryBig, Search, SearchX, Upload } from 'lucide-react';
 import type { Session } from '@/core';
 import {
   fromJSON,
@@ -14,14 +15,16 @@ import {
   type StorageInfo,
 } from '@/data';
 import { useSettings } from '@/state/settingsStore';
-import { Button } from '../components/Button';
-import { Segmented } from '../components/Segmented';
+import { useSync } from '@/sync/store';
+import { Button, EmptyState, Group, PageHeader, Segmented } from '../kit';
 import { SyncPill } from '../components/SyncPill';
 import { toast } from '../components/toastStore';
 import { cx } from '../lib/cx';
 import { seedDemoSession, seedLongSession } from './library/seed';
-import { SessionCard } from './library/SessionCard';
+import { SessionRow } from './library/SessionRow';
 import { UndoBar } from './library/UndoBar';
+import { FILLED_LINK, PLAIN_LINK } from './library/linkStyles';
+import { ShareDialog } from './review/ShareDialog';
 
 type LibrarySort = 'newest' | 'oldest' | 'longest';
 
@@ -60,6 +63,7 @@ export function LibraryScreen() {
   const navigate = useNavigate();
   const seedMode = new URLSearchParams(location.search).get('seed') === '1';
   const spellingFollowsKey = useSettings((s) => s.spellingFollowsKey);
+  const canShare = useSync((s) => s.configured && s.user !== null);
 
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
@@ -71,6 +75,7 @@ export function LibraryScreen() {
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [undo, setUndo] = useState<{ id: string; name: string } | null>(null);
+  const [sharing, setSharing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const refresh = useCallback(() => setReload((n) => n + 1), []);
@@ -182,146 +187,181 @@ export function LibraryScreen() {
 
   const filtering = debounced.trim() !== '' || tag !== null;
   const loading = sessions === null;
+  const firstRun = !loading && sessions.length === 0 && !filtering && !error;
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 pt-5 pb-24 lg:px-8">
-        <header className="flex flex-wrap items-end gap-3">
-          <div className="mr-auto">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-semibold text-white">Library</h1>
+      <div className="mx-auto flex w-full max-w-3xl flex-col pb-28 lg:px-4 lg:pb-12">
+        <PageHeader
+          title="Library"
+          subtitle={
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span data-testid="storage-line">{storage ? storageLine(storage) : ' '}</span>
               <SyncPill />
-            </div>
-            <p data-testid="storage-line" className="text-sm text-zinc-500">
-              {storage ? storageLine(storage) : ' '}
-            </p>
-          </div>
-          {seedMode && (
+            </span>
+          }
+          actions={
             <>
-              <Button disabled={busy} onClick={() => void seed(false)}>
-                Seed demo session
+              <Button
+                variant="gray"
+                disabled={busy}
+                leading={<Upload className="size-4" aria-hidden />}
+                onClick={() => fileInput.current?.click()}
+              >
+                Import
               </Button>
-              <Button disabled={busy} onClick={() => void seed(true)}>
-                Seed 30-min stress session
-              </Button>
+              <Link to="/stats" className={PLAIN_LINK}>
+                <ChartColumn className="size-[18px]" aria-hidden />
+                Stats
+              </Link>
             </>
-          )}
-          <Button disabled={busy} onClick={() => fileInput.current?.click()}>
-            Import JSON
-          </Button>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="application/json,.json"
-            aria-label="Import session JSON file"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void onImport(f);
-            }}
-          />
-        </header>
+          }
+        />
+        <input
+          ref={fileInput}
+          type="file"
+          accept="application/json,.json"
+          aria-label="Import session JSON file"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void onImport(f);
+          }}
+        />
 
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            type="search"
-            aria-label="Search sessions"
-            placeholder="Search by name, tag, key or date (2026-10-22)"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="min-h-11 min-w-0 flex-1 basis-64 rounded-xl bg-zinc-900 px-4 text-sm text-zinc-100 ring-1 ring-zinc-800 placeholder:text-zinc-600 focus-visible:outline-2 focus-visible:outline-violet-300"
-          />
-          <Segmented<LibrarySort>
-            aria-label="Sort"
-            options={SORT_OPTIONS}
-            value={sort}
-            onChange={setSort}
-          />
-        </div>
+        {!firstRun && (
+          <div className="flex flex-col gap-3 px-4 pb-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="relative flex min-w-0 flex-1 basis-60 items-center">
+                <Search
+                  aria-hidden
+                  className="pointer-events-none absolute left-2.5 size-4 text-label-2"
+                />
+                <input
+                  type="search"
+                  aria-label="Search sessions"
+                  placeholder="Search name, tag, key or date"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="h-9 w-full min-w-0 rounded-control bg-fill-3 pr-3 pl-8 text-body text-label placeholder:text-label-3"
+                />
+              </label>
+              <Segmented<LibrarySort>
+                size="sm"
+                aria-label="Sort"
+                options={SORT_OPTIONS}
+                value={sort}
+                onChange={setSort}
+              />
+            </div>
 
-        {allTags.length > 0 && (
-          <div role="group" aria-label="Filter by tag" className="flex flex-wrap gap-1.5">
-            <TagChip active={tag === null} onClick={() => setTag(null)}>
-              All
-            </TagChip>
-            {allTags.map((t) => (
-              <TagChip key={t} active={tag === t} onClick={() => setTag(tag === t ? null : t)}>
-                {t}
-              </TagChip>
-            ))}
+            {allTags.length > 0 && (
+              <div
+                role="group"
+                aria-label="Filter by tag"
+                className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none]"
+              >
+                <TagChip active={tag === null} onClick={() => setTag(null)}>
+                  All
+                </TagChip>
+                {allTags.map((t) => (
+                  <TagChip key={t} active={tag === t} onClick={() => setTag(tag === t ? null : t)}>
+                    {t}
+                  </TagChip>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {error && (
           <div
             role="alert"
-            className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200 ring-1 ring-rose-500/30"
+            className="mx-4 mb-4 rounded-cell bg-live/12 px-4 py-3 text-subhead text-live"
           >
             Could not read the library: {error}
           </div>
         )}
 
         {loading ? (
-          <p role="status" className="py-16 text-center text-zinc-500">
+          <p role="status" className="py-16 text-center text-subhead text-label-3">
             Loading…
           </p>
         ) : sessions.length === 0 ? (
           filtering ? (
-            <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <p className="text-zinc-300">No sessions match.</p>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setQuery('');
-                  setTag(null);
-                }}
-              >
-                Clear search and filters
-              </Button>
-            </div>
+            <EmptyState
+              icon={<SearchX aria-hidden />}
+              title="No sessions match."
+              description="Try another name, key or date, or clear the tag filter."
+              action={
+                <Button
+                  variant="plain"
+                  onClick={() => {
+                    setQuery('');
+                    setTag(null);
+                  }}
+                >
+                  Clear search and filters
+                </Button>
+              }
+            />
           ) : (
             !error && (
-              <div className="flex flex-col items-center gap-4 py-16 text-center">
-                <h2 className="text-xl font-semibold text-white">No jams saved yet</h2>
-                <p className="max-w-md text-sm text-zinc-400">
-                  Every jam you start is saved here automatically when you stop: chords, keys,
-                  bookmarks and (if you turn it on) the audio. Everything stays on this device.
-                </p>
-                <Link
-                  to="/"
-                  className="inline-flex min-h-11 items-center rounded-xl bg-violet-400 px-5 text-sm font-semibold text-zinc-950 hover:bg-violet-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
-                >
-                  Start a jam
-                </Link>
-                {!seedMode && (
-                  <button
-                    type="button"
-                    onClick={() => navigate('/library?seed=1')}
-                    className="text-xs text-zinc-600 underline-offset-2 hover:text-zinc-400 hover:underline"
-                  >
-                    Or load a demo session
-                  </button>
-                )}
-              </div>
+              <EmptyState
+                icon={<LibraryBig aria-hidden />}
+                title="No jams saved yet"
+                description="Every jam is saved here when you stop: chords, keys, bookmarks and, if you turn it on, the audio. Everything stays on this device."
+                action={
+                  <div className="flex flex-col items-center gap-2">
+                    <Link to="/" className={FILLED_LINK}>
+                      Start jamming
+                    </Link>
+                    {!seedMode && (
+                      <button
+                        type="button"
+                        onClick={() => void navigate('/library?seed=1')}
+                        className="min-h-11 px-3 text-footnote text-label-3 transition-colors hover:text-label-2"
+                      >
+                        Or load a demo session
+                      </button>
+                    )}
+                  </div>
+                }
+              />
             )
           )
         ) : (
-          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {sessions.map((s) => (
-              <li key={s.id} className="flex">
-                <div className="flex-1 [&>article]:h-full">
-                  <SessionCard
-                    session={s}
-                    spellingFollowsKey={spellingFollowsKey}
-                    activeTag={tag}
-                    onTag={(t) => setTag(tag === t ? null : t)}
-                    onRename={onRename}
-                    onDelete={(x) => void onDelete(x)}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
+          <Group flush className="px-4" aria-label="Sessions">
+            <ul className="[&>li+li]:hairline-t">
+              {sessions.map((s) => (
+                <SessionRow
+                  key={s.id}
+                  session={s}
+                  spellingFollowsKey={spellingFollowsKey}
+                  onRename={onRename}
+                  onDelete={(x) => void onDelete(x)}
+                  onShare={canShare ? (x) => setSharing(x.id) : undefined}
+                />
+              ))}
+            </ul>
+          </Group>
+        )}
+
+        {seedMode && (
+          <div
+            role="group"
+            aria-label="Developer tools"
+            className="mt-8 flex flex-wrap items-center justify-center gap-x-1 px-4 text-footnote text-label-3"
+          >
+            <span>Developer:</span>
+            <SeedButton disabled={busy} onClick={() => void seed(false)}>
+              Seed demo session
+            </SeedButton>
+            <span aria-hidden>·</span>
+            <SeedButton disabled={busy} onClick={() => void seed(true)}>
+              Seed 30-min stress session
+            </SeedButton>
+          </div>
         )}
       </div>
 
@@ -332,10 +372,25 @@ export function LibraryScreen() {
           onDismiss={() => setUndo(null)}
         />
       )}
+      {sharing && <ShareDialog open onClose={() => setSharing(null)} sessionId={sharing} />}
     </div>
   );
 }
 
+function SeedButton(props: { disabled: boolean; onClick(): void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      disabled={props.disabled}
+      onClick={props.onClick}
+      className="min-h-11 rounded-[8px] px-2 text-accent transition-colors hover:bg-fill-4 disabled:opacity-40"
+    >
+      {props.children}
+    </button>
+  );
+}
+
+/** Small filter toggle; the visible chip is compact, the hit area is 44 px tall. */
 function TagChip({
   active,
   onClick,
@@ -350,14 +405,17 @@ function TagChip({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={cx(
-        'min-h-11 rounded-full px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-violet-300',
-        active
-          ? 'bg-violet-400 text-zinc-950'
-          : 'bg-zinc-900 text-zinc-300 ring-1 ring-zinc-800 hover:bg-zinc-800',
-      )}
+      className="group flex min-h-11 shrink-0 items-center focus-visible:outline-none"
     >
-      {children}
+      <span
+        className={cx(
+          'inline-flex h-7 items-center rounded-full px-3 text-footnote font-semibold whitespace-nowrap transition-colors duration-150',
+          'group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-accent',
+          active ? 'bg-accent text-accent-fg' : 'bg-fill-3 text-label-2 hover:bg-fill-2',
+        )}
+      >
+        {children}
+      </span>
     </button>
   );
 }

@@ -1,5 +1,6 @@
 import type { Session } from '@/core';
 import { toJSON, toText, type SessionFull } from '@/data';
+import { toast } from '../../components/toastStore';
 
 /** `evening-idea-in-c-2026-10-22` */
 export function fileBase(session: Session): string {
@@ -48,4 +49,22 @@ export async function copyChart(full: SessionFull): Promise<'copied' | 'download
     downloadChart(full);
     return 'downloaded';
   }
+}
+
+/** Runs an export action against the full session, toasting failures. */
+export function runExport(
+  getFull: () => Promise<SessionFull | undefined>,
+  fn: (full: SessionFull) => void | Promise<void>,
+): () => Promise<void> {
+  return async () => {
+    try {
+      const full = await getFull();
+      if (!full) throw new Error('Session not found');
+      await fn(full);
+    } catch (err) {
+      toast(`Export failed: ${err instanceof Error ? err.message : String(err)}`, {
+        tone: 'error',
+      });
+    }
+  };
 }

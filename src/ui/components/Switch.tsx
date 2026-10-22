@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { cx } from '../lib/cx';
+import { Switch as KitSwitch } from '@/ui/kit';
 
 export interface SwitchProps {
   label: string;
@@ -9,44 +9,26 @@ export interface SwitchProps {
   disabled?: boolean;
 }
 
-/** Labelled on/off switch row (role="switch"), full row is the touch target. */
+/**
+ * Labelled switch row over the kit toggle: label and optional description on the left,
+ * the switch on the right. For a bare toggle in a `Row` accessory, use `Switch` from `@/ui/kit`.
+ */
 export function Switch({ label, description, checked, onChange, disabled }: SwitchProps) {
   const id = useId();
   return (
     <div className="flex min-h-11 items-center justify-between gap-4">
-      <div className="flex flex-col">
-        <label htmlFor={id} className="text-sm font-medium text-zinc-200">
+      <div className="flex min-w-0 flex-col">
+        <span id={`${id}-l`} className="text-body text-label">
           {label}
-        </label>
-        {description && (
-          <p id={`${id}-d`} className="text-xs text-zinc-500">
-            {description}
-          </p>
-        )}
+        </span>
+        {description && <p className="mt-0.5 text-footnote text-label-2">{description}</p>}
       </div>
-      <button
-        id={id}
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-describedby={description ? `${id}-d` : undefined}
+      <KitSwitch
+        checked={checked}
+        onChange={onChange}
         disabled={disabled}
-        onClick={() => onChange(!checked)}
-        className={cx(
-          'relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-150',
-          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300',
-          'disabled:opacity-40',
-          checked ? 'bg-violet-400' : 'bg-zinc-700',
-        )}
-      >
-        <span
-          aria-hidden
-          className={cx(
-            'inline-block size-5 rounded-full bg-white shadow transition-transform duration-150',
-            checked ? 'translate-x-6' : 'translate-x-1',
-          )}
-        />
-      </button>
+        aria-labelledby={`${id}-l`}
+      />
     </div>
   );
 }

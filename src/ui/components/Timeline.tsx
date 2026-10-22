@@ -120,13 +120,13 @@ export function Timeline({
         aria-current={newest ? 'true' : undefined}
         onClick={() => onAudition?.(c)}
         className={cx(
-          'flex min-h-14 min-w-12 flex-col items-center justify-center rounded-lg px-2.5 py-1',
-          'transition-colors duration-150 hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-violet-300',
-          newest ? 'text-violet-200' : 'text-zinc-100',
+          'flex min-h-14 min-w-12 flex-col items-center justify-center rounded-control px-2.5 py-1',
+          'transition-colors duration-150 hover:bg-fill-4 active:bg-fill-3',
+          newest ? 'text-accent' : 'text-label',
         )}
       >
         <span className="text-2xl leading-tight font-semibold whitespace-nowrap">{symbol}</span>
-        <span className="h-4 text-xs leading-4 text-zinc-500">{numeral}</span>
+        <span className="h-4 text-caption leading-4 text-label-2">{numeral}</span>
       </button>
     );
   };
@@ -140,7 +140,7 @@ export function Timeline({
       className={cx('overflow-x-auto overscroll-x-contain [scrollbar-width:thin]', className)}
     >
       {entries.length === 0 ? (
-        <p role="listitem" className="flex min-h-16 items-center px-1 text-zinc-500">
+        <p role="listitem" className="flex min-h-16 items-center px-1 text-subhead text-label-3">
           Chords you play will appear here.
         </p>
       ) : (
@@ -152,7 +152,7 @@ export function Timeline({
                   role="listitem"
                   key={`k${i}`}
                   data-testid="timeline-key"
-                  className="mx-1 shrink-0 rounded-full bg-violet-400/10 px-3 py-1 text-sm font-medium whitespace-nowrap text-violet-300"
+                  className="mx-1 shrink-0 rounded-full bg-accent/12 px-3 py-1 text-footnote font-semibold whitespace-nowrap text-accent"
                 >
                   {e.first ? '' : '→ '}
                   {pretty(keyLabel(e.key, { spellingFollowsKey }))}
@@ -167,7 +167,7 @@ export function Timeline({
                   role="listitem"
                   key={e.marker.id}
                   data-testid="timeline-marker"
-                  className="mx-1 flex shrink-0 flex-col items-center gap-0.5 self-stretch border-l border-amber-300/50 pl-2 text-xs whitespace-nowrap text-amber-200"
+                  className="mx-1 flex shrink-0 flex-col items-center gap-0.5 self-stretch border-l border-warn/50 pl-2 text-caption whitespace-nowrap text-warn"
                 >
                   {bookmark ? <BookmarkIcon size={14} /> : <FlagIcon size={14} />}
                   <span>{text}</span>
@@ -190,16 +190,16 @@ export function Timeline({
                   role="listitem"
                   key={`s${i}-${seg.start}`}
                   data-testid="timeline-repeat"
-                  className="flex items-center rounded-xl bg-zinc-900/70 pr-2 ring-1 ring-zinc-800"
+                  className="flex items-center rounded-cell bg-fill-4 pr-2"
                 >
-                  <span aria-hidden className="pl-1 text-2xl text-zinc-600">
+                  <span aria-hidden className="pl-1 text-2xl text-label-4">
                     [
                   </span>
                   {chips}
-                  <span aria-hidden className="text-2xl text-zinc-600">
+                  <span aria-hidden className="text-2xl text-label-4">
                     ]
                   </span>
-                  <span className="ml-1.5 text-base font-semibold text-violet-300 tabular-nums">
+                  <span className="ml-1.5 text-callout font-semibold text-accent tabular-nums">
                     ×{seg.repeat}
                   </span>
                 </div>

@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
+import { AudioLines, CloudOff, Copy, FileQuestion, TriangleAlert } from 'lucide-react';
 import { formatTime, fromJSON } from '@/data/export';
 import { isSyncConfigured } from '@/sync/client';
 import { fetchShare, type SharedChart } from '@/sync/share';
 import { chordSymbol, keyName, prettyAccidentals, romanNumeral } from '@/theory';
-import { Button } from '../components/Button';
+import { Button, Group } from '../kit';
+import { cx } from '../lib/cx';
+import { FILLED_LINK, GRAY_LINK } from './library/linkStyles';
 import { buildShareChart, type ChartSegment } from './share/chart';
+import { PageState } from './share/PageState';
 
 type LoadState =
   | { kind: 'loading' }
@@ -23,41 +27,61 @@ function fmtDate(epochMs: number): string {
   });
 }
 
+/** One run of chords; repeats are bracketed with a count, like the jam timeline. */
 function Segment({ segment }: { segment: ChartSegment }) {
+  const repeated = segment.repeat > 1;
   return (
-    <li className="flex items-end gap-2">
-      <span aria-hidden className="pb-5 text-zinc-600">
-        |
-      </span>
+    <li className={cx('flex items-center', repeated && 'rounded-cell bg-fill-4 pr-2.5')}>
+      {repeated && (
+        <span aria-hidden className="pl-1.5 text-title-2 text-label-4">
+          [
+        </span>
+      )}
       {segment.items.map((c, i) => (
-        <span key={i} className="flex min-w-10 flex-col items-center">
-          <span className="text-lg font-semibold text-white">
+        <span key={i} className="flex min-w-12 flex-col items-center px-1.5 py-1.5">
+          <span className="text-title-3 font-semibold text-label">
             {prettyAccidentals(chordSymbol(c.chord, c.key))}
           </span>
-          <span className="text-xs text-violet-300" data-testid="numeral">
+          <span
+            className="h-4 text-caption leading-4 font-medium text-accent"
+            data-testid="numeral"
+          >
             {c.key ? prettyAccidentals(romanNumeral(c.chord, c.key)) : ' '}
           </span>
         </span>
       ))}
-      <span aria-hidden className="pb-5 text-zinc-600">
-        |
-      </span>
-      {segment.repeat > 1 && (
-        <span className="pb-5 text-sm font-medium text-zinc-400">×{segment.repeat}</span>
+      {repeated && (
+        <>
+          <span aria-hidden className="text-title-2 text-label-4">
+            ]
+          </span>
+          <span className="ml-1 text-callout font-semibold text-accent tabular">
+            ×{segment.repeat}
+          </span>
+        </>
       )}
     </li>
   );
 }
 
+/** Standalone page (no app chrome): small wordmark, then a centred reading column. */
 function Frame({ children }: { children: ReactNode }) {
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 pb-[max(env(safe-area-inset-bottom),24px)]">
+    <div className="h-full overflow-y-auto bg-bg text-label">
+      <div className="mx-auto flex max-w-2xl flex-col gap-6 px-5 pt-6 pb-[max(env(safe-area-inset-bottom),40px)]">
         <div className="flex items-center justify-between">
-          <Link to="/" className="font-semibold tracking-tight text-violet-300">
+          <Link
+            to="/"
+            className="flex items-center gap-2 rounded-[8px] text-subhead font-semibold tracking-tight text-label"
+          >
+            <span className="flex size-6 items-center justify-center rounded-[7px] bg-accent text-accent-fg">
+              <AudioLines className="size-3.5" aria-hidden />
+            </span>
             JamKey
           </Link>
-          <span className="text-xs tracking-widest text-zinc-500 uppercase">Shared chart</span>
+          <span className="text-caption font-medium tracking-wide text-label-3 uppercase">
+            Shared chart
+          </span>
         </div>
         {children}
       </div>
@@ -112,34 +136,57 @@ function SharedChartView({ code }: { code: string }) {
   if (state.kind === 'loading') {
     return (
       <Frame>
-        <p role="status" className="text-sm text-zinc-500">
-          Loading chart…
-        </p>
+        <PageState
+          status
+          icon={
+            <span
+              aria-hidden
+              className="size-6 animate-spin rounded-full border-2 border-current border-t-transparent"
+            />
+          }
+          title="Loading chart…"
+        />
       </Frame>
     );
   }
   if (state.kind !== 'ready' || !model) {
-    const [title, body] =
+    const [title, body, icon] =
       state.kind === 'unconfigured'
-        ? ['Sharing is not available', 'This copy of JamKey is not connected to a sync server.']
+        ? [
+            'Sharing is not available',
+            'This copy of JamKey is not connected to a sync server.',
+            <CloudOff key="i" aria-hidden />,
+          ]
         : state.kind === 'not-found'
-          ? ['Chart not found', 'The link may be mistyped, or its owner revoked it.']
-          : ['Could not load the chart', state.kind === 'error' ? state.message : ''];
+          ? [
+              'Chart not found',
+              'The link may be mistyped, or its owner revoked it.',
+              <FileQuestion key="i" aria-hidden />,
+            ]
+          : [
+              'Could not load the chart',
+              state.kind === 'error' ? state.message : '',
+              <TriangleAlert key="i" aria-hidden />,
+            ];
     return (
       <Frame>
-        <div className="flex flex-col items-start gap-3 rounded-2xl bg-zinc-900/40 p-6 ring-1 ring-zinc-900">
-          <h1 className="text-xl font-semibold text-white">{title}</h1>
-          <p className="text-sm text-zinc-400">{body}</p>
-          <div className="flex gap-2">
-            {state.kind === 'error' && <Button onClick={retry}>Try again</Button>}
-            <Link
-              to="/"
-              className="inline-flex min-h-11 items-center rounded-xl px-4 text-sm text-violet-300 hover:bg-zinc-800/70"
-            >
-              Open JamKey
-            </Link>
-          </div>
-        </div>
+        <PageState
+          icon={icon}
+          title={title}
+          description={body}
+          action={
+            <>
+              {state.kind === 'error' && (
+                <Button variant="filled" round onClick={retry}>
+                  Try again
+                </Button>
+              )}
+              <Link to="/" className={state.kind === 'error' ? GRAY_LINK : FILLED_LINK}>
+                Open JamKey
+              </Link>
+            </>
+          }
+        />
       </Frame>
     );
   }
@@ -169,50 +216,80 @@ function SharedChartView({ code }: { code: string }) {
 
   return (
     <Frame>
-      <header className="flex flex-wrap items-start gap-4">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight break-words text-white lg:text-3xl">
-            {session.name}
-          </h1>
-          <p className="flex flex-wrap gap-x-3 text-sm text-zinc-400">
+      <header className="flex flex-col gap-4 pt-4">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-large-title font-bold break-words text-label">{session.name}</h1>
+          <p className="flex flex-wrap items-center gap-x-2 text-subhead text-label-2">
+            {model.keys.length > 0 && (
+              <>
+                <span data-testid="share-keys" className="font-semibold text-label">
+                  {model.keys.map((k) => prettyAccidentals(keyName(k.key))).join(' → ')}
+                </span>
+                <span aria-hidden className="text-label-4">
+                  ·
+                </span>
+              </>
+            )}
+            <span aria-label="Duration" className="tabular">
+              {formatTime(session.durationSec)}
+            </span>
+            <span aria-hidden className="text-label-4">
+              ·
+            </span>
             <span>{fmtDate(session.createdAt)}</span>
-            <span aria-label="Duration">{formatTime(session.durationSec)}</span>
           </p>
-          {model.keys.length > 0 && (
-            <p data-testid="share-keys" className="text-sm text-violet-200">
-              {model.keys.map((k) => prettyAccidentals(keyName(k.key))).join(' → ')}
-            </p>
-          )}
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => void copyChart()}>Copy chart</Button>
-          <Button variant="primary" disabled={importing} onClick={() => void openInJamKey()}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="filled"
+            round
+            size="lg"
+            loading={importing}
+            onClick={() => void openInJamKey()}
+          >
             Open in JamKey
           </Button>
+          <Button
+            variant="gray"
+            round
+            size="lg"
+            leading={<Copy className="size-4" aria-hidden />}
+            onClick={() => void copyChart()}
+          >
+            Copy chart
+          </Button>
         </div>
+        {notice && (
+          <p role="status" className="anim-fade-in text-subhead text-label-2">
+            {notice}
+          </p>
+        )}
       </header>
 
-      {notice && (
-        <p role="status" className="text-sm text-zinc-300">
-          {notice}
-        </p>
-      )}
-
       {model.sections.length === 0 ? (
-        <p className="text-sm text-zinc-500">This chart has no chords.</p>
+        <p className="rounded-card bg-surface px-4 py-6 text-center text-subhead text-label-2">
+          This chart has no chords.
+        </p>
       ) : (
-        <ol aria-label="Chord chart" className="flex flex-col gap-5">
+        <ol aria-label="Chord chart" className="flex flex-col gap-6">
           {model.sections.map((s, i) => (
             <li key={i} className="flex flex-col gap-2">
               {s.label && (
-                <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-                  {s.label} <span className="font-normal">· {formatTime(s.t)}</span>
+                <h2 className="flex items-baseline gap-2 px-1 text-headline text-warn">
+                  <span className="capitalize">{s.label}</span>
+                  <span className="text-footnote font-normal text-label-3 tabular">
+                    {formatTime(s.t)}
+                  </span>
                 </h2>
               )}
-              <ul className="flex flex-wrap gap-x-4 gap-y-3">
-                {s.segments.map((seg, j) => (
-                  <Segment key={j} segment={seg} />
-                ))}
+              <ul className="flex flex-wrap items-center gap-x-2 gap-y-2 rounded-card bg-surface px-2 py-2">
+                {s.segments.length === 0 ? (
+                  <li className="px-2 py-3 text-subhead text-label-3">
+                    No chords in this section.
+                  </li>
+                ) : (
+                  s.segments.map((seg, j) => <Segment key={j} segment={seg} />)
+                )}
               </ul>
             </li>
           ))}
@@ -220,22 +297,17 @@ function SharedChartView({ code }: { code: string }) {
       )}
 
       {model.bookmarks.length > 0 && (
-        <section aria-label="Bookmarks" className="flex flex-col gap-2">
-          <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-            Bookmarks
-          </h2>
-          <ul className="flex flex-wrap gap-2 text-sm text-zinc-300">
-            {model.bookmarks.map((m) => (
-              <li key={m.id} className="rounded-lg bg-zinc-900 px-2.5 py-1 ring-1 ring-zinc-800">
-                {formatTime(m.t)}
-                {m.label ? ` ${m.label}` : ''}
-              </li>
-            ))}
-          </ul>
-        </section>
+        <Group title="Bookmarks" aria-label="Bookmarks">
+          {model.bookmarks.map((m) => (
+            <div key={m.id} className="flex min-h-11 items-center gap-3 px-4 py-2 text-body">
+              <span className="w-12 text-subhead text-label-2 tabular">{formatTime(m.t)}</span>{' '}
+              <span className="text-label">{m.label ?? 'Bookmark'}</span>
+            </div>
+          ))}
+        </Group>
       )}
 
-      <p className="text-xs text-zinc-600">
+      <p className="text-center text-caption text-label-3">
         Shared {fmtDate(state.share.createdAt)} · read-only snapshot
       </p>
     </Frame>

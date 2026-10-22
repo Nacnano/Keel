@@ -1,7 +1,7 @@
-import { useEffect, useId, useRef, useState } from 'react';
 import type { Key, KeyEstimate } from '@/core';
 import { keyLabel, pretty } from '../lib/chordLabel';
 import { cx } from '../lib/cx';
+import { Popover } from '../kit/Popover';
 
 export interface KeyBadgeProps {
   keyEstimate: KeyEstimate | null;
@@ -11,31 +11,18 @@ export interface KeyBadgeProps {
 
 const label = (k: Key, spellingFollowsKey: boolean) => pretty(keyLabel(k, { spellingFollowsKey }));
 
-/** "G major / E minor" with the winner bold, a confidence bar and an alternatives popover. */
+/**
+ * Toolbar title: "C major · A minor" with the winner bold and a confidence dot.
+ * Tap for the alternatives.
+ */
 export function KeyBadge({ keyEstimate, spellingFollowsKey = true, className }: KeyBadgeProps) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  const popId = useId();
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
-    document.addEventListener('pointerdown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('pointerdown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
   if (!keyEstimate) {
     return (
-      <div className={cx('flex min-h-11 items-center gap-2 text-zinc-500', className)}>
-        <span className="text-xs tracking-widest uppercase">Key</span>
-        <span className="text-lg">—</span>
+      <div
+        className={cx('flex min-h-11 items-center justify-center gap-2 text-label-3', className)}
+      >
+        <span className="text-footnote font-medium tracking-wide uppercase">Key</span>
+        <span className="text-headline">—</span>
       </div>
     );
   }
@@ -44,81 +31,79 @@ export function KeyBadge({ keyEstimate, spellingFollowsKey = true, className }: 
   const major = winner.mode === 'major' ? winner : winner.relative;
   const minor = winner.mode === 'minor' ? winner : winner.relative;
   const pct = Math.round(Math.max(0, Math.min(1, winner.confidence)) * 100);
+  const tone = pct >= 70 ? 'bg-ok' : pct >= 45 ? 'bg-warn' : 'bg-label-3';
   const part = (k: Key) => (
     <span
-      className={k.mode === winner.mode ? 'font-semibold text-white' : 'font-normal text-zinc-500'}
+      className={k.mode === winner.mode ? 'font-semibold text-label' : 'font-normal text-label-2'}
     >
       {label(k, spellingFollowsKey)}
     </span>
   );
 
   return (
-    <div ref={root} className={cx('relative', className)}>
-      <button
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={open ? popId : undefined}
-        aria-label={`Key ${label(winner, spellingFollowsKey)}, ${pct}% confident. Show alternatives`}
-        onClick={() => setOpen((o) => !o)}
-        className={cx(
-          'flex min-h-11 items-center gap-3 rounded-xl px-3 text-lg transition-colors',
-          'hover:bg-zinc-900 focus-visible:outline-2 focus-visible:outline-violet-300',
-        )}
-      >
-        <span className="text-xs tracking-widest text-zinc-500 uppercase">Key</span>
-        <span className="flex items-baseline gap-1.5">
-          {part(major)}
-          <span className="text-zinc-600">/</span>
-          {part(minor)}
-        </span>
-        <span className="flex items-center gap-2" aria-hidden>
-          <span className="h-1.5 w-16 overflow-hidden rounded-full bg-zinc-800">
-            <span
-              className="block h-full rounded-full bg-violet-400 transition-[width] duration-300"
-              style={{ width: `${pct}%` }}
-            />
-          </span>
-          <span className="w-9 text-right text-sm text-zinc-400 tabular-nums">{pct}%</span>
-        </span>
-      </button>
-      {open && (
-        <div
-          id={popId}
-          role="dialog"
-          aria-label="Key alternatives"
-          className="absolute top-full left-0 z-40 mt-2 w-64 rounded-2xl bg-zinc-900 p-3 shadow-2xl ring-1 ring-zinc-800"
-        >
-          <p className="mb-2 px-1 text-xs tracking-widest text-zinc-500 uppercase">
-            Other candidates
-          </p>
-          {winner.alternatives.length === 0 ? (
-            <p className="px-1 text-sm text-zinc-400">No close alternatives.</p>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {winner.alternatives.map((a) => (
-                <li
-                  key={`${a.tonic}-${a.mode}`}
-                  className="flex items-center justify-between gap-3 rounded-lg px-1 py-1.5 text-sm"
-                >
-                  <span className="text-zinc-200">{label(a, spellingFollowsKey)}</span>
-                  <span className="flex items-center gap-2">
-                    <span className="h-1 w-14 overflow-hidden rounded-full bg-zinc-800">
-                      <span
-                        className="block h-full bg-zinc-500"
-                        style={{ width: `${Math.round(a.score * 100)}%` }}
-                      />
-                    </span>
-                    <span className="w-8 text-right text-zinc-500 tabular-nums">
-                      {Math.round(a.score * 100)}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
+    <Popover
+      align="start"
+      width={280}
+      aria-label="Key alternatives"
+      trigger={(p) => (
+        <button
+          type="button"
+          {...p}
+          aria-label={`Key ${label(winner, spellingFollowsKey)}, ${pct}% confident. Show alternatives`}
+          className={cx(
+            'flex min-h-10 max-w-full items-center gap-2 rounded-control px-2 text-subhead transition-colors hover:bg-fill-4 sm:gap-2.5 sm:px-2.5 sm:text-headline',
+            className,
           )}
-        </div>
+        >
+          <span aria-hidden className={cx('size-2 rounded-full', tone)} />
+          <span className="flex items-baseline gap-1.5 whitespace-nowrap">
+            {part(major)}
+            <span className="hidden text-label-4 sm:inline">·</span>
+            <span className="hidden sm:inline">{part(minor)}</span>
+          </span>
+        </button>
       )}
-    </div>
+    >
+      <div className="px-2 pt-1 pb-2">
+        <div className="flex items-baseline justify-between">
+          <span className="text-headline font-semibold">{label(winner, spellingFollowsKey)}</span>
+          <span className="text-footnote text-label-2 tabular">{pct}% sure</span>
+        </div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-fill-3">
+          <div
+            className="h-full rounded-full bg-accent transition-[width] duration-300"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+      <p className="px-2 pt-1 pb-1 text-caption font-medium tracking-wide text-label-2 uppercase">
+        Other candidates
+      </p>
+      {winner.alternatives.length === 0 ? (
+        <p className="px-2 pb-2 text-subhead text-label-2">No close alternatives.</p>
+      ) : (
+        <ul className="flex flex-col">
+          {winner.alternatives.map((a) => (
+            <li
+              key={`${a.tonic}-${a.mode}`}
+              className="flex items-center justify-between gap-3 rounded-[8px] px-2 py-1.5 text-subhead"
+            >
+              <span className="text-label">{label(a, spellingFollowsKey)}</span>
+              <span className="flex items-center gap-2">
+                <span className="h-1 w-14 overflow-hidden rounded-full bg-fill-3">
+                  <span
+                    className="block h-full bg-label-3"
+                    style={{ width: `${Math.round(a.score * 100)}%` }}
+                  />
+                </span>
+                <span className="w-8 text-right text-label-2 tabular">
+                  {Math.round(a.score * 100)}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Popover>
   );
 }

@@ -1,131 +1,100 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { ChevronDown, Copy, FileJson, FileText, Link2 } from 'lucide-react';
 import type { SessionFull } from '@/data';
-import { Button } from '../../components/Button';
+import { Button } from '../../kit';
 import { toast } from '../../components/toastStore';
-import { cx } from '../../lib/cx';
-import { copyChart, downloadChart, downloadJSON } from './exportActions';
+import { copyChart, downloadChart, downloadJSON, runExport } from './exportActions';
+import { Menu, MenuItem, MenuSeparator } from './Menu';
 
 export interface ExportMenuProps {
-  /** Loads the full session on demand (library cards only hold the session row). */
+  /** Loads the full session on demand (library rows only hold the session row). */
   getFull(): Promise<SessionFull | undefined>;
   label?: string;
   className?: string;
   align?: 'left' | 'right';
-  /** Adds a "Share link…" item (review screen). */
+  /** Adds a "Share link…" item. */
   share?: {
     onSelect(): void;
     /** When set, the item is disabled and this hint is shown under it. */
     disabledReason?: string;
   };
+  /** Custom trigger content (e.g. an icon); defaults to a gray "Export" button. */
+  icon?: ReactNode;
 }
 
-/** "Export" button with copy chart / download text / download JSON. */
+/** Copy chart / download text / download JSON, as menu items (shared by the row menu). */
+export function ExportItems({ getFull }: Pick<ExportMenuProps, 'getFull'>) {
+  return (
+    <>
+      <MenuItem
+        icon={<Copy />}
+        onSelect={() =>
+          void runExport(getFull, async (full) => {
+            const how = await copyChart(full);
+            toast(how === 'copied' ? 'Chord chart copied' : 'Chord chart downloaded', {
+              tone: 'success',
+            });
+          })()
+        }
+      >
+        Copy chord chart
+      </MenuItem>
+      <MenuItem icon={<FileText />} onSelect={() => void runExport(getFull, downloadChart)()}>
+        Download chart (.txt)
+      </MenuItem>
+      <MenuItem icon={<FileJson />} onSelect={() => void runExport(getFull, downloadJSON)()}>
+        Download JSON
+      </MenuItem>
+    </>
+  );
+}
+
+/** "Export" button opening a menu with the export actions and an optional share item. */
 export function ExportMenu({
   getFull,
   label = 'Export',
   className,
   align = 'right',
   share,
+  icon,
 }: ExportMenuProps) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  const menuId = useId();
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('pointerdown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('pointerdown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
-  const run = (fn: (full: SessionFull) => void | Promise<void>) => async () => {
-    setOpen(false);
-    try {
-      const full = await getFull();
-      if (!full) throw new Error('Session not found');
-      await fn(full);
-    } catch (err) {
-      toast(`Export failed: ${err instanceof Error ? err.message : String(err)}`, {
-        tone: 'error',
-      });
-    }
-  };
-
-  const item =
-    'flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm text-zinc-100 hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-violet-300';
-
   return (
-    <div ref={root} className={cx('relative', className)}>
-      <Button
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        onClick={() => setOpen((v) => !v)}
+    <span className={className}>
+      <Menu
+        align={align === 'right' ? 'end' : 'start'}
+        width={248}
+        aria-label={label}
+        trigger={(t) =>
+          icon ? (
+            <Button icon variant="plain" aria-label={label} {...t}>
+              {icon}
+            </Button>
+          ) : (
+            <Button
+              variant="gray"
+              trailing={<ChevronDown className="size-3.5 opacity-60" aria-hidden />}
+              {...t}
+            >
+              {label}
+            </Button>
+          )
+        }
       >
-        {label}
-      </Button>
-      {open && (
-        <div
-          id={menuId}
-          role="menu"
-          className={cx(
-            'absolute top-full z-30 mt-1 w-52 rounded-xl bg-zinc-900 p-1 shadow-xl ring-1 ring-zinc-800',
-            align === 'right' ? 'right-0' : 'left-0',
-          )}
-        >
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            onClick={run(async (full) => {
-              const how = await copyChart(full);
-              toast(how === 'copied' ? 'Chord chart copied' : 'Chord chart downloaded', {
-                tone: 'success',
-              });
-            })}
-          >
-            Copy chord chart
-          </button>
-          <button type="button" role="menuitem" className={item} onClick={run(downloadChart)}>
-            Download chart (.txt)
-          </button>
-          <button type="button" role="menuitem" className={item} onClick={run(downloadJSON)}>
-            Download JSON
-          </button>
-          {share && (
-            <>
-              <div role="separator" className="my-1 h-px bg-zinc-800" />
-              <button
-                type="button"
-                role="menuitem"
-                className={cx(item, 'disabled:cursor-not-allowed disabled:opacity-50')}
-                disabled={!!share.disabledReason}
-                aria-describedby={share.disabledReason ? `${menuId}-share-hint` : undefined}
-                onClick={() => {
-                  setOpen(false);
-                  share.onSelect();
-                }}
-              >
-                Share link…
-              </button>
-              {share.disabledReason && (
-                <p id={`${menuId}-share-hint`} className="px-3 pb-2 text-xs text-zinc-500">
-                  {share.disabledReason}
-                </p>
-              )}
-            </>
-          )}
-        </div>
-      )}
-    </div>
+        <ExportItems getFull={getFull} />
+        {share && (
+          <>
+            <MenuSeparator />
+            <MenuItem
+              icon={<Link2 />}
+              disabled={!!share.disabledReason}
+              hint={share.disabledReason}
+              onSelect={share.onSelect}
+            >
+              Share link…
+            </MenuItem>
+          </>
+        )}
+      </Menu>
+    </span>
   );
 }

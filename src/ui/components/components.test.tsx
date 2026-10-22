@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { C_MAJOR_KEY } from '@/core/mocks';
 import type { Chord, ChordRecord, Key, Marker } from '@/core';
+import { Button } from './Button';
 import { ChordDisplay } from './ChordDisplay';
+import { Select } from './Select';
+import { Switch } from './Switch';
 import { KeyBadge } from './KeyBadge';
 import { Piano } from './Piano';
 import { Timeline } from './Timeline';
@@ -114,7 +117,7 @@ describe('Piano', () => {
     expect(state(48)).toBe('pc');
     expect(state(108)).toBe('pc'); // C8
     expect(state(62)).toBe('off');
-    expect(container.querySelector('[data-note="60"]')).toHaveClass('fill-violet-400');
+    expect(container.querySelector('[data-note="60"]')).toHaveClass('fill-accent');
   });
 
   it('supports a 61-key range', () => {
@@ -190,5 +193,48 @@ describe('Toaster', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open' }));
     expect(onClick).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Saved “Jam”')).toBeNull();
+  });
+});
+
+describe('legacy primitives on the kit', () => {
+  it('maps Button variants and sizes to the kit', () => {
+    render(
+      <>
+        <Button variant="primary">Save</Button>
+        <Button variant="danger">Delete</Button>
+        <Button variant="ghost" size="icon" aria-label="Close" />
+        <Button pressed>Loop</Button>
+      </>,
+    );
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveClass('bg-accent');
+    expect(screen.getByRole('button', { name: 'Delete' })).toHaveClass('text-live');
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveClass('size-11');
+    expect(screen.getByRole('button', { name: 'Loop' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('labels Select and Switch rows', () => {
+    const onSelect = vi.fn();
+    const onSwitch = vi.fn();
+    render(
+      <>
+        <Select
+          label="Theme"
+          hint="Dark first"
+          value="dark"
+          options={[
+            { value: 'dark', label: 'Dark' },
+            { value: 'light', label: 'Light' },
+          ]}
+          onChange={onSelect}
+        />
+        <Switch label="Slash chords" description="C/E" checked={false} onChange={onSwitch} />
+      </>,
+    );
+    const select = screen.getByLabelText('Theme');
+    expect(select).toHaveAccessibleDescription('Dark first');
+    fireEvent.change(select, { target: { value: 'light' } });
+    expect(onSelect).toHaveBeenCalledWith('light');
+    fireEvent.click(screen.getByRole('switch', { name: 'Slash chords' }));
+    expect(onSwitch).toHaveBeenCalledWith(true);
   });
 });

@@ -8,10 +8,13 @@ export interface JamShortcutHandlers {
   setLevel(level: VocabLevel): void;
   togglePiano(): void;
   toggleMode(): void;
-  /** S: show / hide the scale helper. */
-  toggleScales?(): void;
-  /** V: show / hide the voicings panel. */
-  toggleVoicings?(): void;
+  /** I: open / close the ideas inspector. */
+  toggleInspector?(): void;
+  /** N / S / V / K: open the inspector on a tab (toggle if already there). */
+  showNext?(): void;
+  showScales?(): void;
+  showVoicings?(): void;
+  showModulate?(): void;
 }
 
 function isTypingTarget(t: EventTarget | null): boolean {
@@ -19,7 +22,10 @@ function isTypingTarget(t: EventTarget | null): boolean {
   return t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
 }
 
-/** Space start/stop, R reset, B bookmark, 1/2/3 level, K piano, M mode, S scales, V voicings. */
+/**
+ * Space start/stop · R clear · B bookmark · 1/2/3 chord detail · P keyboard · M listening mode ·
+ * I ideas · N next · S scales · V voicings · K modulate.
+ */
 export function useJamShortcuts(handlers: JamShortcutHandlers) {
   const ref = useRef(handlers);
   useLayoutEffect(() => {
@@ -36,32 +42,42 @@ export function useJamShortcuts(handlers: JamShortcutHandlers) {
       switch (k) {
         case ' ':
           e.preventDefault();
-          // Stop a focused button from also activating on keyup.
           if (e.target instanceof HTMLButtonElement) e.target.blur();
-          if (!e.repeat) h.toggleListening();
-          return;
+          h.toggleListening();
+          break;
         case 'r':
           h.reset();
-          return;
+          break;
         case 'b':
           h.bookmark();
-          return;
+          break;
         case '1':
         case '2':
         case '3':
           h.setLevel(Number(k) as VocabLevel);
-          return;
-        case 'k':
+          break;
+        case 'p':
           h.togglePiano();
-          return;
+          break;
         case 'm':
           h.toggleMode();
-          return;
+          break;
+        case 'i':
+          h.toggleInspector?.();
+          break;
+        case 'n':
+          h.showNext?.();
+          break;
         case 's':
-          h.toggleScales?.();
-          return;
+          h.showScales?.();
+          break;
         case 'v':
-          h.toggleVoicings?.();
+          h.showVoicings?.();
+          break;
+        case 'k':
+          h.showModulate?.();
+          break;
+        default:
           return;
       }
     };

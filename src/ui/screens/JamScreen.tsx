@@ -1,42 +1,28 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { Bookmark, ChevronDown, Flag, Lightbulb, Mic, Play, Square, Usb } from 'lucide-react';
 import type { Chord, MarkerKind, VocabLevel } from '@/core';
 import { jamStore, useJamStore } from '@/state/jamStore';
 import type { JamStatus } from '@/state/jamStore';
 import { useSettings } from '@/state/settingsStore';
+import { auditionChord } from '@/app/live/audition';
 import { ChordDisplay } from '../components/ChordDisplay';
 import { KeyBadge } from '../components/KeyBadge';
-import { LevelSelector } from '../components/LevelSelector';
-import { ModeToggle } from '../components/ModeToggle';
-import { ModulationHints } from '../components/ModulationHints';
 import { Piano } from '../components/Piano';
-import { ScaleHelper } from '../components/ScaleHelper';
-import { SourceIndicator } from '../components/SourceIndicator';
 import { Timeline } from '../components/Timeline';
 import { toast } from '../components/toastStore';
-import { TransportBar } from '../components/TransportBar';
-import { TryNext } from '../components/TryNext';
-import { VoicingPanel } from '../components/VoicingPanel';
-import { auditionChord } from '@/app/live/audition';
+import { Badge, Button, Meter, Popover, Toolbar } from '../kit';
 import { cx } from '../lib/cx';
-import { MARKER_LABEL } from '../lib/markers';
+import { MARKER_LABEL, SECTION_KINDS } from '../lib/markers';
+import { playNotes } from '../lib/playNotes';
 import { suggestNext } from '../lib/suggest';
 import { useMediaQuery } from '../lib/useMediaQuery';
-import { playNotes } from '../lib/playNotes';
+import { JamInspector } from './jam/JamInspector';
+import { JamOptions } from './jam/JamOptions';
+import { useInspectorPref } from './jam/useInspectorPref';
 import { useJamInput } from './jam/useJamInput';
 import { useJamShortcuts } from './jam/useJamShortcuts';
-import { useScalesPref } from './jam/useScalesPref';
 import { useStoredToggle } from './jam/useStoredToggle';
-
-const PIANO_PREF_KEY = 'jamkey.ui.piano';
-
-function readPianoPref(): boolean {
-  try {
-    return localStorage.getItem(PIANO_PREF_KEY) !== '0';
-  } catch {
-    return true;
-  }
-}
 
 function formatTime(sec: number): string {
   const s = Math.floor(sec);
@@ -50,38 +36,118 @@ const STATUS_LABEL: Record<JamStatus, string> = {
   error: 'Needs attention',
 };
 
-function StatusPill({ status, mock }: { status: JamStatus; mock: boolean }) {
+/** Quiet-input watchdog: true after the input has been near-silent for a few seconds. */
+function useQuietInput(listening: boolean, level: number, seconds = 4): boolean {
+  const [quiet, setQuiet] = useState(false);
+  const since = useRef<number | null>(null);
+  useEffect(() => {
+    if (!listening) {
+      since.current = null;
+      setQuiet(false);
+      return;
+    }
+    if (level > 0.06) {
+      since.current = null;
+      setQuiet(false);
+      return;
+    }
+    since.current ??= Date.now();
+    const id = setTimeout(() => {
+      if (since.current && Date.now() - since.current >= seconds * 1000) setQuiet(true);
+    }, seconds * 1000);
+    return () => clearTimeout(id);
+  }, [listening, level, seconds]);
+  return quiet;
+}
+
+function StatusPill({
+  status,
+  source,
+  level,
+  mock,
+}: {
+  status: JamStatus;
+  source: 'mic' | 'midi' | null;
+  level: number;
+  mock: boolean;
+}) {
+  const listening = status === 'listening';
   return (
-    <div className="flex min-h-11 items-center gap-2.5">
+    <div className="flex min-h-10 items-center gap-2.5">
       <span
         aria-hidden
         className={cx(
           'size-2.5 rounded-full',
-          status === 'listening' && 'animate-pulse bg-violet-400',
-          status === 'starting' && 'bg-amber-300',
-          status === 'error' && 'bg-rose-400',
-          status === 'idle' && 'bg-zinc-600',
+          listening && 'anim-pulse-soft bg-live',
+          status === 'starting' && 'bg-warn',
+          status === 'error' && 'bg-live',
+          status === 'idle' && 'bg-label-4',
         )}
       />
       <span
         role="status"
-        className={cx(
-          'text-xs font-semibold tracking-[0.2em] uppercase',
-          status === 'listening' ? 'text-violet-200' : 'text-zinc-400',
-        )}
+        className={cx('text-subhead font-semibold', listening ? 'text-label' : 'text-label-2')}
       >
         {STATUS_LABEL[status]}
       </span>
+      {listening && (
+        <span
+          className="hidden items-center gap-1.5 text-label-2 sm:flex"
+          title={source === 'midi' ? 'MIDI' : 'Microphone'}
+        >
+          {source === 'midi' ? (
+            <Usb className="size-4" aria-hidden />
+          ) : (
+            <Mic className="size-4" aria-hidden />
+          )}
+          <Meter level={level} active bars={7} />
+        </span>
+      )}
       {mock && (
-        <span className="rounded-md bg-zinc-800 px-1.5 py-0.5 text-[11px] font-medium text-zinc-400">
-          Demo
+        <span className="hidden sm:inline-flex">
+          <Badge>Demo</Badge>
         </span>
       )}
     </div>
   );
 }
 
-/** The one screen in use during a jam (DESIGN.md §3.1). */
+function SectionMenu({ disabled, onPick }: { disabled: boolean; onPick(kind: MarkerKind): void }) {
+  return (
+    <Popover
+      align="end"
+      width={200}
+      aria-label="Mark a section"
+      trigger={(t) => (
+        <Button
+          variant="gray"
+          disabled={disabled}
+          leading={<Flag className="size-4" aria-hidden />}
+          trailing={<ChevronDown className="size-3.5 opacity-60" aria-hidden />}
+          {...t}
+        >
+          Section
+        </Button>
+      )}
+    >
+      <ul className="flex flex-col">
+        {SECTION_KINDS.map((k) => (
+          <li key={k}>
+            <button
+              type="button"
+              onClick={() => onPick(k)}
+              className="flex h-10 w-full items-center rounded-[8px] px-3 text-left text-subhead text-label hover:bg-fill-4"
+            >
+              {MARKER_LABEL[k]}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Popover>
+  );
+}
+
+/** The one screen in use during a jam: chord, key, timeline. Ideas live in the inspector. */
 export function JamScreen() {
   const jam = useJamStore(
     useShallow((s) => ({
@@ -112,9 +178,8 @@ export function JamScreen() {
   );
   const input = useJamInput();
   const wide = useMediaQuery('(min-width: 1024px)', true);
-  const [pianoVisible, setPianoVisible] = useState(readPianoPref);
-  const [scalesOpen, toggleScales] = useScalesPref(wide);
-  const [voicingsOpen, toggleVoicings] = useStoredToggle('jamkey.ui.voicings');
+  const [pianoVisible, togglePiano] = useStoredToggle('jamkey.ui.piano', true);
+  const inspector = useInspectorPref();
 
   // Per-session recording choice starts from the settings default.
   useEffect(() => {
@@ -123,15 +188,8 @@ export function JamScreen() {
     }
   }, [settings.recordAudioByDefault]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(PIANO_PREF_KEY, pianoVisible ? '1' : '0');
-    } catch {
-      /* private mode: ignore */
-    }
-  }, [pianoVisible]);
-
   const listening = jam.status === 'listening';
+  const quiet = useQuietInput(listening && jam.source !== 'midi', jam.level);
   const { start, stop } = input;
   const { update } = settings;
 
@@ -145,9 +203,7 @@ export function JamScreen() {
 
   const addMarker = useCallback((kind: MarkerKind) => {
     const m = jamStore.getState().addMarker(kind);
-    if (m) {
-      toast(`${MARKER_LABEL[kind]} at ${formatTime(m.t)}`, { durationMs: 1600 });
-    }
+    if (m) toast(`${MARKER_LABEL[kind]} at ${formatTime(m.t)}`, { durationMs: 1600 });
   }, []);
 
   const audition = useCallback((chord: Chord) => auditionChord(chord), []);
@@ -157,10 +213,13 @@ export function JamScreen() {
     reset,
     bookmark: () => jamStore.getState().status === 'listening' && addMarker('bookmark'),
     setLevel: (vocabLevel: VocabLevel) => update({ vocabLevel }),
-    togglePiano: () => setPianoVisible((v) => !v),
+    togglePiano,
     toggleMode: () => update({ mode: settings.mode === 'solo' ? 'room' : 'solo' }),
-    toggleScales,
-    toggleVoicings,
+    toggleInspector: () => inspector.setOpen(!inspector.open),
+    showNext: () => inspector.toggleTab('next'),
+    showScales: () => inspector.toggleTab('scales'),
+    showVoicings: () => inspector.toggleTab('voicings'),
+    showModulate: () => inspector.toggleTab('keys'),
   });
 
   const recent = useMemo(
@@ -174,131 +233,169 @@ export function JamScreen() {
 
   const hint =
     jam.status === 'starting'
-      ? 'Starting… allow microphone access if your browser asks.'
-      : jam.status === 'listening'
-        ? 'Listening… play a chord.'
-        : jam.status === 'error'
-          ? 'Something went wrong. See the message above.'
+      ? 'Starting… allow the microphone if your browser asks.'
+      : jam.status === 'error'
+        ? 'Something went wrong. See the message above.'
+        : listening
+          ? quiet
+            ? 'Can’t hear much. Move closer to the piano, or raise the input level in Settings.'
+            : jam.timeline.length === 0
+              ? 'Play a chord and hold it.'
+              : 'Listening'
           : jam.timeline.length > 0
-            ? 'Stopped. Start again to continue, or reset the timeline.'
+            ? 'Stopped. Start again to continue, or clear the timeline from Options.'
             : input.mock
               ? 'Tap Start to play the demo progression.'
-              : 'Tap Start and allow the microphone.';
+              : 'Tap Start, then play. The chord and key appear here.';
 
   return (
-    <div className="flex h-full flex-col gap-3 px-4 pt-3 pb-[max(env(safe-area-inset-bottom),12px)] lg:px-8">
-      <header className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <StatusPill status={jam.status} mock={input.mock} />
-        <KeyBadge keyEstimate={jam.keyEstimate} spellingFollowsKey={settings.spellingFollowsKey} />
-        <SourceIndicator source={jam.source} level={jam.level} active={listening} />
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <LevelSelector
-            value={settings.vocabLevel}
-            onChange={(vocabLevel) => update({ vocabLevel })}
+    <div className="flex h-full flex-col">
+      <Toolbar
+        sticky={false}
+        className="hairline-b"
+        leading={
+          <StatusPill status={jam.status} source={jam.source} level={jam.level} mock={input.mock} />
+        }
+        title={
+          <KeyBadge
+            keyEstimate={jam.keyEstimate}
+            spellingFollowsKey={settings.spellingFollowsKey}
           />
-          <ModeToggle value={settings.mode} onChange={(mode) => update({ mode })} />
-        </div>
-      </header>
+        }
+        trailing={
+          <>
+            <Button
+              variant={inspector.open ? 'tinted' : 'plain'}
+              pressed={inspector.open}
+              leading={<Lightbulb className="size-[18px]" aria-hidden />}
+              onClick={() => inspector.setOpen(!inspector.open)}
+              aria-label="Ideas"
+            >
+              <span className="hidden sm:inline">Ideas</span>
+            </Button>
+            <JamOptions
+              vocabLevel={settings.vocabLevel}
+              onVocabLevel={(vocabLevel) => update({ vocabLevel })}
+              mode={settings.mode}
+              onMode={(mode) => update({ mode })}
+              recordAudio={jam.recordAudio}
+              onRecordAudio={(on) => jamStore.getState().setRecordAudio(on)}
+              pianoVisible={pianoVisible}
+              onPianoVisible={togglePiano}
+              onReset={reset}
+              canReset={jam.timeline.length > 0}
+            />
+          </>
+        }
+      />
 
       {jam.status === 'error' && jam.error && (
         <div
           role="alert"
-          className="rounded-xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200 ring-1 ring-rose-500/30"
+          className="mx-4 mt-3 rounded-cell bg-live/12 px-4 py-3 text-subhead text-live"
         >
           {jam.error}
         </div>
       )}
 
-      <main className="grid min-h-0 flex-1 grid-cols-1 content-start gap-6 overflow-y-auto lg:grid-cols-2 lg:content-stretch lg:gap-10 lg:overflow-visible">
-        <section aria-label="Current chord" className="flex flex-col justify-center gap-8 py-2">
-          <ChordDisplay
-            chord={jam.currentChord}
-            confidence={jam.confidence}
-            keyContext={jam.keyEstimate}
-            showSlash={settings.showSlashChords}
-            spellingFollowsKey={settings.spellingFollowsKey}
-            hint={hint}
+      <main
+        className={cx(
+          'flex min-h-0 flex-1 flex-col items-center justify-center gap-6 px-4 py-4 transition-[padding] duration-300',
+          inspector.open && wide && 'lg:pr-[400px]',
+        )}
+      >
+        <ChordDisplay
+          chord={jam.currentChord}
+          confidence={jam.confidence}
+          keyContext={jam.keyEstimate}
+          showSlash={settings.showSlashChords}
+          spellingFollowsKey={settings.spellingFollowsKey}
+          hint={hint}
+          idle={jam.status === 'idle' && jam.timeline.length === 0}
+        />
+        {pianoVisible && (
+          <Piano
+            keys={wide ? 88 : 61}
+            activePitchClasses={jam.activePitchClasses}
+            activeMidiNotes={jam.activeMidiNotes}
+            className="w-full max-w-4xl"
           />
-          <TryNext
-            className="items-center lg:items-start"
-            suggestions={suggestions}
-            keyContext={jam.keyEstimate}
-            onAudition={audition}
-            spellingFollowsKey={settings.spellingFollowsKey}
-          />
-          <ModulationHints
-            className="-mt-4 items-center lg:items-start"
-            keyContext={jam.keyEstimate}
-            level={settings.vocabLevel}
-            onAudition={audition}
-            spellingFollowsKey={settings.spellingFollowsKey}
-          />
-          <ScaleHelper
-            chord={jam.currentChord}
-            confidence={jam.confidence}
-            keyContext={jam.keyEstimate}
-            spellingFollowsKey={settings.spellingFollowsKey}
-            open={scalesOpen}
-            onToggle={toggleScales}
-          />
-          <VoicingPanel
-            chord={jam.currentChord ?? jam.timeline.at(-1)?.chord ?? null}
-            keyContext={jam.keyEstimate}
-            spellingFollowsKey={settings.spellingFollowsKey}
-            onPlay={playNotes}
-            open={voicingsOpen}
-            onToggle={toggleVoicings}
-          />
-        </section>
-
-        <section
-          aria-label="History and keyboard"
-          className="flex min-w-0 flex-col justify-center gap-4"
-        >
-          <div className="rounded-2xl bg-zinc-900/40 p-3 ring-1 ring-zinc-900">
-            <h2 className="mb-1 px-1 text-xs font-medium tracking-widest text-zinc-500 uppercase">
-              Timeline
-            </h2>
-            <Timeline
-              timeline={jam.timeline}
-              keyHistory={jam.keyHistory}
-              markers={jam.markers}
-              onAudition={audition}
-              showSlash={settings.showSlashChords}
-              spellingFollowsKey={settings.spellingFollowsKey}
-            />
-          </div>
-          {pianoVisible && (
-            <div className="rounded-2xl bg-zinc-900/40 p-3 ring-1 ring-zinc-900">
-              <Piano
-                keys={wide ? 88 : 61}
-                activePitchClasses={jam.activePitchClasses}
-                activeMidiNotes={jam.activeMidiNotes}
-                className="max-h-40"
-              />
-            </div>
-          )}
-        </section>
+        )}
       </main>
 
-      <footer className="flex flex-col gap-2 border-t border-zinc-900 pt-3">
-        <TransportBar
-          status={jam.status}
-          onStart={() => void start()}
-          onStop={() => void stop()}
-          onReset={reset}
-          recordAudio={jam.recordAudio}
-          onToggleRecordAudio={() => jamStore.getState().toggleRecordAudio()}
-          onBookmark={() => addMarker('bookmark')}
-          onMarker={addMarker}
-          pianoVisible={pianoVisible}
-          onTogglePiano={() => setPianoVisible((v) => !v)}
+      <section
+        aria-label="Timeline"
+        className={cx(
+          'mx-4 mb-3 rounded-card bg-surface px-3 py-1 transition-[margin] duration-300',
+          inspector.open && wide && 'lg:mr-[400px]',
+        )}
+      >
+        <Timeline
+          timeline={jam.timeline}
+          keyHistory={jam.keyHistory}
+          markers={jam.markers}
+          onAudition={audition}
+          showSlash={settings.showSlashChords}
+          spellingFollowsKey={settings.spellingFollowsKey}
         />
-        <p className="hidden text-xs text-zinc-600 lg:block">
-          Space start/stop · R reset · B bookmark · 1 2 3 chord level · K keyboard · M Solo/Room · S
-          scales · V voicings
-        </p>
+      </section>
+
+      <footer className="material hairline-t flex items-center justify-center gap-2 px-4 py-3 lg:pb-3">
+        {listening ? (
+          <Button
+            size="lg"
+            variant="filled"
+            destructive
+            round
+            className="min-w-36"
+            leading={<Square className="size-4 fill-current" aria-hidden />}
+            onClick={() => void stop()}
+          >
+            Stop
+          </Button>
+        ) : (
+          <Button
+            size="lg"
+            variant="filled"
+            round
+            className="min-w-36"
+            loading={jam.status === 'starting'}
+            leading={<Play className="size-4 fill-current" aria-hidden />}
+            onClick={() => void start()}
+          >
+            Start
+          </Button>
+        )}
+        <Button
+          variant="gray"
+          disabled={!listening}
+          leading={<Bookmark className="size-4" aria-hidden />}
+          onClick={() => addMarker('bookmark')}
+        >
+          <span className="hidden sm:inline">Bookmark</span>
+        </Button>
+        <SectionMenu disabled={!listening} onPick={addMarker} />
+        {jam.recordAudio && listening && (
+          <Badge tone="live" className="ml-1">
+            REC
+          </Badge>
+        )}
       </footer>
+
+      <JamInspector
+        open={inspector.open}
+        onClose={() => inspector.setOpen(false)}
+        tab={inspector.tab}
+        onTab={inspector.setTab}
+        chord={jam.currentChord}
+        confidence={jam.confidence}
+        keyContext={jam.keyEstimate}
+        level={settings.vocabLevel}
+        suggestions={suggestions}
+        spellingFollowsKey={settings.spellingFollowsKey}
+        onAudition={audition}
+        onPlayNotes={playNotes}
+      />
     </div>
   );
 }
