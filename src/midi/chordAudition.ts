@@ -38,24 +38,39 @@ export function chordToMidiNotes(chord: Chord, octave = 4): MidiNote[] {
   return notes.filter((n) => n >= 0 && n <= 127);
 }
 
+type NotePlayer = Pick<MidiPlayer, 'noteOn' | 'noteOff'>;
+
 /**
- * Sound a chord on the player for `durationMs`. Returns a function that
- * releases it early (e.g. when the user taps another chord).
+ * Sound exact MIDI notes (a voicing) on the player for `durationMs`. Returns a function that
+ * releases them early (e.g. when the user taps another voicing); calling it twice is a no-op.
  */
-export function playChord(
-  player: Pick<MidiPlayer, 'noteOn' | 'noteOff'>,
-  chord: Chord,
-  { octave = 4, durationMs = 900, velocity = 80 }: PlayChordOptions = {},
+export function playVoicing(
+  player: NotePlayer,
+  notes: readonly MidiNote[],
+  durationMs = 1200,
+  velocity = 80,
 ): () => void {
-  const notes = chordToMidiNotes(chord, octave);
-  for (const n of notes) player.noteOn(n, velocity);
+  const sounding = [...new Set(notes)].filter((n) => n >= 0 && n <= 127);
+  for (const n of sounding) player.noteOn(n, velocity);
   let released = false;
   const release = () => {
     if (released) return;
     released = true;
     clearTimeout(timer);
-    for (const n of notes) player.noteOff(n);
+    for (const n of sounding) player.noteOff(n);
   };
   const timer = setTimeout(release, durationMs);
   return release;
+}
+
+/**
+ * Sound a chord on the player for `durationMs`. Returns a function that
+ * releases it early (e.g. when the user taps another chord).
+ */
+export function playChord(
+  player: NotePlayer,
+  chord: Chord,
+  { octave = 4, durationMs = 900, velocity = 80 }: PlayChordOptions = {},
+): () => void {
+  return playVoicing(player, chordToMidiNotes(chord, octave), durationMs, velocity);
 }
