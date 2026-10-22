@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MidiEvent, MidiNoteEvent } from '@/core';
 import { buildNoteIndex, pitchWindow, visibleNotes } from './PianoRoll.logic';
+import { perfBudget } from '@/core/testing/perf';
 
 const on = (t: number, note: number, velocity = 80): MidiNoteEvent => ({
   t,
@@ -90,7 +91,7 @@ describe('visibleNotes (viewport culling)', () => {
     const perFrameMs = (performance.now() - t) / 600;
     expect(total).toBeGreaterThan(0);
     // Generous bound for CI; real cost is a few microseconds per frame.
-    expect(perFrameMs).toBeLessThan(2);
+    expect(perFrameMs).toBeLessThan(perfBudget(2));
     const tenSeconds = visibleNotes(idx, { t0: 900, t1: 910 });
     expect(tenSeconds.length).toBeLessThan(200);
   });

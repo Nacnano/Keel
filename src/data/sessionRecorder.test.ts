@@ -4,6 +4,7 @@ import type { AnalysisEvent, Chord, KeyEstimate, MidiEvent } from '@/core/types'
 import { C_MAJOR_KEY, JAZZ_PROGRESSION, POP_PROGRESSION } from '@/core/mocks';
 import { db } from './db';
 import { startSession } from './sessionRecorder';
+import { perfBudget } from '@/core/testing/perf';
 
 const A_MINOR_KEY: KeyEstimate = {
   tonic: 9,
@@ -179,7 +180,7 @@ describe('sessionRecorder', () => {
     const s = await h.stop();
     const ms = performance.now() - t;
     console.info(`[perf] flush+stop 5,000 chords + 50,000 MIDI events: ${ms.toFixed(0)} ms`);
-    expect(ms).toBeLessThan(2000);
+    expect(ms).toBeLessThan(perfBudget(2000));
     expect(await db.chords.count()).toBe(5000);
     expect((await db.midiTracks.get(h.id))?.events).toHaveLength(50_000);
     expect(s.summary?.chordCount).toBe(5000);

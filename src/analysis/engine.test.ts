@@ -6,6 +6,7 @@ import { createAnalysisEngine } from './engine';
 import { CHORD_VOCAB, chordTones, qualitiesForLevel } from './templates';
 import { FPS, chromaFromNotes, progressionFrames } from './testing/chromaFromNotes';
 import type { Step } from './testing/chromaFromNotes';
+import { perfBudget } from '@/core/testing/perf';
 
 const C = ['C3', 'C4', 'E4', 'G4'];
 const Am = ['A2', 'A3', 'C4', 'E4'];
@@ -268,6 +269,6 @@ describe('performance', () => {
     }
     const perFrame = (performance.now() - start) / n;
     console.log(`[analysis perf] level 3: ${perFrame.toFixed(4)} ms/frame over ${n} frames`);
-    expect(perFrame).toBeLessThan(1);
+    expect(perFrame).toBeLessThan(perfBudget(1));
   });
 });

@@ -4,6 +4,7 @@ import type { ChromaFrame } from '@/core/types';
 import { mix, noise, noteNumber, synthChord, synthProgression } from '@/core/testing/synth';
 import { analyseSamples } from './fileInput';
 import { createChromaPipeline } from './pipeline';
+import { perfBudget } from '@/core/testing/perf';
 
 const notes = (...names: string[]) => names.map(noteNumber);
 const argmax = (c: Float32Array) => c.indexOf(Math.max(...c));
@@ -179,6 +180,6 @@ describe('chroma pipeline', () => {
     }
     const mean = (performance.now() - t0) / n;
     console.log(`[audio] chroma pipeline: ${mean.toFixed(3)} ms/frame (mean of ${n})`);
-    expect(mean).toBeLessThan(2);
+    expect(mean).toBeLessThan(perfBudget(2));
   });
 });
