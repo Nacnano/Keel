@@ -5,6 +5,7 @@
  *
  *   pnpm eval                 full run, writes docs/ACCURACY.md and eval/.cache/last.json
  *   pnpm eval --quick         3 sessions, 6 conditions, no sweep (smoke test, ~15 s)
+ *   pnpm eval --core          10 sessions, the 6 headline conditions, no sweep (tuning)
  *   pnpm eval --save-baseline also writes eval/baseline.json (the "before" numbers)
  *   pnpm eval --no-write      print only
  *   pnpm eval --synth         force the additive synth instead of the real piano samples
@@ -21,6 +22,7 @@ import { createChromaPipeline, type PipelineConfig } from '@/audio/pipeline';
 import { DEFAULT_ANALYSIS_CONFIG } from '@/core/constants';
 import type { AnalysisConfig, ChromaFrame, JamMode, VocabLevel } from '@/core/types';
 import { CONDITIONS, conditionById } from './conditions';
+import { evaluateControls, formatControls } from './controls';
 import { computeStats, mergeStats, type RunStats, type TimedChord, type TimedKey } from './metrics';
 import { renderSession, SESSIONS, type Session } from './render';
 import { median, quantile } from './util';
@@ -29,6 +31,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const args = new Set(process.argv.slice(2));
 const QUICK = args.has('--quick');
+/** All sessions, the six headline conditions, no sweep (for tuning). */
+const CORE = args.has('--core');
+const SMALL = QUICK || CORE;
 const WRITE = !args.has('--no-write');
 const SAVE_BASELINE = args.has('--save-baseline');
 const FORCE_SYNTH = args.has('--synth');
@@ -98,6 +103,7 @@ interface Row {
 
 interface Summary {
   rq: number;
+  steady: number;
   root: number;
   dash: number;
   latMed: number;
@@ -112,6 +118,7 @@ interface Summary {
 function summarise(s: RunStats): Summary {
   return {
     rq: s.rqSec / s.gtSec,
+    steady: s.steadyRqSec / Math.max(1e-9, s.steadySec),
     root: s.rootSec / s.gtSec,
     dash: s.dashSec / s.gtSec,
     latMed: median(s.latencies) * 1000,
@@ -129,11 +136,11 @@ const ms = (x: number) => (Number.isFinite(x) ? `${Math.round(x)}` : '–');
 const sec = (x: number | null) => (x === null || !Number.isFinite(x) ? 'never' : x.toFixed(1));
 
 const HEADER =
-  '| Condition | Chord % | Root % | Dash % | Latency med / p90 (ms) | Missed % | Spurious /min | Key % | Key or rel. % | First key (s) |\n' +
-  '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |';
+  '| Condition | Chord % | Chord % after 0.5 s | Root % | Dash % | Latency med / p90 (ms) | Missed % | Spurious /min | Key % | Key or rel. % | First key (s) |\n' +
+  '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |';
 
 function rowLine(label: string, s: Summary): string {
-  return `| ${label} | ${pct(s.rq)} | ${pct(s.root)} | ${pct(s.dash)} | ${ms(s.latMed)} / ${ms(s.latP90)} | ${pct(s.miss)} | ${s.spurious.toFixed(1)} | ${pct(s.key)} | ${pct(s.keyRel)} | ${sec(s.firstKey)} |`;
+  return `| ${label} | ${pct(s.rq)} | ${pct(s.steady)} | ${pct(s.root)} | ${pct(s.dash)} | ${ms(s.latMed)} / ${ms(s.latP90)} | ${pct(s.miss)} | ${s.spurious.toFixed(1)} | ${pct(s.key)} | ${pct(s.keyRel)} | ${sec(s.firstKey)} |`;
 }
 
 async function main() {
@@ -143,14 +150,14 @@ async function main() {
         ['pop-C-block-90', 'pop-G-broken-72', 'jazz-Bb-251-120'].includes(s.id),
       )
     : SESSIONS;
-  const conditionIds = QUICK
+  const conditionIds = SMALL
     ? ['clean', 'pink10', 'low40', 'laptop', 'speaker', 'vocal']
     : CONDITIONS.map((c) => c.id);
-  const sweepConditions = QUICK ? [] : ['clean', 'pink10', 'laptop', 'speaker'];
+  const sweepConditions = SMALL ? [] : ['clean', 'pink10', 'laptop', 'speaker'];
   const roomConditions = new Set([...sweepConditions, 'vocal', 'speaker']);
-  const rates44 = QUICK ? [] : ['clean', 'low40', 'laptop'];
+  const rates44 = SMALL ? [] : ['clean', 'low40', 'laptop'];
   const sweep: EvalConfig[] = [];
-  if (!QUICK) {
+  if (!SMALL) {
     for (const stability of [0.3, 0.5, 0.7]) {
       for (const vocabLevel of [2, 3] as VocabLevel[]) {
         for (const mode of ['solo', 'room'] as JamMode[])
@@ -262,6 +269,36 @@ async function main() {
       ' See eval/README.md for the sessions, conditions and metric definitions.',
   );
   lines.push('');
+  lines.push('## Scope and limitations');
+  lines.push('');
+  lines.push(
+    'These are deterministic simulated performances, not recordings of people jamming. ' +
+      'The ten progressions and noise conditions were also used during tuning, so the results are ' +
+      'development-set measurements, not an independent accuracy guarantee. The baseline uses the ' +
+      'same renderer, seeds, sample recordings, metric code and configurations as the improved detector. ' +
+      'Low-level conditions are peak dBFS; noise SNR is measured against whole-session RMS.',
+  );
+  lines.push('');
+  lines.push(
+    'Chord accuracy includes transitions and display delay; the after-0.5-second column excludes the ' +
+      'first 500 ms of each written chord. Latency is conditional on finding the chord and must be read ' +
+      'alongside missed changes. Ground truth is the written harmony: melody, pedal overlap, ' +
+      'inversions and inherently ambiguous voicings can make another label defensible. Nine sessions ' +
+      'are major and only one is minor; exact-key results are especially limited by that imbalance. ' +
+      'A major-key prior and relative-key switching hysteresis are part of the estimator.',
+  );
+  lines.push('');
+  lines.push(
+    'No real microphone, browser capture chain, device processing, guitar recordings, live singers, ' +
+      'speech or percussion are represented in the primary matrix. The vocal distractor is a ' +
+      'simple synthesized voice. Room mode is a heuristic, not source separation. Sensitivity changes ' +
+      'gate opening, not chord vocabulary or input gain; the headline runs use its default 0.5. ' +
+      'The adaptive gate learns the initial room floor, so a brief quiet lead-in helps quiet playing. ' +
+      'Real-device and held-out musician recordings are still required before claiming field accuracy.',
+  );
+  lines.push('');
+
+  if (!SMALL) lines.push(formatControls(await evaluateControls()));
 
   const baselinePath = join(HERE, 'baseline.json');
   if (existsSync(baselinePath) && !SAVE_BASELINE) {
@@ -314,6 +351,13 @@ async function main() {
   }
   lines.push('');
 
+  lines.push('## Reading these results');
+  lines.push('');
+  lines.push(
+    'The detector remains imperfect: repeated mains hum can dominate the bass and harmonic evidence, and pedal, broken chords and rootless jazz voicings still produce wrong labels. Room mode helps the simulated vocal distractor but does not consistently improve the speaker condition. In quiet/speaker conditions the original fixed gate mostly showed dashes; opening it increases both correct detections and opportunities for spurious labels. Compare chord accuracy, dash time and spurious changes together. A short latency among detected changes does not include missed changes.',
+  );
+  lines.push('');
+
   if (sweep.length) {
     lines.push('## Config sweep (48 kHz)');
     lines.push('');
@@ -340,6 +384,24 @@ async function main() {
     for (const c of rates44) {
       const r = find(c, cfgId(PRIMARY), 44100);
       if (r) lines.push(rowLine(conditionById(c).label, summarise(r.stats)));
+    }
+    lines.push('');
+  }
+
+  {
+    lines.push('## Most common errors (stability 0.5, level 2, Solo; share of chord time)');
+    lines.push('');
+    lines.push('| Condition | Top confusions (written → shown) |');
+    lines.push('| --- | --- |');
+    for (const c of ['clean', 'laptop', 'pink10']) {
+      const r = find(c, cfgId(PRIMARY));
+      if (!r) continue;
+      const top = Object.entries(r.stats.confusions)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([k, v]) => `${k} ${pct(v / r.stats.gtSec)}`)
+        .join('; ');
+      lines.push(`| ${conditionById(c).label} | ${top} |`);
     }
     lines.push('');
   }
@@ -396,7 +458,7 @@ async function main() {
     };
     writeFileSync(baselinePath, await pretty(JSON.stringify(slim), baselinePath));
   }
-  if (WRITE && !QUICK) {
+  if (WRITE && !SMALL) {
     const out = join(ROOT, 'docs', 'ACCURACY.md');
     writeFileSync(out, await pretty(md, out));
   }

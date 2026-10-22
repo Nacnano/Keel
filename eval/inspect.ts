@@ -68,7 +68,7 @@ engine.subscribe((e) => {
       : '';
     lines.push([
       wall,
-      `  show ${label.padEnd(8)} conf ${e.confidence.toFixed(2)}${dash} (frame t ${e.t.toFixed(2)}) energy ${f?.energy.toFixed(2)} bass ${f?.bass ?? '-'} [${chroma}]`,
+      `  show ${label.padEnd(8)} conf ${e.confidence.toFixed(2)}${dash} (frame t ${e.t.toFixed(2)}) energy ${f?.energy.toFixed(2)} lvl ${pipeline.status().levelDb.toFixed(0)} floor ${pipeline.status().noiseFloorDb.toFixed(0)} gate ${pipeline.status().gateDb.toFixed(0)} bass ${f?.bass ?? '-'} [${chroma}]`,
     ]);
   } else if (e.type === 'key') lines.push([wall, `  key  ${keyName(e.key)}`]);
 });

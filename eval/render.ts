@@ -7,7 +7,7 @@
  *   block   – chords struck on the downbeat (RH sometimes re-strikes on beat 3), no pedal
  *   pedal   – block chords with late pedal changes: the previous chord rings 300–800 ms
  *             into the next one
- *   broken  – arpeggiated (bass, then RH tones in eighths) under the pedal, late changes
+ *   broken  – arpeggiated in eighths (LH 1-5-8, RH voicing up and down) under the pedal
  *   melody  – LH chord + bass held, RH melody (chord tones on strong beats, passing tones)
  *   jazz    – LH root, RH shell / rootless voicing, comping on beat 1 and the "and" of 2
  *
@@ -312,8 +312,9 @@ export function performSession(spec: SessionSpec): { notes: NoteEvent[]; chords:
       case 'broken': {
         const rh = voice(chord.root, rhIntervals(chord, spec.voicing), 55, 74, rhCentre);
         rhCentre = rh.reduce((a, b) => a + b, 0) / rh.length;
-        const fifth = bass + 7;
-        const pattern = [bass, fifth, ...rh, rh[rh.length - 2] ?? rh[0], rh[1] ?? rh[0], fifth];
+        // LH 1-5-8, then the RH voicing up and back down (8 eighths per 4/4 bar).
+        const fifth = placeAt(chord.root + 7, bass + 1);
+        const pattern = [bass, fifth, bass + 12, ...rh, ...rh.slice(1, -1).reverse()];
         const eighth = beat / 2;
         const steps = Math.round(span / eighth);
         for (let s = 0; s < steps; s++) {

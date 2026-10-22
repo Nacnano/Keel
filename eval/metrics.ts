@@ -27,6 +27,9 @@ export interface RunStats {
   /** Seconds of ground-truth chord time sampled. */
   gtSec: number;
   rqSec: number;
+  /** Ground-truth time more than 0.5 s after a downbeat, and the correct part of it. */
+  steadySec: number;
+  steadyRqSec: number;
   rootSec: number;
   dashSec: number;
   latencies: number[];
@@ -39,6 +42,8 @@ export interface RunStats {
   sessionSec: number;
   /** Seconds from the first chord to the first correct key; null if never. */
   firstKey: number | null;
+  /** Seconds per confusion "written → shown" (quality names; "root" when the root is wrong). */
+  confusions: Record<string, number>;
 }
 
 const LEVEL2_FALLBACK: Partial<Record<ChordQuality, ChordQuality>> = {
@@ -106,6 +111,8 @@ export function computeStats(
   const stats: RunStats = {
     gtSec: 0,
     rqSec: 0,
+    steadySec: 0,
+    steadyRqSec: 0,
     rootSec: 0,
     dashSec: 0,
     latencies: [],
@@ -116,6 +123,7 @@ export function computeStats(
     keyRelSec: 0,
     sessionSec,
     firstKey: null,
+    confusions: {},
   };
 
   // Frame-level chord accuracy over the ground-truth span.
@@ -129,10 +137,23 @@ export function computeStats(
     const d = shown(chords[ci]);
     const g = gt[gi].chord;
     stats.gtSec += step;
+    const steady = t - gt[gi].t0 >= 0.5;
+    if (steady) {
+      stats.steadySec += step;
+      if (matchRQ(d, g, level)) stats.steadyRqSec += step;
+    }
     if (!d) stats.dashSec += step;
     else {
       if (d.root === g.root) stats.rootSec += step;
       if (matchRQ(d, g, level)) stats.rqSec += step;
+      else {
+        const gq = reduceQuality(g.quality, level);
+        const k =
+          d.root === g.root
+            ? `${gq} → ${d.quality}`
+            : `${gq} → wrong root (${(d.root - g.root + 12) % 12} st, ${d.quality})`;
+        stats.confusions[k] = (stats.confusions[k] ?? 0) + step;
+      }
     }
   }
 
@@ -193,6 +214,8 @@ export function mergeStats(list: RunStats[]): RunStats {
   const out: RunStats = {
     gtSec: 0,
     rqSec: 0,
+    steadySec: 0,
+    steadyRqSec: 0,
     rootSec: 0,
     dashSec: 0,
     latencies: [],
@@ -203,11 +226,14 @@ export function mergeStats(list: RunStats[]): RunStats {
     keyRelSec: 0,
     sessionSec: 0,
     firstKey: null,
+    confusions: {},
   };
   const firsts: number[] = [];
   for (const s of list) {
     out.gtSec += s.gtSec;
     out.rqSec += s.rqSec;
+    out.steadySec += s.steadySec;
+    out.steadyRqSec += s.steadyRqSec;
     out.rootSec += s.rootSec;
     out.dashSec += s.dashSec;
     out.latencies.push(...s.latencies);
@@ -218,6 +244,9 @@ export function mergeStats(list: RunStats[]): RunStats {
     out.keyRelSec += s.keyRelSec;
     out.sessionSec += s.sessionSec;
     firsts.push(s.firstKey ?? Infinity);
+    for (const [k, v] of Object.entries(s.confusions)) {
+      out.confusions[k] = (out.confusions[k] ?? 0) + v;
+    }
   }
   // Median time to first correct key (Infinity when most sessions never got it).
   firsts.sort((a, b) => a - b);

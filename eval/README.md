@@ -1,6 +1,6 @@
 # `eval/`: detection-accuracy harness
 
-Renders realistic piano jam sessions, degrades them (noise, hum, reverb, low level, laptop mic,
+Renders simulated piano jam sessions, degrades them (noise, hum, reverb, low level, laptop mic,
 speaker in a room, a singer), runs them through the **live** detection path exactly as the app
 does (`createChromaPipeline` hop by hop → `createAnalysisEngine`), and scores what the jam
 screen would show. Results go to [`docs/ACCURACY.md`](../docs/ACCURACY.md).
@@ -11,9 +11,11 @@ run takes 1–2 minutes. `tsc -b` still typechecks this folder.
 ```sh
 pnpm eval                 # full run → docs/ACCURACY.md (+ eval/.cache/last.json)
 pnpm eval --quick         # 3 sessions × 6 conditions, prints only (~10 s once cached)
+pnpm eval --core          # all 10 sessions, six headline conditions, no sweep
 pnpm eval --no-write      # full run, print only
 pnpm eval --save-baseline # also store eval/baseline.json, the "before" column of the report
 pnpm eval --synth         # use the additive fallback synth instead of the samples
+pnpm exec tsx --tsconfig eval/tsconfig.json eval/controls.ts # startup + noise-only controls
 
 # timeline of one session (displayed chord, confidence, chroma, key) next to the ground truth
 pnpm eval:inspect pop-G-broken-72 laptop solo 2 [--wav]   # --wav writes eval/.cache/<id>.wav
@@ -74,7 +76,7 @@ SNRs are relative to the RMS of the whole session.
 
 ## Configs
 
-- Primary: stability 0.5, vocabulary level 2, piano, Solo (Room as well for `vocal` and `speaker`).
+- Primary: stability 0.5, vocabulary level 2, sensitivity 0.5, piano, Solo (Room as well for `vocal` and `speaker`).
 - Sweep: stability 0.3 / 0.5 / 0.7 × level 2 / 3 × Solo / Room on clean, pink 10 dB, laptop and
   speaker.
 - 44.1 kHz: clean, low40 and laptop with the primary config.
@@ -89,6 +91,7 @@ so the smoother's look-ahead lag is part of every latency number. The display fo
 - **Chord %**: share of the ground-truth time (10 ms grid) where the displayed root and quality
   equal the written chord, reduced to the vocabulary level (Gm9 → Gm7 and Ab13 → Ab7 at level 2;
   Cmaj7 → C at level 1). Slash bass is ignored. A dash counts as wrong.
+- **Chord % after 0.5 s**: chord accuracy excluding the first 500 ms of each written chord.
 - **Root %**: same, root only.
 - **Dash %**: share of the ground-truth time with no chord shown.
 - **Latency**: downbeat → first time the correct label is on screen (median and p90 over all
@@ -108,3 +111,25 @@ Two devDependencies, used only here:
 - `ogg-opus-decoder` (WASM, no native build): the Splendid samples are Ogg Opus; node has no
   decoder and `decodeAudioData` is browser-only.
 - `tsx`: runs TypeScript with the `@/` path alias in node (the app code is imported unchanged).
+
+## Baseline provenance and limitations
+
+`baseline.json` was regenerated using the current renderer and metric code against the original
+`a39bf72` detector source (identical to the detector in `6405134`). This matters: the interrupted
+work had changed the broken-chord performance after saving its original baseline. Comparing that
+old baseline to the new performance would have changed both the input and detector.
+
+For a fresh comparison, export `a39bf72` to a temporary directory with `git archive`, copy the
+current `eval/` directory into it, and link the current `node_modules/` into the temporary root.
+Use `node node_modules/tsx/dist/cli.mjs --tsconfig eval/tsconfig.json eval/run.ts --save-baseline`
+from the temporary root (pnpm rejects a modules symlink that points outside a temporary project).
+Copy the resulting `eval/baseline.json` back, recording `a39bf72` as its detector commit since an
+archive has no `.git` metadata. Then run `pnpm eval` from this checkout. Keep both runs on the same
+sample/synth setting; the report states which was used.
+
+The ten progressions are the development set used for tuning. These simulations cover only a
+sampled piano, and share recordings and seeds across degradations; hundreds of configurations
+are not hundreds of independent performances. Nine progressions are major and one minor.
+They do not establish real-microphone, guitar, singer or held-out musician accuracy. The report
+includes poor conditions, missed changes, startup false positives and key ambiguity, so improved
+headline averages must not be read as a field accuracy guarantee.
