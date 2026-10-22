@@ -8,6 +8,7 @@ import {
   ReviewScreen,
   RouteFallback,
   SettingsScreen,
+  StatsScreen,
 } from './lazyRoutes';
 import { JamScreen } from '../ui/screens/JamScreen';
 
@@ -26,6 +27,7 @@ export const routes = [
       { path: 'review/:id', element: suspended(ReviewScreen) },
       { path: 'library', element: suspended(LibraryScreen) },
       { path: 'analyze', element: suspended(AnalyzeScreen) },
+      { path: 'stats', element: suspended(StatsScreen) },
       { path: 'settings', element: suspended(SettingsScreen) },
     ],
   },

@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { routes } from './routes';
 
 describe('App routes', () => {
+  afterEach(cleanup);
   it('renders the jam screen at /', () => {
     const r = createMemoryRouter(routes, { initialEntries: ['/'] });
     render(<RouterProvider router={r} />);
@@ -14,6 +15,12 @@ describe('App routes', () => {
     const r = createMemoryRouter(routes, { initialEntries: ['/library'] });
     render(<RouterProvider router={r} />);
     expect(await screen.findByRole('heading', { level: 1, name: 'Library' })).toBeInTheDocument();
+  });
+  it('renders the stats screen at /stats', async () => {
+    const r = createMemoryRouter(routes, { initialEntries: ['/stats'] });
+    render(<RouterProvider router={r} />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Stats' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Stats' })).toHaveAttribute('aria-current', 'page');
   });
   it('renders the settings screen at /settings', async () => {
     const r = createMemoryRouter(routes, { initialEntries: ['/settings'] });
