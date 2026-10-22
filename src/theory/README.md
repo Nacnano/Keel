@@ -16,7 +16,7 @@ Pure TypeScript. No DOM, no audio, no timers; imports only `@/core` and sibling 
 | `suggest.ts`    | `suggestNext(key \| null, recent, level, max = 8) → { chord, reason }[]`                                                                                                                                                                   |
 | `timeline.ts`   | `compressTimeline(chords, maxCycle = 8) → { chords, repeat }[]`, `compressRepeats(xs, eq, maxCycle?, minCycle?)`, `expandTimeline`, `findCycles`, `collapseRuns`, `canonicalRotation`                                                      |
 | `scales.ts`     | `scalesForChord(chord, key?) → { id, name, root, label, pitchClasses, reason, score, rank }[]`, `scaleNotesSpelled(scale, key?, opts?)`, `SCALES`, `scalePitchClasses`                                                                     |
-| `voicings.ts`   | `voicings(chord, { style, register? }) → MidiNote[][]`, `VOICING_STYLES`, `omittableTones`                                                                                                                                                 |
+| `voicings.ts`   | `voicings(chord, { style, register? }) → MidiNote[][]`, `VOICING_STYLES`, `splitHands(notes, splitAt?)`, `voicingLabel`, `voicingDescription`, `omittableTones`                                                                            |
 | `reharm.ts`     | `reharmonize(chords, key, { style: 'pop' \| 'jazz', maxResults? }) → { chords, numerals, reason, score, rules }[]`, `applyRule(rule, chords, key) → ReharmEdit[]`, `applyEdits`, `REHARM_RULES`, `STYLE_RULES`                             |
 | `modulation.ts` | `modulationHints(key, level, max?) → { to, pivot, pivotNumeralFrom, pivotNumeralTo, reason, direct }[]`                                                                                                                                    |
 
@@ -71,10 +71,18 @@ of C major; every note in the key"). `scaleNotesSpelled` spells seven-note scale
 per degree from the root (falling back to the key spelling for odd enharmonics), and other
 scales with `spell(pc, key)`.
 
-**Voicings.** Left-hand bass in C2–B2; right hand centred on `register` (default G4 = 67).
-Rootless A starts on the 3rd, B on the 7th, centred on middle C (left-hand comping). Chords
-with more than four tones drop the fifth first (`omittableTones`); an 11 chord also drops
-its major third. A power chord has no rootless voicing.
+**Voicings.** Styles `pop | close | spread | shell | drop2 | rootlessA | rootlessB`. Hands split
+at middle C (`splitHands`): left-hand bass in C2–B2 (shells may drop to A1 / G#1 to stay below
+C4), right hand in C4–C6 centred on `register` (`low` C4, `mid` G4 default, `high` D5, or a MIDI
+note). Below C3 no two neighbouring notes are closer than a minor third. Pop = right-hand triad
+(the upper three tones on a seventh chord) over the root in octaves; spread = left-hand root +
+fifth (root + octave when the fifth is altered) with the rest in the right hand; shell = 1-3-7 and
+1-7-3 in the left hand (triads use the fifth, add9 the ninth); drop2 keeps the top three voices in
+the right hand; rootless A starts on the 3rd and B on the 7th, in the right hand (a left-hand
+comping shape around middle C in the `low` register), with a 9 / 13 added when the chord has no
+colour tone. Chords with more than four tones drop the fifth first (`omittableTones`); an 11 chord
+also drops its major third. A slash bass is always lowest (and the root stays in the voicing). A
+power chord has no rootless voicing (`[]`).
 
 **Reharmonization** (`reharmonize`). Rules propose local edits: `tritone` (a dominant, or a
 V triad, resolving down a fifth -> the dominant a tritone away), `iiV` (insert ii–V before a
