@@ -1,6 +1,6 @@
 # JamKey — technical implementation plan
 
-Status: **draft for review**. Companion to [`../DESIGN.md`](../DESIGN.md).
+Status: **executed** (2026-10-22). All waves landed as PRs 2–18; see `PR_LOG.md`. Kept as the record of contracts and ownership. Companion to [`../DESIGN.md`](../DESIGN.md).
 This plan is written so that several coding agents can work in parallel. Every
 workstream owns a folder, implements against frozen contracts, and lands as its
 own pull request with real (non-squashed) commits.

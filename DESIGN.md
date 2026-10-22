@@ -1,4 +1,8 @@
-# JamKey — design doc (draft v0)
+# JamKey — design doc
+
+> Status 2026-10-22: built. All phases below are implemented and merged (PRs 1–19 in
+> [`docs/PR_LOG.md`](docs/PR_LOG.md)). Hardware verification and the Supabase project are
+> the user's remaining steps; see [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
 
 Personal web app for jamming and solo piano: listen to the microphone, show the
 current key and chord progression in real time, and capture ideas so they are
