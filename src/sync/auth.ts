@@ -48,13 +48,19 @@ export async function currentUser(): Promise<SyncUser | null> {
 export function onAuthChange(cb: (user: SyncUser | null) => void): () => void {
   let unsubscribe: (() => void) | null = null;
   let cancelled = false;
-  void getSupabase().then((client) => {
-    if (!client || cancelled) return;
-    const { data } = client.auth.onAuthStateChange((_event, session) => {
-      cb(toSyncUser(session?.user));
-    });
-    unsubscribe = () => data.subscription.unsubscribe();
-  });
+  void getSupabase().then(
+    (client) => {
+      if (!client || cancelled) return;
+      const { data } = client.auth.onAuthStateChange((_event, session) => {
+        cb(toSyncUser(session?.user));
+      });
+      unsubscribe = () => data.subscription.unsubscribe();
+    },
+    (err: unknown) => {
+      // e.g. the Supabase chunk failed to load while offline; stay signed out.
+      console.warn('[sync] auth unavailable', err);
+    },
+  );
   return () => {
     cancelled = true;
     unsubscribe?.();

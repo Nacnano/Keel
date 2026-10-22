@@ -254,11 +254,9 @@ describe('pullChanges', () => {
 
   it('pages through more rows than one response holds', async () => {
     for (let i = 0; i < 520; i++) {
-      fake
-        .rows('sessions')
-        .push({
-          ...remoteSession({ id: `s-${String(i).padStart(4, '0')}`, updated_at: 5_000 + i }),
-        });
+      fake.rows('sessions').push({
+        ...remoteSession({ id: `s-${String(i).padStart(4, '0')}`, updated_at: 5_000 + i }),
+      });
     }
     expect((await pullChanges()).pulled).toBe(520);
     expect(await db.sessions.count()).toBe(520);
