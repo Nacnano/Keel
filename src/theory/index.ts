@@ -12,3 +12,5 @@ export * from './suggest';
 export * from './timeline';
 export * from './scales';
 export * from './voicings';
+export * from './reharm';
+export * from './modulation';

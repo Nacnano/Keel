@@ -32,6 +32,9 @@ describe('theory index', () => {
       'compressTimeline',
       'scalesForChord',
       'voicings',
+      'reharmonize',
+      'applyRule',
+      'modulationHints',
     ];
     for (const name of expected) expect(theory, name).toHaveProperty(name);
   });

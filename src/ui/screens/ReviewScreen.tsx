@@ -2,14 +2,17 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
-import type { ChordRecord, MarkerKind } from '@/core';
+import { auditionChord } from '@/app/live/audition';
+import type { Chord, ChordRecord, MarkerKind } from '@/core';
 import type { SessionFull } from '@/data';
 import { useSettings } from '@/state/settingsStore';
+import { sameChord } from '@/theory';
 import { Button } from '../components/Button';
 import { ChordLane } from '../components/ChordLane';
 import { ChordPicker } from '../components/ChordPicker';
 import { MarkerLane, MarkerToolbar } from '../components/MarkerLane';
 import { PianoRoll } from '../components/PianoRoll';
+import { ReharmPanel, type ReharmSource } from '../components/ReharmPanel';
 import { buildNoteIndex } from '../components/PianoRoll.logic';
 import { SummaryCard } from '../components/SummaryCard';
 import { toast } from '../components/toastStore';
@@ -227,6 +230,31 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
         .filter((k, i, a) => a.findIndex((x) => x.tonic === k.tonic && x.mode === k.mode) === i);
   const editingKey = editing ? keyAtTime(keys, editing.t) : null;
 
+  // Reharmonize: the summary's top progressions, or up to four chords from the playhead.
+  const summary = session.summary;
+  const reharmSources = useMemo<ReharmSource[]>(() => {
+    const home = summary?.keys[0]?.key ?? keys[0]?.key;
+    if (!summary || !home) return [];
+    const key = { tonic: home.tonic, mode: home.mode };
+    return summary.topProgressions.slice(0, 3).map((p, i) => ({
+      id: `top:${i}`,
+      label: `Top ${i + 1} ×${p.count}`,
+      chords: p.chords,
+      key,
+    }));
+  }, [summary, keys]);
+  const captureAtPlayhead = useCallback(() => {
+    const start = Math.max(0, indexAt(chords, controller.position()));
+    const picked: Chord[] = [];
+    for (let i = start; i < chords.length && picked.length < 4; i++) {
+      const c = chords[i].chord;
+      if (c && !sameChord(picked[picked.length - 1], c)) picked.push(c);
+    }
+    const k = keyAtTime(keys, chords[start]?.t ?? 0);
+    if (!picked.length || !k) return null;
+    return { chords: picked, key: { tonic: k.tonic, mode: k.mode } };
+  }, [chords, keys, controller]);
+
   return (
     <div className="flex h-full flex-col overflow-y-auto">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 pt-4 pb-[max(env(safe-area-inset-bottom),24px)] lg:px-8">
@@ -405,6 +433,14 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
         <SummaryCard
           summary={session.summary}
           durationSec={session.durationSec}
+          spellingFollowsKey={settings.spellingFollowsKey}
+          showSlash={settings.showSlashChords}
+        />
+
+        <ReharmPanel
+          sources={reharmSources}
+          capture={captureAtPlayhead}
+          onAudition={auditionChord}
           spellingFollowsKey={settings.spellingFollowsKey}
           showSlash={settings.showSlashChords}
         />

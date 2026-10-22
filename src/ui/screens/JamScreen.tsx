@@ -8,6 +8,7 @@ import { ChordDisplay } from '../components/ChordDisplay';
 import { KeyBadge } from '../components/KeyBadge';
 import { LevelSelector } from '../components/LevelSelector';
 import { ModeToggle } from '../components/ModeToggle';
+import { ModulationHints } from '../components/ModulationHints';
 import { Piano } from '../components/Piano';
 import { ScaleHelper } from '../components/ScaleHelper';
 import { SourceIndicator } from '../components/SourceIndicator';
@@ -217,6 +218,13 @@ export function JamScreen() {
             className="items-center lg:items-start"
             suggestions={suggestions}
             keyContext={jam.keyEstimate}
+            onAudition={audition}
+            spellingFollowsKey={settings.spellingFollowsKey}
+          />
+          <ModulationHints
+            className="-mt-4 items-center lg:items-start"
+            keyContext={jam.keyEstimate}
+            level={settings.vocabLevel}
             onAudition={audition}
             spellingFollowsKey={settings.spellingFollowsKey}
           />
