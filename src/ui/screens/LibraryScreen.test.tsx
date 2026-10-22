@@ -58,7 +58,9 @@ describe('LibraryScreen', () => {
   it('shows the first-run empty state', async () => {
     renderAt();
     expect(await screen.findByText('No jams saved yet')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Start a jam' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Start jamming' })).toHaveAttribute('href', '/');
+    // Dev seed tools stay hidden without ?seed=1.
+    expect(screen.queryByRole('button', { name: 'Seed demo session' })).toBeNull();
   });
 
   it('lists sessions newest first, sorts, and links cards to the review screen', async () => {
@@ -114,7 +116,9 @@ describe('LibraryScreen', () => {
     await seed();
     renderAt();
     await screen.findAllByTestId('session-card');
-    fireEvent.click(screen.getByRole('button', { name: 'Delete Neo soul groove' }));
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Neo soul groove' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    expect(screen.queryByRole('menu')).toBeNull();
     await waitFor(() => expect(cardNames()).toEqual(['Ballad sketch', 'Evening idea in C']));
     expect((await db.sessions.get('s2'))?.deleted).toBe(true);
     expect(screen.getByRole('status')).toHaveTextContent('Deleted “Neo soul groove”');
@@ -128,12 +132,30 @@ describe('LibraryScreen', () => {
     await seed();
     renderAt();
     await screen.findAllByTestId('session-card');
-    fireEvent.click(screen.getByRole('button', { name: 'Rename Ballad sketch' }));
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Ballad sketch' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
     const input = screen.getByRole('textbox', { name: 'Session name' });
     fireEvent.change(input, { target: { value: 'Ballad in E' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     await waitFor(() => expect(cardNames()).toContain('Ballad in E'));
     expect((await db.sessions.get('s3'))?.name).toBe('Ballad in E');
+  });
+
+  it('row menu offers the export actions, and share only when sync is signed in', async () => {
+    await seed();
+    renderAt();
+    await screen.findAllByTestId('session-card');
+    fireEvent.click(screen.getByRole('button', { name: 'More actions for Evening idea in C' }));
+    const menu = within(screen.getByRole('menu', { name: 'Actions for Evening idea in C' }));
+    expect(menu.getAllByRole('menuitem').map((m) => m.textContent)).toEqual([
+      'Rename',
+      'Copy chord chart',
+      'Download chart (.txt)',
+      'Download JSON',
+      'Delete',
+    ]);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('menu')).toBeNull();
   });
 
   it('imports a JSON export as a new session', async () => {

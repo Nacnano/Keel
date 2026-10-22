@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createShare, listShares, revokeShare, type ShareLink } from '@/sync/share';
-import { Button } from '../../components/Button';
+import { Button } from '../../kit';
 import { Dialog } from '../../components/Dialog';
 
 export interface ShareDialogProps {
@@ -100,20 +100,22 @@ function ShareDialogBody({ onClose, sessionId }: Omit<ShareDialogProps, 'open'>)
       title="Share link"
       footer={
         <>
-          <Button variant="ghost" disabled={busy} onClick={() => void create()}>
+          <Button variant="gray" disabled={busy} onClick={() => void create()}>
             {links?.length ? 'Create new link' : 'Create link'}
           </Button>
-          <Button onClick={onClose}>Done</Button>
+          <Button variant="filled" onClick={onClose}>
+            Done
+          </Button>
         </>
       }
     >
       <div className="flex flex-col gap-3">
-        <p className="text-zinc-400">
+        <p>
           Anyone with the link can view this chart without signing in. It is a snapshot: later edits
           need a new link. Audio and MIDI are not shared.
         </p>
         {links === null && (
-          <p role="status" className="text-zinc-500">
+          <p role="status" className="text-label-3">
             Preparing link…
           </p>
         )}
@@ -124,28 +126,28 @@ function ShareDialogBody({ onClose, sessionId }: Omit<ShareDialogProps, 'open'>)
               aria-label="Share URL"
               value={l.url}
               onFocus={(e) => e.currentTarget.select()}
-              className="min-h-11 min-w-0 flex-1 rounded-xl bg-zinc-950 px-3 text-sm text-zinc-100 ring-1 ring-zinc-800"
+              className="h-11 min-w-0 flex-1 rounded-control bg-fill-3 px-3 text-subhead text-label"
             />
             <Button
-              size="md"
+              variant="gray"
               onClick={async () =>
                 setMessage((await copy(l.url)) ? 'Link copied to the clipboard' : 'Copy failed')
               }
             >
               Copy
             </Button>
-            <Button variant="danger" disabled={busy} onClick={() => void revoke(l.code)}>
+            <Button variant="plain" destructive disabled={busy} onClick={() => void revoke(l.code)}>
               Revoke
             </Button>
           </div>
         ))}
         {message && (
-          <p role="status" className="text-emerald-300">
+          <p role="status" className="text-ok">
             {message}
           </p>
         )}
         {error && (
-          <p role="alert" className="text-rose-300">
+          <p role="alert" className="text-live">
             {error}
           </p>
         )}

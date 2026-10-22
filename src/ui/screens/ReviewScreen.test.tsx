@@ -166,6 +166,7 @@ describe('ReviewScreen', () => {
     fireEvent.blur(name);
     await waitFor(async () => expect((await db.sessions.get(ID))?.name).toBe('Night groove'));
 
+    fireEvent.click(screen.getByRole('button', { name: /^Add (a )?tag$/ }));
     const tag = screen.getByLabelText('Add tag');
     fireEvent.change(tag, { target: { value: 'ballad' } });
     fireEvent.keyDown(tag, { key: 'Enter' });

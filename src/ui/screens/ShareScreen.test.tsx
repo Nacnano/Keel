@@ -79,7 +79,32 @@ describe('ShareScreen', () => {
   it('shows a not-found state for unknown or revoked codes', async () => {
     renderAt('/s/nothingHere');
     expect(await screen.findByRole('heading', { name: 'Chart not found' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Chart not found' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Open JamKey' })).toHaveAttribute('href', '/');
+  });
+
+  it('shows a loading state, then the chart', async () => {
+    renderAt(`/s/${CODE}`);
+    expect(screen.getByRole('status')).toHaveTextContent('Loading chart');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Shared groove' })).toBeVisible();
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('shows an empty state for a chart without chords', async () => {
+    const payload = buildSharePayload({
+      session: mockSession({ id: 'empty', name: 'Silent take' }),
+      chords: [],
+      keys: [],
+      markers: [],
+    });
+    fake
+      .rows('shares')
+      .push({ code: 'Empty00000', user_id: 'u', session_id: 'empty', payload, created_at: 1 });
+    renderAt('/s/Empty00000');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Silent take' })).toBeVisible();
+    expect(screen.getByText('This chart has no chords.')).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Chord chart' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open in JamKey' })).toBeEnabled();
   });
 
   it('explains when sharing is not configured', async () => {

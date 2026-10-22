@@ -32,7 +32,8 @@ export interface ChordLaneProps {
 
 const LONG_PRESS_MS = 500;
 const LONG_PRESS_SLOP_PX = 8;
-const KEY_TINTS = ['bg-violet-400/[0.07]', 'bg-sky-400/[0.07]'];
+/** Key regions alternate between a faint fill band and none. */
+const KEY_TINTS = ['bg-fill-4', 'bg-transparent'];
 
 /**
  * Full-session chord timeline on the shared time axis, with key regions shaded and labelled.
@@ -90,14 +91,14 @@ export const ChordLane = memo(function ChordLane({
               key={`${s.t0}-${i}`}
               data-testid="key-segment"
               className={cx(
-                'absolute top-0 flex h-full items-center border-l border-violet-400/40',
+                'absolute top-0 flex h-full items-center shadow-[inset_1px_0_0_var(--jk-separator)]',
                 KEY_TINTS[i % 2],
               )}
               style={{ left: x0, width: Math.max(1, x1 - x0) }}
               title={`${label} from ${clockLabel(s.t0)}`}
             >
               <span
-                className="truncate px-2 text-xs font-medium text-violet-200"
+                className="truncate px-2 text-caption font-semibold text-label-2"
                 style={{ marginLeft: Math.max(0, -x0) }}
               >
                 {i > 0 ? '→ ' : ''}
@@ -124,7 +125,7 @@ export const ChordLane = memo(function ChordLane({
         })}
 
         {chords.length === 0 && (
-          <p className="absolute inset-0 flex items-center px-3 text-sm text-zinc-500">
+          <p className="absolute inset-0 flex items-center px-3 text-subhead text-label-3">
             No chords were detected in this session.
           </p>
         )}
@@ -200,26 +201,26 @@ export const ChordLane = memo(function ChordLane({
               onPointerCancel={cancelPress}
               onKeyDown={onKeyDown}
               className={cx(
-                'absolute inset-y-1 flex flex-col items-start justify-center overflow-hidden rounded-lg border-l px-1.5 text-left',
-                'transition-colors duration-100 [-webkit-touch-callout:none] focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-violet-300',
+                'absolute inset-y-1 flex flex-col items-start justify-center overflow-hidden rounded-[8px] px-1.5 text-left',
+                'transition-colors duration-100 [-webkit-touch-callout:none] focus-visible:z-10',
                 active
-                  ? 'border-violet-300 bg-violet-400/25 text-white'
-                  : 'border-zinc-700 bg-zinc-900/80 text-zinc-100 hover:bg-zinc-800',
-                !rec.chord && 'text-zinc-500',
+                  ? 'bg-accent/20 text-label shadow-[inset_2px_0_0_var(--jk-accent)]'
+                  : 'bg-fill-3 text-label shadow-[inset_1px_0_0_var(--jk-separator)] hover:bg-fill-2',
+                !rec.chord && 'text-label-3',
               )}
               style={{ left: x0, width: w }}
             >
               {roomy && (
                 <>
-                  <span className="max-w-full truncate text-base leading-tight font-semibold">
+                  <span className="max-w-full truncate text-callout leading-tight font-semibold">
                     {symbol}
                     {rec.manual && (
-                      <span aria-hidden className="ml-1 align-super text-[10px] text-violet-300">
+                      <span aria-hidden className="ml-1 align-super text-[10px] text-accent">
                         ●
                       </span>
                     )}
                   </span>
-                  <span className="h-4 max-w-full truncate text-xs leading-4 text-zinc-400">
+                  <span className="h-4 max-w-full truncate text-caption leading-4 text-label-2">
                     {numeral}
                   </span>
                 </>

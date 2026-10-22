@@ -4,8 +4,8 @@ import type { Marker, MarkerKind } from '@/core';
 import { cx } from '../lib/cx';
 import { MARKER_LABEL, SECTION_KINDS } from '../lib/markers';
 import { clockLabel, timeToX, visibleSeconds, type TimeViewport } from '../screens/review/timeline';
-import { Button } from './Button';
-import { BookmarkIcon, FlagIcon } from './icons';
+import { Bookmark, Flag, X } from 'lucide-react';
+import { Button, Select } from '../kit';
 
 export interface MarkerLaneProps {
   /** Sorted by `t`. */
@@ -109,7 +109,7 @@ export function MarkerLane({
       aria-label="Markers. Drag to move, Delete removes, arrow keys nudge."
     >
       {markers.length === 0 && (
-        <p className="absolute inset-0 flex items-center px-3 text-xs text-zinc-600">
+        <p className="absolute inset-0 flex items-center px-3 text-footnote text-label-3">
           No markers yet. Press B for a bookmark at the playhead.
         </p>
       )}
@@ -135,14 +135,17 @@ export function MarkerLane({
             onClick={() => onClick(m)}
             onKeyDown={onKeyDown(m)}
             className={cx(
-              'absolute top-0 flex h-full min-w-11 touch-none items-center gap-1 rounded-r-lg border-l-2 pr-2 pl-1.5 text-xs font-medium whitespace-nowrap',
-              'cursor-ew-resize focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-violet-300',
-              bookmark ? 'border-amber-300 text-amber-200' : 'border-sky-300 text-sky-200',
-              isSel ? 'bg-zinc-800' : 'bg-zinc-950/60 hover:bg-zinc-900',
+              'absolute top-1 bottom-1 flex min-w-11 touch-none items-center gap-1 rounded-r-[8px] pr-2 pl-1.5 text-caption font-semibold whitespace-nowrap text-warn',
+              'cursor-ew-resize shadow-[inset_2px_0_0_var(--jk-warn)] transition-colors duration-100 focus-visible:z-10',
+              isSel ? 'bg-warn/20' : 'bg-warn/[0.07] hover:bg-warn/15',
             )}
             style={{ left: timeToX(viewport, t) }}
           >
-            {bookmark ? <BookmarkIcon size={14} /> : <FlagIcon size={14} />}
+            {bookmark ? (
+              <Bookmark className="size-3.5" aria-hidden />
+            ) : (
+              <Flag className="size-3.5" aria-hidden />
+            )}
             <span>{markerText(m)}</span>
           </button>
         );
@@ -174,50 +177,58 @@ export function MarkerToolbar({
 }: MarkerToolbarProps) {
   return (
     <div className={cx('flex flex-wrap items-center gap-2', className)}>
-      <Button onClick={() => onAdd('bookmark', time)}>
-        <BookmarkIcon size={16} />
+      <Button
+        variant="gray"
+        size="sm"
+        leading={<Bookmark className="size-3.5" aria-hidden />}
+        onClick={() => onAdd('bookmark', time)}
+        title="Bookmark at the playhead (B)"
+      >
         Bookmark
-        <kbd className="ml-1 rounded bg-zinc-900 px-1 text-[10px] text-zinc-400">B</kbd>
+        <kbd className="ml-0.5 rounded-[4px] bg-fill-3 px-1 font-sans text-[10px] text-label-2">
+          B
+        </kbd>
       </Button>
-      <select
+      <Select
+        inline
+        className="w-auto"
         aria-label="Add section marker at playhead"
         value=""
-        onChange={(e) => {
-          if (e.target.value) onAdd(e.target.value as MarkerKind, time);
+        onChange={(v) => {
+          if (v) onAdd(v as MarkerKind, time);
         }}
-        className="min-h-11 rounded-xl bg-zinc-800/80 px-3 text-sm text-zinc-100 focus-visible:outline-2 focus-visible:outline-violet-300"
-      >
-        <option value="">+ Section at playhead…</option>
-        {SECTION_KINDS.map((k) => (
-          <option key={k} value={k}>
-            {MARKER_LABEL[k]}
-          </option>
-        ))}
-      </select>
+        options={[
+          { value: '', label: 'Add section…' },
+          ...SECTION_KINDS.map((k) => ({ value: k, label: MARKER_LABEL[k] })),
+        ]}
+      />
 
       {selected && (
         <div
           data-testid="marker-editor"
-          className="flex items-center gap-2 rounded-xl bg-zinc-900 py-1 pr-1 pl-3 ring-1 ring-zinc-800 sm:ml-auto"
+          className="anim-fade-in flex items-center gap-1.5 rounded-cell bg-fill-4 py-1 pr-1 pl-3 sm:ml-auto"
         >
-          <span className="text-sm text-zinc-300 tabular-nums">{clockLabel(selected.t, true)}</span>
-          <select
+          <span className="text-footnote text-label-2 tabular">{clockLabel(selected.t, true)}</span>
+          <Select
+            inline
+            className="w-auto"
             aria-label="Marker type"
             value={selected.kind}
-            onChange={(e) => onChangeKind(selected.id, e.target.value as MarkerKind)}
-            className="min-h-11 rounded-lg bg-zinc-800 px-2 text-sm text-zinc-100 focus-visible:outline-2 focus-visible:outline-violet-300"
-          >
-            {ALL_KINDS.map((k) => (
-              <option key={k} value={k}>
-                {MARKER_LABEL[k]}
-              </option>
-            ))}
-          </select>
-          <Button variant="danger" onClick={() => onDelete(selected.id)}>
+            onChange={(v) => onChangeKind(selected.id, v as MarkerKind)}
+            options={ALL_KINDS.map((k) => ({ value: k, label: MARKER_LABEL[k] }))}
+          />
+          <Button variant="plain" size="sm" destructive onClick={() => onDelete(selected.id)}>
             Delete marker
           </Button>
-          <Button variant="ghost" size="icon" aria-label="Close marker editor" onClick={onDeselect}>
-            ✕
+          <Button
+            variant="plain"
+            size="sm"
+            icon
+            round
+            aria-label="Close marker editor"
+            onClick={onDeselect}
+          >
+            <X className="size-4" aria-hidden />
           </Button>
         </div>
       )}

@@ -35,14 +35,15 @@ export function TimeRuler({ viewport, onViewportChange, width, duration, onSeek 
     <div
       ref={ref}
       aria-hidden
-      className="relative h-7 cursor-pointer touch-none overflow-hidden border-b border-zinc-800 select-none"
+      className="relative h-7 cursor-pointer touch-none overflow-hidden select-none"
     >
       {ticks.map((t) => (
         <div
           key={t}
-          className="absolute bottom-0 flex h-full items-end border-l border-zinc-700 pb-1 pl-1 text-[11px] text-zinc-500 tabular-nums"
+          className="absolute bottom-0 flex h-full items-end pb-1 pl-1.5 text-[11px] text-label-3 tabular"
           style={{ left: timeToX(viewport, t) }}
         >
+          <span className="absolute bottom-0 left-0 h-2.5 w-px bg-separator" />
           {clockLabel(t, showTenths)}
         </div>
       ))}
