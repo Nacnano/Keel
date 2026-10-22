@@ -56,13 +56,13 @@ function layout(lo: number, hi: number): { keys: KeyGeom[]; width: number } {
 }
 
 const FILL: Record<KeyState, [white: string, black: string]> = {
-  off: ['fill-zinc-200', 'fill-zinc-900'],
-  scale: ['fill-violet-200/55', 'fill-violet-700'],
-  chord: ['fill-violet-300', 'fill-violet-400'],
-  pc: ['fill-violet-300/45', 'fill-violet-800'],
-  exact: ['fill-violet-400', 'fill-violet-400'],
+  off: ['fill-[#f4f4f5]', 'fill-[#111113]'],
+  scale: ['fill-accent/22', 'fill-accent/45'],
+  chord: ['fill-accent/80', 'fill-accent'],
+  pc: ['fill-accent/22', 'fill-accent/45'],
+  exact: ['fill-accent', 'fill-accent'],
   left: ['fill-sky-400', 'fill-sky-500'],
-  right: ['fill-violet-400', 'fill-violet-500'],
+  right: ['fill-accent', 'fill-accent'],
 };
 
 /** SVG keyboard. Pure props, no store coupling; scales to its container width. */
@@ -124,7 +124,7 @@ export const Piano = memo(function Piano({
         width={k.black ? BW : W}
         height={k.black ? BH : H}
         rx={k.black ? 2 : 3}
-        className={cx(FILL[st][k.black ? 1 : 0], 'stroke-zinc-950 transition-[fill] duration-75')}
+        className={cx(FILL[st][k.black ? 1 : 0], 'stroke-black/70 transition-[fill] duration-75')}
         strokeWidth={k.black ? 1 : 1.5}
       />
     );
@@ -154,7 +154,7 @@ export const Piano = memo(function Piano({
               aria-hidden
               className={cx(
                 'pointer-events-none font-semibold',
-                k.black ? 'fill-white text-[7px]' : 'fill-zinc-900 text-[9px]',
+                k.black ? 'fill-white text-[7px]' : 'fill-black/80 text-[9px]',
               )}
             >
               {labels[(k.note % 12) as PitchClass]}
@@ -171,14 +171,14 @@ export const Piano = memo(function Piano({
               cx={k.x + (k.black ? BW : W) / 2}
               cy={k.black ? BH - 22 : H - 12}
               r={3.5}
-              className={k.black ? 'fill-white' : 'fill-zinc-900'}
+              className={k.black ? 'fill-white' : 'fill-black/80'}
             />
           ))}
       {/* middle C orientation dot */}
       {geom.keys
         .filter((k) => k.note === 60 && rootPitchClass !== 0)
         .map((k) => (
-          <circle key="c4" cx={k.x + W / 2} cy={H - 12} r={3} className="fill-zinc-400" />
+          <circle key="c4" cx={k.x + W / 2} cy={H - 12} r={3} className="fill-black/30" />
         ))}
     </svg>
   );

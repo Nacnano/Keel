@@ -114,7 +114,7 @@ describe('Piano', () => {
     expect(state(48)).toBe('pc');
     expect(state(108)).toBe('pc'); // C8
     expect(state(62)).toBe('off');
-    expect(container.querySelector('[data-note="60"]')).toHaveClass('fill-violet-400');
+    expect(container.querySelector('[data-note="60"]')).toHaveClass('fill-accent');
   });
 
   it('supports a 61-key range', () => {

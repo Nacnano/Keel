@@ -12,8 +12,10 @@ export interface ChordDisplayProps {
   keyContext?: Key | null;
   showSlash?: boolean;
   spellingFollowsKey?: boolean;
-  /** Shown in the detail line when there is no chord (e.g. "Tap Start and allow the microphone"). */
+  /** Shown in the detail line when there is no chord (e.g. "Tap Start, then play"). */
   hint?: string;
+  /** Idle (not listening): show a quiet placeholder mark instead of the dash. */
+  idle?: boolean;
   className?: string;
 }
 
@@ -33,6 +35,7 @@ export function ChordDisplay({
   showSlash = true,
   spellingFollowsKey = true,
   hint,
+  idle,
   className,
 }: ChordDisplayProps) {
   const shown = chord && confidence >= MIN_DISPLAY_CONFIDENCE ? chord : null;
@@ -59,12 +62,22 @@ export function ChordDisplay({
           ref={symbolRef}
           style={{ fontSize: `calc(${SYMBOL_SIZE} * ${scale})` }}
           className={cx(
-            'leading-none font-semibold tracking-tight whitespace-nowrap',
-            shown ? 'text-white' : 'text-zinc-700',
+            'leading-none font-semibold tracking-[-0.03em] whitespace-nowrap',
+            shown ? 'text-label' : 'text-label-4',
           )}
         >
           {shown ? (
             symbol
+          ) : idle ? (
+            <>
+              <span
+                aria-hidden
+                className="inline-flex size-[0.6em] items-center justify-center rounded-full bg-fill-4 text-[0.28em] text-label-3"
+              >
+                ♪
+              </span>
+              <span className="sr-only">Not listening</span>
+            </>
           ) : (
             <>
               <span aria-hidden>{DASH}</span>
@@ -75,27 +88,27 @@ export function ChordDisplay({
       </div>
       <div
         data-testid="chord-numeral"
-        className="mt-2 h-12 text-4xl font-medium text-violet-300 sm:text-5xl"
+        className="mt-2 h-12 text-4xl font-medium text-accent sm:text-5xl"
       >
         {numeral}
       </div>
-      <div className="mt-3 flex h-7 items-center gap-5 text-lg text-zinc-400">
+      <div className="mt-3 flex h-7 items-center gap-5 text-body text-label-2">
         {shown ? (
           <>
-            <span className="flex gap-3 font-medium tracking-wide text-zinc-300">
+            <span className="flex gap-3 font-medium tracking-wide text-label">
               {tones.map((t, i) => (
                 <span key={i}>{t}</span>
               ))}
             </span>
-            <span className="text-zinc-600" aria-hidden>
+            <span className="text-label-4" aria-hidden>
               |
             </span>
             <span>
-              bass <span className="font-medium text-zinc-300">{bass}</span>
+              bass <span className="font-medium text-label">{bass}</span>
             </span>
           </>
         ) : (
-          <span className="text-base text-zinc-500">{hint}</span>
+          <span className="max-w-md text-balance text-callout text-label-2">{hint}</span>
         )}
       </div>
     </div>
