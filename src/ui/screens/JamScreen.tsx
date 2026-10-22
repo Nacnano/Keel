@@ -14,13 +14,16 @@ import { Timeline } from '../components/Timeline';
 import { toast } from '../components/toastStore';
 import { TransportBar } from '../components/TransportBar';
 import { TryNext } from '../components/TryNext';
+import { VoicingPanel } from '../components/VoicingPanel';
 import { auditionChord } from '@/app/live/audition';
 import { cx } from '../lib/cx';
 import { MARKER_LABEL } from '../lib/markers';
 import { suggestNext } from '../lib/suggest';
 import { useMediaQuery } from '../lib/useMediaQuery';
+import { playNotes } from '../lib/playNotes';
 import { useJamInput } from './jam/useJamInput';
 import { useJamShortcuts } from './jam/useJamShortcuts';
+import { useStoredToggle } from './jam/useStoredToggle';
 
 const PIANO_PREF_KEY = 'jamkey.ui.piano';
 
@@ -107,6 +110,7 @@ export function JamScreen() {
   const input = useJamInput();
   const wide = useMediaQuery('(min-width: 1024px)', true);
   const [pianoVisible, setPianoVisible] = useState(readPianoPref);
+  const [voicingsOpen, toggleVoicings] = useStoredToggle('jamkey.ui.voicings');
 
   // Per-session recording choice starts from the settings default.
   useEffect(() => {
@@ -151,6 +155,7 @@ export function JamScreen() {
     setLevel: (vocabLevel: VocabLevel) => update({ vocabLevel }),
     togglePiano: () => setPianoVisible((v) => !v),
     toggleMode: () => update({ mode: settings.mode === 'solo' ? 'room' : 'solo' }),
+    toggleVoicings,
   });
 
   const recent = useMemo(
@@ -216,6 +221,14 @@ export function JamScreen() {
             onAudition={audition}
             spellingFollowsKey={settings.spellingFollowsKey}
           />
+          <VoicingPanel
+            chord={jam.currentChord ?? jam.timeline.at(-1)?.chord ?? null}
+            keyContext={jam.keyEstimate}
+            spellingFollowsKey={settings.spellingFollowsKey}
+            onPlay={playNotes}
+            open={voicingsOpen}
+            onToggle={toggleVoicings}
+          />
         </section>
 
         <section
@@ -262,7 +275,8 @@ export function JamScreen() {
           onTogglePiano={() => setPianoVisible((v) => !v)}
         />
         <p className="hidden text-xs text-zinc-600 lg:block">
-          Space start/stop · R reset · B bookmark · 1 2 3 chord level · K keyboard · M Solo/Room
+          Space start/stop · R reset · B bookmark · 1 2 3 chord level · K keyboard · M Solo/Room · V
+          voicings
         </p>
       </footer>
     </div>

@@ -98,3 +98,26 @@ describe('SettingsScreen', () => {
     expect(screen.getByLabelText('MIDI device')).toBeDisabled();
   });
 });
+
+describe('JamScreen voicings panel', () => {
+  it('is collapsed by default; V toggles it and the choice persists', () => {
+    renderJam();
+    const panel = screen.getByRole('region', { name: 'Voicings' });
+    expect(screen.queryByRole('radiogroup', { name: 'Voicing style' })).toBeNull();
+    act(() => {
+      fireEvent.keyDown(window, { key: 'v' });
+    });
+    expect(screen.getByRole('radiogroup', { name: 'Voicing style' })).toBeInTheDocument();
+    expect(panel).toHaveTextContent(/appear once a chord is detected/);
+    expect(localStorage.getItem('jamkey.ui.voicings')).toBe('1');
+    // the main keyboard is still the only "Piano" image
+    expect(screen.getByRole('img', { name: /Piano/ })).toBeInTheDocument();
+  });
+
+  it('voices the current chord', () => {
+    localStorage.setItem('jamkey.ui.voicings', '1');
+    jamStore.setState({ currentChord: { root: 0, quality: 'maj7' }, confidence: 1 });
+    renderJam();
+    expect(screen.getAllByTestId('voicing-card').length).toBeGreaterThanOrEqual(1);
+  });
+});
