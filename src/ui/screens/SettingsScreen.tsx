@@ -1,44 +1,40 @@
 import { useId, useState } from 'react';
-import type { ReactNode } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import type { Instrument, Settings } from '@/core';
+import type { Instrument, JamMode, Settings, VocabLevel } from '@/core';
 import { useInputStore } from '@/state/inputStore';
 import { selectSettings, useSettings } from '@/state/settingsStore';
-import { Button } from '../components/Button';
-import { Dialog } from '../components/Dialog';
-import { LevelSelector } from '../components/LevelSelector';
-import { ModeToggle } from '../components/ModeToggle';
-import { Segmented } from '../components/Segmented';
-import { Select } from '../components/Select';
-import { Switch } from '../components/Switch';
 import { toast } from '../components/toastStore';
+import { Button, Group, PageHeader, Row, Segmented, Select, Sheet, Slider, Switch } from '../kit';
+import { APP_VERSION, JAM_SHORTCUTS } from './settings/about';
 import { AccountSync } from './settings/AccountSync';
 
 export const A4_MIN = 415;
 export const A4_MAX = 466;
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-5 rounded-2xl bg-zinc-900/40 p-5 ring-1 ring-zinc-900">
-      <h2 className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">{title}</h2>
-      {children}
-    </section>
-  );
-}
+const INSTRUMENTS = [
+  { value: 'piano' as const, label: 'Piano' },
+  { value: 'guitar' as const, label: 'Guitar' },
+];
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-      <div className="flex flex-col">
-        <span className="text-sm font-medium text-zinc-200">{label}</span>
-        {hint && <span className="text-xs text-zinc-500">{hint}</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
+const MODES = [
+  { value: 'solo' as const, label: 'Just me' },
+  { value: 'room' as const, label: 'Room' },
+];
 
-function A4Input({ value, onCommit }: { value: number; onCommit(v: number): void }) {
+const LEVELS = [
+  { value: 1 as const, label: 'Triads' },
+  { value: 2 as const, label: '7ths' },
+  { value: 3 as const, label: 'Jazz' },
+];
+
+const THEMES = [
+  { value: 'system' as const, label: 'System' },
+  { value: 'light' as const, label: 'Light' },
+  { value: 'dark' as const, label: 'Dark' },
+];
+
+/** Tuning group: A4 as an inline number field; the hint or validation error is the footer. */
+function TuningGroup({ value, onCommit }: { value: number; onCommit(v: number): void }) {
   const id = useId();
   const [draft, setDraft] = useState(String(value));
   const [error, setError] = useState<string | null>(null);
@@ -54,82 +50,74 @@ function A4Input({ value, onCommit }: { value: number; onCommit(v: number): void
   };
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-      <div className="flex flex-col">
-        <label htmlFor={id} className="text-sm font-medium text-zinc-200">
-          Reference pitch (A4)
-        </label>
-        <span className="text-xs text-zinc-500">440 Hz is standard; some pianos sit at 442.</span>
-      </div>
-      <div className="flex flex-col items-end gap-1">
-        <div className="flex items-center gap-2">
-          <input
-            id={id}
-            type="number"
-            inputMode="decimal"
-            min={A4_MIN}
-            max={A4_MAX}
-            step={0.5}
-            value={draft}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? `${id}-err` : undefined}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commit}
-            onKeyDown={(e) => e.key === 'Enter' && commit()}
-            className="min-h-11 w-28 rounded-xl bg-zinc-900 px-3 text-right text-sm text-zinc-100 tabular-nums ring-1 ring-zinc-800 focus-visible:outline-2 focus-visible:outline-violet-300 aria-[invalid]:ring-rose-500"
-          />
-          <span className="text-sm text-zinc-500">Hz</span>
-        </div>
-        {error && (
-          <p id={`${id}-err`} role="alert" className="text-xs text-rose-300">
+    <Group
+      title="Tuning"
+      footer={
+        error ? (
+          <span id={`${id}-err`} role="alert" className="text-live">
             {error}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function StabilitySlider({ value, onChange }: { value: number; onChange(v: number): void }) {
-  const id = useId();
-  const word = value < 0.34 ? 'Snappy' : value > 0.66 ? 'Very stable' : 'Balanced';
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between">
-        <label htmlFor={id} className="text-sm font-medium text-zinc-200">
-          Chord stability
-        </label>
-        <span className="text-sm text-violet-300">{word}</span>
-      </div>
-      <input
-        id={id}
-        type="range"
-        min={0}
-        max={1}
-        step={0.05}
-        value={value}
-        aria-valuetext={`${word} (${Math.round(value * 100)}%)`}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="h-11 w-full accent-violet-400"
+          </span>
+        ) : (
+          '440 Hz is standard; some pianos sit at 442.'
+        )
+      }
+    >
+      <Row
+        label={<label htmlFor={id}>Reference pitch (A4)</label>}
+        accessory={
+          <>
+            <input
+              id={id}
+              type="number"
+              inputMode="decimal"
+              min={A4_MIN}
+              max={A4_MAX}
+              step={0.5}
+              value={draft}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? `${id}-err` : undefined}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commit}
+              onKeyDown={(e) => e.key === 'Enter' && commit()}
+              className="h-8 w-20 rounded-[8px] bg-fill-3 px-2 text-right text-body text-label tabular aria-[invalid]:text-live"
+            />
+            <span>Hz</span>
+          </>
+        }
       />
-      <div className="flex justify-between text-xs text-zinc-500">
-        <span>Snappy, follows every change</span>
-        <span>Stable, ignores passing notes</span>
-      </div>
-    </div>
+    </Group>
   );
 }
 
-const INSTRUMENTS = [
-  { value: 'piano' as const, label: 'Piano' },
-  { value: 'guitar' as const, label: 'Guitar' },
-];
+function Kbd({ children }: { children: string }) {
+  return (
+    <kbd className="inline-flex h-6 min-w-6 items-center justify-center rounded-[6px] bg-fill-3 px-1.5 font-sans text-footnote font-semibold text-label">
+      {children}
+    </kbd>
+  );
+}
 
-const THEMES = [
-  { value: 'dark', label: 'Dark' },
-  { value: 'light', label: 'Light' },
-  { value: 'system', label: 'Match system' },
-];
+function ShortcutsSheet({ open, onClose }: { open: boolean; onClose(): void }) {
+  return (
+    <Sheet open={open} onClose={onClose} title="Keyboard shortcuts">
+      <p className="pb-2 text-footnote text-label-2">
+        On the jam screen, whenever you are not typing in a field.
+      </p>
+      <ul aria-label="Jam shortcuts" className="[&>*+*]:hairline-t">
+        {JAM_SHORTCUTS.map((s) => (
+          <li key={s.keys.join()} className="flex min-h-11 items-center gap-3 py-2">
+            <span className="min-w-0 flex-1 text-body text-label">{s.action}</span>
+            <span className="flex shrink-0 gap-1">
+              {s.keys.map((k) => (
+                <Kbd key={k}>{k}</Kbd>
+              ))}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Sheet>
+  );
+}
 
 export function SettingsScreen() {
   const settings = useSettings(useShallow(selectSettings));
@@ -145,6 +133,7 @@ export function SettingsScreen() {
     })),
   );
   const [confirmReset, setConfirmReset] = useState(false);
+  const [shortcuts, setShortcuts] = useState(false);
 
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => update({ [k]: v });
 
@@ -153,138 +142,247 @@ export function SettingsScreen() {
     ...inputs.audioDevices.map((d) => ({ value: d.id, label: d.label || 'Unnamed input' })),
   ];
   const midiOptions = [
-    { value: '', label: inputs.midiDevices.length ? 'None (use the microphone)' : 'No devices' },
+    { value: '', label: inputs.midiDevices.length ? 'None' : 'No devices' },
     ...inputs.midiDevices.map((d) => ({ value: d.id, label: d.name || d.manufacturer || d.id })),
   ];
   const midiHint = !inputs.midiSupported
     ? 'Web MIDI needs Chrome or Edge on a laptop. Safari uses the microphone.'
     : inputs.midiDevices.length === 0
-      ? 'Connect a digital piano over USB to use exact MIDI input.'
-      : 'MIDI is exact and instant; the microphone stays available as a fallback.';
+      ? 'Connect a digital piano over USB for exact input.'
+      : 'Exact and instant; the microphone stays as a fallback.';
+  const sensitivityWord =
+    settings.sensitivity < 0.34 ? 'Low' : settings.sensitivity > 0.66 ? 'High' : 'Medium';
+  const stabilityWord =
+    settings.stability < 0.34 ? 'Snappy' : settings.stability > 0.66 ? 'Very stable' : 'Balanced';
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-6 pb-[max(env(safe-area-inset-bottom),24px)]">
-        <header className="flex items-end justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Settings</h1>
-          <span className="text-xs text-zinc-500">Saved automatically on this device</span>
-        </header>
+      <div className="mx-auto max-w-2xl pb-[max(env(safe-area-inset-bottom),32px)]">
+        <PageHeader title="Settings" />
 
-        <Section title="Input">
-          <Select
-            label="Microphone"
-            options={audioOptions}
-            value={settings.audioDeviceId ?? ''}
-            onChange={(v) => {
-              set('audioDeviceId', v || null);
-              inputs.selectAudioDevice(v || null);
-            }}
-            hint={
-              inputs.audioDevices.length === 0
-                ? 'Device names appear after you allow the microphone once.'
-                : undefined
-            }
-          />
-          <Select
-            label="MIDI device"
-            options={midiOptions}
-            value={settings.midiDeviceId ?? ''}
-            disabled={!inputs.midiSupported || inputs.midiDevices.length === 0}
-            onChange={(v) => {
-              set('midiDeviceId', v || null);
-              inputs.selectMidiDevice(v || null);
-            }}
-            hint={midiHint}
-          />
-          <Switch
-            label="Record audio by default"
-            description="Stored only on this device. You can still change it per session."
-            checked={settings.recordAudioByDefault}
-            onChange={(v) => set('recordAudioByDefault', v)}
-          />
-        </Section>
-
-        <Section title="Detection">
-          <Field label="Instrument" hint="Tunes smoothing and bass detection.">
-            <Segmented<Instrument>
-              aria-label="Instrument"
-              options={INSTRUMENTS}
-              value={settings.instrument}
-              onChange={(v) => set('instrument', v)}
+        <div className="flex flex-col gap-6 px-4 pt-2">
+          <Group title="Input" footer="Settings are saved automatically on this device.">
+            <Row
+              label="Microphone"
+              detail={
+                inputs.audioDevices.length === 0
+                  ? 'Names appear after you allow the microphone once.'
+                  : undefined
+              }
+              accessory={
+                <Select
+                  inline
+                  aria-label="Microphone"
+                  options={audioOptions}
+                  value={settings.audioDeviceId ?? ''}
+                  onChange={(v) => {
+                    set('audioDeviceId', v || null);
+                    inputs.selectAudioDevice(v || null);
+                  }}
+                />
+              }
             />
-          </Field>
-          <Field label="Listening mode" hint="Room follows a band or a song playing nearby.">
-            <ModeToggle value={settings.mode} onChange={(v) => set('mode', v)} />
-          </Field>
-          <Field label="Chord vocabulary" hint="Triads, sevenths, or full jazz extensions.">
-            <LevelSelector value={settings.vocabLevel} onChange={(v) => set('vocabLevel', v)} />
-          </Field>
-          <StabilitySlider value={settings.stability} onChange={(v) => set('stability', v)} />
+            <Row
+              label="MIDI device"
+              detail={midiHint}
+              accessory={
+                <Select
+                  inline
+                  aria-label="MIDI device"
+                  options={midiOptions}
+                  value={settings.midiDeviceId ?? ''}
+                  disabled={!inputs.midiSupported || inputs.midiDevices.length === 0}
+                  onChange={(v) => {
+                    set('midiDeviceId', v || null);
+                    inputs.selectMidiDevice(v || null);
+                  }}
+                />
+              }
+            />
+            <Row
+              stacked
+              label={
+                <span className="flex items-baseline justify-between gap-3">
+                  <span>Sensitivity</span>
+                  <span className="text-subhead text-label-2">{sensitivityWord}</span>
+                </span>
+              }
+              accessory={
+                <Slider
+                  aria-label="Microphone sensitivity"
+                  aria-valuetext={`${sensitivityWord} (${Math.round(settings.sensitivity * 100)}%)`}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={settings.sensitivity}
+                  onChange={(v) => set('sensitivity', v)}
+                  minLabel="Ignores room noise"
+                  maxLabel="Hears soft playing"
+                />
+              }
+            />
+          </Group>
+
+          <Group title="Listening" footer="Room follows a band or a song playing nearby.">
+            <Row
+              label="Instrument"
+              accessory={
+                <Segmented<Instrument>
+                  size="sm"
+                  aria-label="Instrument"
+                  options={INSTRUMENTS}
+                  value={settings.instrument}
+                  onChange={(v) => set('instrument', v)}
+                />
+              }
+            />
+            <Row
+              label="Mode"
+              accessory={
+                <Segmented<JamMode>
+                  size="sm"
+                  aria-label="Listening mode"
+                  options={MODES}
+                  value={settings.mode}
+                  onChange={(v) => set('mode', v)}
+                />
+              }
+            />
+            <Row
+              label="Record audio by default"
+              detail="Stored only on this device. You can change it per session."
+              accessory={
+                <Switch
+                  aria-label="Record audio by default"
+                  checked={settings.recordAudioByDefault}
+                  onChange={(v) => set('recordAudioByDefault', v)}
+                />
+              }
+            />
+          </Group>
+
+          <Group title="Chords">
+            <Row
+              label="Detail"
+              accessory={
+                <Segmented<VocabLevel>
+                  size="sm"
+                  aria-label="Chord detail"
+                  options={LEVELS}
+                  value={settings.vocabLevel}
+                  onChange={(v) => set('vocabLevel', v)}
+                />
+              }
+            />
+            <Row
+              label="Show slash chords"
+              detail="C/E instead of C when E is in the bass."
+              accessory={
+                <Switch
+                  aria-label="Show slash chords"
+                  checked={settings.showSlashChords}
+                  onChange={(v) => set('showSlashChords', v)}
+                />
+              }
+            />
+            <Row
+              label="Spell notes for the key"
+              detail="B♭ in F major, A♯ in B major. Off: always sharps."
+              accessory={
+                <Switch
+                  aria-label="Spell notes for the key"
+                  checked={settings.spellingFollowsKey}
+                  onChange={(v) => set('spellingFollowsKey', v)}
+                />
+              }
+            />
+            <Row
+              stacked
+              label={
+                <span className="flex items-baseline justify-between gap-3">
+                  <span>Stability</span>
+                  <span className="text-subhead text-label-2">{stabilityWord}</span>
+                </span>
+              }
+              accessory={
+                <Slider
+                  aria-label="Chord stability"
+                  aria-valuetext={`${stabilityWord} (${Math.round(settings.stability * 100)}%)`}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={settings.stability}
+                  onChange={(v) => set('stability', v)}
+                  minLabel="Follows every change"
+                  maxLabel="Ignores passing notes"
+                />
+              }
+            />
+          </Group>
+
           {/* keyed so an external change (reset) refreshes the draft */}
-          <A4Input key={settings.a4} value={settings.a4} onCommit={(v) => set('a4', v)} />
-        </Section>
+          <TuningGroup key={settings.a4} value={settings.a4} onCommit={(v) => set('a4', v)} />
 
-        <Section title="Notation">
-          <Switch
-            label="Show inversions as slash chords"
-            description="C/E instead of C when E is in the bass."
-            checked={settings.showSlashChords}
-            onChange={(v) => set('showSlashChords', v)}
-          />
-          <Switch
-            label="Spelling follows the key"
-            description="B♭ in F major, A♯ in B major. Off: always sharps."
-            checked={settings.spellingFollowsKey}
-            onChange={(v) => set('spellingFollowsKey', v)}
-          />
-        </Section>
+          <Group title="Appearance">
+            <Row
+              label="Theme"
+              accessory={
+                <Segmented<Settings['theme']>
+                  size="sm"
+                  aria-label="Theme"
+                  options={THEMES}
+                  value={settings.theme}
+                  onChange={(v) => set('theme', v)}
+                />
+              }
+            />
+          </Group>
 
-        <Section title="Appearance">
-          <Select
-            label="Theme"
-            options={THEMES}
-            value={settings.theme}
-            onChange={(v) => set('theme', v as Settings['theme'])}
-            hint="The jam screen is designed dark-first; light theme is coming later."
-          />
-        </Section>
-
-        <Section title="Account & sync">
           <AccountSync />
-        </Section>
 
-        <div className="flex justify-end">
-          <Button variant="ghost" onClick={() => setConfirmReset(true)}>
-            Reset to defaults
-          </Button>
+          <Group title="About">
+            <Row label="Version" accessory={<span className="tabular">{APP_VERSION}</span>} />
+            <Row label="Keyboard shortcuts" chevron onClick={() => setShortcuts(true)} />
+          </Group>
+
+          <Group footer="Saved sessions are not affected.">
+            <Row
+              label={<span className="text-live">Reset all settings</span>}
+              onClick={() => setConfirmReset(true)}
+            />
+          </Group>
         </div>
       </div>
 
-      <Dialog
+      <ShortcutsSheet open={shortcuts} onClose={() => setShortcuts(false)} />
+
+      <Sheet
         open={confirmReset}
         onClose={() => setConfirmReset(false)}
+        placement="center"
         title="Reset all settings?"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setConfirmReset(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => {
-                resetSettings();
-                setConfirmReset(false);
-                toast('Settings reset to defaults');
-              }}
-            >
-              Reset
-            </Button>
-          </>
-        }
       >
-        Input devices, detection and notation go back to their defaults. Saved sessions are not
-        affected.
-      </Dialog>
+        <p className="text-subhead text-label-2">
+          Input devices, listening, chords and tuning go back to their defaults. Saved sessions are
+          not affected.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="gray" onClick={() => setConfirmReset(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="filled"
+            destructive
+            onClick={() => {
+              resetSettings();
+              setConfirmReset(false);
+              toast('Settings reset to defaults');
+            }}
+          >
+            Reset
+          </Button>
+        </div>
+      </Sheet>
     </div>
   );
 }

@@ -24,7 +24,7 @@ export function ChordChart({
 }: ChordChartProps) {
   if (!chart.items.length) {
     return (
-      <p className="rounded-2xl bg-zinc-900/40 p-5 text-sm text-zinc-400 ring-1 ring-zinc-900">
+      <p className="rounded-card bg-surface px-4 py-4 text-subhead text-label-2">
         No chords found. The file may be silent, mostly drums or speech, or very quiet.
       </p>
     );
@@ -35,7 +35,7 @@ export function ChordChart({
       {chart.blocks.map((block, b) => (
         <div key={b} className="flex flex-col gap-2">
           {block.key && (
-            <h3 className="text-xs font-semibold tracking-widest text-violet-200 uppercase">
+            <h3 className="px-1 text-footnote font-medium tracking-wide text-label-2 uppercase">
               {b === 0
                 ? `Key ${pretty(keyLabel(block.key, opts))}`
                 : `→ ${pretty(keyLabel(block.key, opts))} at ${clockLabel(block.t)}`}
@@ -48,35 +48,36 @@ export function ChordChart({
                 <li
                   key={s}
                   data-testid="chart-segment"
-                  className="flex flex-wrap items-center gap-1.5"
+                  className="flex items-start gap-2 rounded-card bg-surface p-2"
                 >
-                  <span aria-hidden className="text-lg text-zinc-700">
-                    |
-                  </span>
-                  {seg.items.map((item, c) => (
-                    <Cell
-                      key={c}
-                      chord={item.chord}
-                      keyContext={block.key}
-                      active={here?.cell === c}
-                      at={cellTime(chart, seg, c, here?.pass ?? 1)}
-                      onSeek={onSeek}
-                      spellingFollowsKey={spellingFollowsKey}
-                      showSlash={showSlash}
-                    />
-                  ))}
-                  <span aria-hidden className="text-lg text-zinc-700">
-                    |
-                  </span>
+                  <div className="grid min-w-0 flex-1 grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-1.5">
+                    {seg.items.map((item, c) => (
+                      <Cell
+                        key={c}
+                        chord={item.chord}
+                        keyContext={block.key}
+                        active={here?.cell === c}
+                        at={cellTime(chart, seg, c, here?.pass ?? 1)}
+                        onSeek={onSeek}
+                        spellingFollowsKey={spellingFollowsKey}
+                        showSlash={showSlash}
+                      />
+                    ))}
+                  </div>
                   {seg.repeat > 1 && (
                     <span
                       className={cx(
-                        'ml-1 text-sm tabular-nums',
-                        here ? 'text-violet-200' : 'text-zinc-400',
+                        'flex min-h-14 shrink-0 flex-col items-end justify-center px-2 text-subhead font-semibold tabular',
+                        here ? 'text-accent' : 'text-label-2',
                       )}
                     >
                       ×{seg.repeat}
-                      {here && <span className="text-zinc-500"> · pass {here.pass}</span>}
+                      {here && (
+                        <span className="text-caption font-normal text-label-3">
+                          {' '}
+                          pass {here.pass}
+                        </span>
+                      )}
                     </span>
                   )}
                 </li>
@@ -118,16 +119,13 @@ const Cell = memo(function Cell({
       aria-label={`${symbol}${numeral ? `, ${numeral}` : ''} at ${clockLabel(at)}`}
       onClick={() => onSeek(at)}
       className={cx(
-        'flex min-h-14 min-w-16 flex-col items-center justify-center rounded-xl px-3 py-1.5 transition-colors duration-100',
-        'focus-visible:outline-2 focus-visible:outline-violet-300',
-        active
-          ? 'bg-violet-400/20 text-white ring-1 ring-violet-300'
-          : 'bg-zinc-900 text-zinc-100 ring-1 ring-zinc-800 hover:bg-zinc-800',
+        'flex min-h-14 flex-col items-center justify-center rounded-cell px-2 py-1.5 transition-colors duration-100',
+        active ? 'bg-accent/15 text-accent' : 'bg-fill-4 text-label hover:bg-fill-3',
       )}
     >
-      <span className="text-lg leading-tight font-semibold">{symbol}</span>
+      <span className="text-headline leading-tight font-semibold">{symbol}</span>
       {numeral && (
-        <span className={cx('text-xs', active ? 'text-violet-200' : 'text-zinc-500')}>
+        <span className={cx('text-caption', active ? 'text-accent' : 'text-label-2')}>
           {numeral}
         </span>
       )}

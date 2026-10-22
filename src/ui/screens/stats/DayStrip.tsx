@@ -28,7 +28,7 @@ export function DayStrip({ days }: DayStripProps) {
     (max > 0 ? `; most on ${dayLabel(best.day)}, ${durationSpoken(best.seconds)}.` : '.');
 
   return (
-    <figure className="flex flex-col gap-1">
+    <figure className="flex flex-col gap-1.5">
       <svg
         role="img"
         aria-label={label}
@@ -42,7 +42,7 @@ export function DayStrip({ days }: DayStripProps) {
           x2="100%"
           y1={HEIGHT - 0.5}
           y2={HEIGHT - 0.5}
-          className="stroke-zinc-800"
+          className="stroke-separator"
           strokeWidth={1}
         />
         {days.map((d, i) => {
@@ -73,7 +73,7 @@ export function DayStrip({ days }: DayStripProps) {
                     y={HEIGHT - h}
                     height={h}
                     rx={RADIUS}
-                    className="fill-violet-400 transition-colors group-hover:fill-violet-300"
+                    className="fill-accent transition-[filter] group-hover:brightness-125"
                   />
                   {/* Square off the bottom so the bar sits flat on the baseline. */}
                   <rect
@@ -81,7 +81,7 @@ export function DayStrip({ days }: DayStripProps) {
                     width={w}
                     y={HEIGHT - Math.min(h, RADIUS)}
                     height={Math.min(h, RADIUS)}
-                    className="fill-violet-400 transition-colors group-hover:fill-violet-300"
+                    className="fill-accent transition-[filter] group-hover:brightness-125"
                   />
                 </>
               )}
@@ -89,7 +89,7 @@ export function DayStrip({ days }: DayStripProps) {
           );
         })}
       </svg>
-      <figcaption className="flex justify-between text-xs text-zinc-500" aria-hidden>
+      <figcaption className="flex justify-between text-caption text-label-3 tabular" aria-hidden>
         <span>{dayLabel(days[0].day)}</span>
         {max > 0 && <span>Most: {durationLabel(max)}</span>}
         <span>{dayLabel(days.at(-1)!.day)}</span>
