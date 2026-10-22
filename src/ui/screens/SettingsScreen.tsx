@@ -11,7 +11,6 @@ import { ModeToggle } from '../components/ModeToggle';
 import { Segmented } from '../components/Segmented';
 import { Select } from '../components/Select';
 import { Switch } from '../components/Switch';
-import { Toaster } from '../components/Toast';
 import { toast } from '../components/toastStore';
 
 export const A4_MIN = 415;
@@ -281,7 +280,6 @@ export function SettingsScreen() {
         Input devices, detection and notation go back to their defaults. Saved sessions are not
         affected.
       </Dialog>
-      <Toaster />
     </div>
   );
 }

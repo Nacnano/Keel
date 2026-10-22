@@ -11,11 +11,10 @@ import { ModeToggle } from '../components/ModeToggle';
 import { Piano } from '../components/Piano';
 import { SourceIndicator } from '../components/SourceIndicator';
 import { Timeline } from '../components/Timeline';
-import { Toaster } from '../components/Toast';
 import { toast } from '../components/toastStore';
 import { TransportBar } from '../components/TransportBar';
 import { TryNext } from '../components/TryNext';
-import { auditionChord } from '../lib/audition';
+import { auditionChord } from '@/app/live/audition';
 import { cx } from '../lib/cx';
 import { MARKER_LABEL } from '../lib/markers';
 import { suggestNext } from '../lib/suggest';
@@ -178,9 +177,6 @@ export function JamScreen() {
 
   return (
     <div className="flex h-full flex-col gap-3 px-4 pt-3 pb-[max(env(safe-area-inset-bottom),12px)] lg:px-8">
-      {/* TODO(integration): drop once src/app/App.test.tsx stops asserting the placeholder copy. */}
-      <span hidden>Jam screen placeholder</span>
-
       <header className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <StatusPill status={jam.status} mock={input.mock} />
         <KeyBadge keyEstimate={jam.keyEstimate} spellingFollowsKey={settings.spellingFollowsKey} />
@@ -269,7 +265,6 @@ export function JamScreen() {
           Space start/stop · R reset · B bookmark · 1 2 3 chord level · K keyboard · M Solo/Room
         </p>
       </footer>
-      <Toaster />
     </div>
   );
 }
