@@ -1,0 +1,24 @@
+export { createAnalysisEngine, NOTE_THRESHOLD } from './engine';
+export {
+  CHORD_VOCAB,
+  QUALITY_ORDER,
+  buildTemplates,
+  chordTones,
+  qualitiesForLevel,
+  sameChord,
+} from './templates';
+export type { ChordShape, TemplateBank } from './templates';
+export { identifyExact, scoreChroma } from './chordScorer';
+export type { ExactMatch } from './chordScorer';
+export { createSmoother, lagForStability, stayProbability } from './smoother';
+export type { Decoded, Smoother, SmootherOptions } from './smoother';
+export { applyBass, createBassResolver } from './bassResolver';
+export type { BassResolver } from './bassResolver';
+export {
+  KRUMHANSL_MAJOR,
+  KRUMHANSL_MINOR,
+  createKeyEstimator,
+  relativeKey,
+  DEFAULT_KEY_OPTIONS,
+} from './keyEstimator';
+export type { KeyEstimator, KeyEstimatorOptions } from './keyEstimator';
