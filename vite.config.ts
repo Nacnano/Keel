@@ -60,7 +60,7 @@ export default defineConfig({
         test: {
           name: 'dom',
           environment: 'jsdom',
-          include: ['src/{ui,state,data,app}/**/*.test.{ts,tsx}'],
+          include: ['src/{ui,state,data,app,sync}/**/*.test.{ts,tsx}'],
         },
       },
     ],
