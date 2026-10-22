@@ -11,6 +11,7 @@ import {
 import { computeSummary, topProgressions } from './summary';
 import { canonicalRotation, findCycles } from './cycles';
 import { chordSymbol } from './chordSymbol';
+import { perfBudget } from '@/core/testing/perf';
 
 const A_MINOR_KEY: KeyEstimate = {
   tonic: 9,
@@ -125,6 +126,6 @@ describe('computeSummary', () => {
     const many = records(repeat([...POP_PROGRESSION, ...JAZZ_PROGRESSION], 625));
     const t = performance.now();
     computeSummary(many, [], [], 5000);
-    expect(performance.now() - t).toBeLessThan(200);
+    expect(performance.now() - t).toBeLessThan(perfBudget(200));
   });
 });
