@@ -9,6 +9,7 @@ import { KeyBadge } from '../components/KeyBadge';
 import { LevelSelector } from '../components/LevelSelector';
 import { ModeToggle } from '../components/ModeToggle';
 import { Piano } from '../components/Piano';
+import { ScaleHelper } from '../components/ScaleHelper';
 import { SourceIndicator } from '../components/SourceIndicator';
 import { Timeline } from '../components/Timeline';
 import { toast } from '../components/toastStore';
@@ -23,6 +24,7 @@ import { useMediaQuery } from '../lib/useMediaQuery';
 import { playNotes } from '../lib/playNotes';
 import { useJamInput } from './jam/useJamInput';
 import { useJamShortcuts } from './jam/useJamShortcuts';
+import { useScalesPref } from './jam/useScalesPref';
 import { useStoredToggle } from './jam/useStoredToggle';
 
 const PIANO_PREF_KEY = 'jamkey.ui.piano';
@@ -110,6 +112,7 @@ export function JamScreen() {
   const input = useJamInput();
   const wide = useMediaQuery('(min-width: 1024px)', true);
   const [pianoVisible, setPianoVisible] = useState(readPianoPref);
+  const [scalesOpen, toggleScales] = useScalesPref(wide);
   const [voicingsOpen, toggleVoicings] = useStoredToggle('jamkey.ui.voicings');
 
   // Per-session recording choice starts from the settings default.
@@ -155,6 +158,7 @@ export function JamScreen() {
     setLevel: (vocabLevel: VocabLevel) => update({ vocabLevel }),
     togglePiano: () => setPianoVisible((v) => !v),
     toggleMode: () => update({ mode: settings.mode === 'solo' ? 'room' : 'solo' }),
+    toggleScales,
     toggleVoicings,
   });
 
@@ -221,6 +225,14 @@ export function JamScreen() {
             onAudition={audition}
             spellingFollowsKey={settings.spellingFollowsKey}
           />
+          <ScaleHelper
+            chord={jam.currentChord}
+            confidence={jam.confidence}
+            keyContext={jam.keyEstimate}
+            spellingFollowsKey={settings.spellingFollowsKey}
+            open={scalesOpen}
+            onToggle={toggleScales}
+          />
           <VoicingPanel
             chord={jam.currentChord ?? jam.timeline.at(-1)?.chord ?? null}
             keyContext={jam.keyEstimate}
@@ -275,8 +287,8 @@ export function JamScreen() {
           onTogglePiano={() => setPianoVisible((v) => !v)}
         />
         <p className="hidden text-xs text-zinc-600 lg:block">
-          Space start/stop · R reset · B bookmark · 1 2 3 chord level · K keyboard · M Solo/Room · V
-          voicings
+          Space start/stop · R reset · B bookmark · 1 2 3 chord level · K keyboard · M Solo/Room · S
+          scales · V voicings
         </p>
       </footer>
     </div>

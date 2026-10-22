@@ -104,7 +104,7 @@ function VoicingCard({
           range={range}
           leftHandNotes={left}
           rightHandNotes={right}
-          label={`${voicingLabel(style)} voicing ${index + 1}`}
+          ariaLabel={`${voicingLabel(style)} voicing ${index + 1}`}
           className="max-h-16"
         />
         <span className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
@@ -160,6 +160,7 @@ export function VoicingPanel({
           <button
             type="button"
             aria-expanded={open}
+            aria-label={open ? 'Hide voicings' : 'Show voicings'}
             onClick={onToggle}
             title="Show or hide voicings (V)"
             className={cx(

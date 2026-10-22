@@ -8,6 +8,9 @@ export interface JamShortcutHandlers {
   setLevel(level: VocabLevel): void;
   togglePiano(): void;
   toggleMode(): void;
+  /** S: show / hide the scale helper. */
+  toggleScales?(): void;
+  /** V: show / hide the voicings panel. */
   toggleVoicings?(): void;
 }
 
@@ -16,7 +19,7 @@ function isTypingTarget(t: EventTarget | null): boolean {
   return t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
 }
 
-/** Space start/stop, R reset, B bookmark, 1/2/3 level, K piano, M mode, V voicings. */
+/** Space start/stop, R reset, B bookmark, 1/2/3 level, K piano, M mode, S scales, V voicings. */
 export function useJamShortcuts(handlers: JamShortcutHandlers) {
   const ref = useRef(handlers);
   useLayoutEffect(() => {
@@ -53,6 +56,9 @@ export function useJamShortcuts(handlers: JamShortcutHandlers) {
           return;
         case 'm':
           h.toggleMode();
+          return;
+        case 's':
+          h.toggleScales?.();
           return;
         case 'v':
           h.toggleVoicings?.();

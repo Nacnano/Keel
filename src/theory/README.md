@@ -15,7 +15,7 @@ Pure TypeScript. No DOM, no audio, no timers; imports only `@/core` and sibling 
 | `numerals.ts`  | `romanNumeral(chord, key, opts?)`, `scaleDegree(pc, key)`, `bassDegree(chord, key)`, `inversionFigure(chord)`, `NUMERAL_SUFFIX`                                                                                                            |
 | `suggest.ts`   | `suggestNext(key \| null, recent, level, max = 8) → { chord, reason }[]`                                                                                                                                                                   |
 | `timeline.ts`  | `compressTimeline(chords, maxCycle = 8) → { chords, repeat }[]`, `compressRepeats(xs, eq, maxCycle?, minCycle?)`, `expandTimeline`, `findCycles`, `collapseRuns`, `canonicalRotation`                                                      |
-| `scales.ts`    | `scalesForChord(chord, key?) → { id, name, root, label, pitchClasses, reason, score }[]`, `SCALES`, `scalePitchClasses`                                                                                                                    |
+| `scales.ts`    | `scalesForChord(chord, key?) → { id, name, root, label, pitchClasses, reason, score, rank }[]`, `scaleNotesSpelled(scale, key?, opts?)`, `SCALES`, `scalePitchClasses`                                                                     |
 | `voicings.ts`  | `voicings(chord, { style, register? }) → MidiNote[][]`, `VOICING_STYLES`, `splitHands(notes, splitAt?)`, `voicingLabel`, `voicingDescription`, `omittableTones`                                                                            |
 
 ## Conventions
@@ -58,6 +58,16 @@ ii–V setups, tritone subs (level 3 only), borrowed iv / bVII / bVI (dorian IV 
 Qualities: triads at level 1, triads + dominant sevenths at 2, sevenths at 3. The current chord
 and same-root subsets / supersets of it (Dm7 → Dm) are never suggested; same-root colour
 changes are (C → C7, F → Fm).
+
+**Scales.** `scalesForChord` filters an idiomatic per-quality list to scales that contain every
+chord tone (the fifth may be altered; blues / minor pentatonic, and major pentatonic over
+dominants, may skip one as colour), then ranks by how many of the scale's other notes sit in
+the key (natural minor plus the leading tone in minor keys) blended with the idiomatic order.
+So Dm7 in C → D dorian, G7 → mixolydian, Fmaj7 → lydian, E7 in A minor → phrygian dominant
+(mode 5 of harmonic minor). Reasons name the numeral and parent scale ("ii7 in C major: mode 2
+of C major; every note in the key"). `scaleNotesSpelled` spells seven-note scales one letter
+per degree from the root (falling back to the key spelling for odd enharmonics), and other
+scales with `spell(pc, key)`.
 
 **Voicings.** Styles `pop | close | spread | shell | drop2 | rootlessA | rootlessB`. Hands split
 at middle C (`splitHands`): left-hand bass in C2–B2 (shells may drop to A1 / G#1 to stay below

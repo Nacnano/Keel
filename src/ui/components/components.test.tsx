@@ -124,7 +124,12 @@ describe('Piano', () => {
 
   it('colours left- and right-hand notes over a custom range', () => {
     const { container } = render(
-      <Piano range={[36, 71]} leftHandNotes={[36, 43]} rightHandNotes={[64, 67]} label="Voicing" />,
+      <Piano
+        range={[36, 71]}
+        leftHandNotes={[36, 43]}
+        rightHandNotes={[64, 67]}
+        ariaLabel="Voicing"
+      />,
     );
     expect(container.querySelectorAll('[data-note]')).toHaveLength(36);
     const state = (n: number) =>

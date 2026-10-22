@@ -55,7 +55,7 @@ describe('VoicingPanel', () => {
     expect(screen.getByText(/No rootless a voicing/)).toBeInTheDocument();
     rerender(<VoicingPanel chord={Cmaj7} open={false} onToggle={onToggle} />);
     expect(screen.queryByTestId('voicing-card')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Show' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show voicings' }));
     expect(onToggle).toHaveBeenCalledOnce();
   });
 });
