@@ -94,4 +94,9 @@ describe('keyEstimator', () => {
     est.reset();
     expect(est.current()).toBeNull();
   });
+
+  it('does not flip to the relative minor on a vi-heavy stretch', () => {
+    const { events } = run(steps([C, G, Am, F, Am, F, C, G, Am, F, C, G, Am, F, C, G]));
+    expect(events.map((e) => [e.key.tonic, e.key.mode])).toEqual([[0, 'major']]);
+  });
 });

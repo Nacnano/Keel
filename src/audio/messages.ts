@@ -18,12 +18,29 @@ export interface DspConfigMessage {
   a4: number;
   instrument: Instrument;
   mode: JamMode;
+  /** Fixed gate in dBFS; absent = adaptive gate (noise floor + sensitivity margin). */
   gateDb?: number;
+  /** 0..1, adaptive gate sensitivity (default 0.5). */
+  sensitivity?: number;
 }
 
 export type ToDspWorker = DspConfigMessage | HopMessage | { type: 'reset' };
 
-export interface DspStats {
+/** Live input health (see `InputStatus` in pipeline.ts). */
+export interface InputStatusFields {
+  /** RMS of the newest hop in dBFS (−Infinity for digital silence). */
+  levelDb: number;
+  /** Noise-floor estimate in dBFS. */
+  noiseFloorDb: number;
+  /** Current gate opening threshold in dBFS. */
+  gateDb: number;
+  /** Nothing reached the gate in the last ~3 s ("can't hear you" / not playing). */
+  tooQuiet: boolean;
+  /** A sample hit ±0.99 full scale in the last ~1 s. */
+  clipping: boolean;
+}
+
+export interface DspStats extends InputStatusFields {
   /** Mean / max processing time per hop over the last `frames` hops (ms). */
   meanMs: number;
   maxMs: number;
@@ -35,6 +52,7 @@ export interface DspStats {
 export type FromDspWorker =
   | { type: 'frame'; frame: ChromaFrame }
   | ({ type: 'stats' } & DspStats)
+  | ({ type: 'status' } & InputStatusFields)
   | { type: 'error'; message: string };
 
 /** Main → worklet. */

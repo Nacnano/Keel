@@ -140,6 +140,34 @@ describe('mic path', () => {
     expect(chords.map((c) => label(c.chord))).toEqual(['Cmaj', '-']);
   });
 
+  it('keeps the chord through a short gate closure (decay into room noise), not a long one', () => {
+    const notes = midiChord(C);
+    const frames: ChromaFrame[] = [];
+    let t = 0;
+    const push = (sound: boolean, seconds: number) => {
+      for (let i = 0; i < Math.round(seconds * FPS); i++, t += 1 / FPS) {
+        frames.push(
+          sound
+            ? chromaFromNotes(notes, { t, seed: frames.length + 1 })
+            : {
+                t,
+                chroma: new Float32Array(12),
+                energy: 0.1,
+                bass: null,
+                onset: false,
+                exact: false,
+              },
+        );
+      }
+    };
+    push(true, 1.5);
+    push(false, 0.6); // shorter than RELEASE_HOLD_SEC
+    push(true, 1.5);
+    expect(runFrames(frames).labels).toEqual(['Cmaj']);
+    push(false, 3);
+    expect(runFrames(frames).labels).toEqual(['Cmaj', '-']);
+  });
+
   it('emits notes on change and level on every frame', () => {
     const frames = progressionFrames(steps([C, Am], 0.5));
     const { events } = runFrames(frames);

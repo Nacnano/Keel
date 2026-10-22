@@ -2,6 +2,7 @@
 export {
   createMicInput,
   AudioInputError,
+  type InputStatus,
   type MicInput,
   type MicSettings,
   type MicStartOptions,
@@ -30,6 +31,7 @@ export {
   createChromaPipeline,
   resolveConfig,
   type ChromaPipeline,
+  type InputStatus as PipelineInputStatus,
   type PipelineConfig,
   type PipelineConfigInput,
 } from './pipeline';
@@ -38,7 +40,23 @@ export type { DspStats } from './messages';
 export { createRealFFT, createComplexFFT, type RealFFT, type ComplexFFT } from './fft';
 export { hann } from './window';
 export { findPeaks, type Peak, type PeakOptions } from './peaks';
-export { computeChroma, accumulateChroma, hzToMidi, type ChromaOptions } from './chroma';
+export {
+  accumulateChroma,
+  attributeHarmonics,
+  computeChroma,
+  hzToMidi,
+  PARTIAL_PROFILE,
+  type ChromaOptions,
+} from './chroma';
 export { detectBass, type BassEstimate, type BassOptions } from './bass';
-export { createEnergyGate, createOnsetDetector, rmsDb, dbToEnergy } from './gate';
+export {
+  createAdaptiveGate,
+  createEnergyGate,
+  createOnsetDetector,
+  dbToEnergy,
+  rmsDb,
+  sensitivityMarginDb,
+  type AdaptiveGate,
+  type AdaptiveGateOptions,
+} from './gate';
 export { createRoomProcessor, type RoomOptions } from './room';

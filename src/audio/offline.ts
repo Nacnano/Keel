@@ -18,7 +18,7 @@
  * - With the whole song known, chords shorter than `minChordSec` (default 0.2 s: the one-off
  *   transition labels such as `C/G` between C and G) are folded into the chord before them.
  */
-import { createAnalysisEngine, lagForStability, sameChord } from '@/analysis';
+import { createAnalysisEngine, lagForStability, RELEASE_HOLD_SEC, sameChord } from '@/analysis';
 import { DEFAULT_ANALYSIS_CONFIG } from '@/core/constants';
 import type { AnalysisConfig, AnalysisEvent } from '@/core/types';
 import { decodeAudio, mixToMono } from './fileInput';
@@ -137,8 +137,13 @@ export async function analyseSamplesToEvents(
   try {
     onProgress?.(0, 'analysing');
     const silent = new Float32Array(hopSize);
-    // Enough silent hops to empty the window and let the smoother decide every frame.
-    const tailHops = Math.ceil(frameSize / hopSize) + lagForStability(cfg.stability) + 2;
+    // Enough silent hops to empty the window, outlast the engine's release hold and let the
+    // smoother decide every frame.
+    const tailHops =
+      Math.ceil(frameSize / hopSize) +
+      Math.ceil((RELEASE_HOLD_SEC * sampleRate) / hopSize) +
+      lagForStability(cfg.stability) +
+      2;
     const totalHops = Math.floor(samples.length / hopSize) + tailHops;
     for (let h = 0; h < totalHops; h++) {
       if (signal?.aborted) throw abortError();

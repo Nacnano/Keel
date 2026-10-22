@@ -182,4 +182,57 @@ describe('chroma pipeline', () => {
     console.log(`[audio] chroma pipeline: ${mean.toFixed(3)} ms/frame (mean of ${n})`);
     expect(mean).toBeLessThan(perfBudget(2));
   });
+
+  it('analyses a quiet chord (peak −45 dBFS) that the old fixed −50 dBFS gate dropped', () => {
+    const sr = 48000;
+    const quiet = synthChord({ notes: notes('C3', 'E4', 'G4'), sampleRate: sr, seconds: 2 });
+    const peak = Math.max(...quiet.map(Math.abs));
+    for (let i = 0; i < quiet.length; i++) quiet[i] *= 10 ** (-45 / 20) / peak;
+    const x = mix(concat(silence(sr, 1), quiet), noise(sr * 3, 10 ** (-80 / 20), 7));
+    const adaptive = steady(analyseSamples(x, sr), 1.1, 3, sr);
+    expect(adaptive.length).toBeGreaterThan(20);
+    for (const f of adaptive) {
+      expect(f.chroma[0] + f.chroma[4] + f.chroma[7]).toBeGreaterThan(0.6);
+    }
+    const fixed = steady(analyseSamples(x, sr, { gateDb: -50 }), 1.1, 3, sr);
+    expect(fixed.filter((f) => f.chroma.some((v) => v > 0)).length).toBeLessThan(
+      adaptive.length / 2,
+    );
+  });
+
+  it('reports input status: level, noise floor, too quiet, clipping', () => {
+    const sr = 48000;
+    const p = createChromaPipeline({ sampleRate: sr });
+    const hop = p.config.hopSize;
+    const room = noise(sr * 4, 0.002, 3); // about -59 dBFS
+    for (let i = 0; i + hop <= room.length; i += hop) p.process(room.subarray(i, i + hop), i / sr);
+    let st = p.status();
+    expect(st.noiseFloorDb).toBeGreaterThan(-62);
+    expect(st.noiseFloorDb).toBeLessThan(-56);
+    expect(st.levelDb).toBeCloseTo(st.noiseFloorDb, 0);
+    expect(st.tooQuiet).toBe(true);
+    expect(st.clipping).toBe(false);
+    const loud = synthChord({
+      notes: notes('C4', 'E4', 'G4'),
+      sampleRate: sr,
+      seconds: 0.5,
+      gain: 1,
+    });
+    for (let i = 0; i + hop <= loud.length; i += hop) {
+      p.process(loud.subarray(i, i + hop), 4 + i / sr);
+    }
+    st = p.status();
+    expect(st.tooQuiet).toBe(false);
+    expect(st.clipping).toBe(true);
+    expect(st.levelDb).toBeGreaterThan(-20);
+  });
+
+  it('keeps a fixed gateDb working and switches back to the adaptive gate', () => {
+    const p = createChromaPipeline({ sampleRate: 48000, gateDb: -40 });
+    expect(p.status().gateDb).toBe(-40);
+    p.configure({ gateDb: undefined, sensitivity: 1 });
+    expect(p.config.gateDb).toBeUndefined();
+    expect(p.config.sensitivity).toBe(1);
+    expect(p.status().gateDb).not.toBe(-40);
+  });
 });

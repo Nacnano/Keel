@@ -25,6 +25,7 @@ import {
   type DspStats,
   type FromDspWorker,
   type HopMessage,
+  type InputStatusFields,
   type ToDspWorker,
 } from './messages';
 // `?worker&url` makes Vite compile the worklet (TS → JS) as its own entry and return
@@ -35,8 +36,30 @@ export interface MicSettings {
   a4: number;
   instrument: Instrument;
   mode: JamMode;
-  /** Energy gate in dBFS. Default -50. */
+  /**
+   * Fixed energy gate in dBFS. Unset (default) = adaptive gate: follows the measured noise
+   * floor and opens `sensitivity`-dependent dB above it. Set it to pin the old behaviour
+   * (e.g. -50); set it back to `undefined` to return to the adaptive gate.
+   */
   gateDb?: number;
+  /**
+   * 0..1, default 0.5. How far above the noise floor the adaptive gate opens:
+   * 0 → 14 dB (only clear, close playing), 0.5 → 9 dB, 1 → 4 dB (quiet piano across the room;
+   * more risk of reacting to room noise). Ignored while `gateDb` is set.
+   */
+  sensitivity?: number;
+}
+
+/** Live input health for a level meter and a "can't hear you" hint. */
+export interface InputStatus {
+  /** RMS of the newest hop in dBFS (−Infinity for digital silence or before the first hop). */
+  levelDb: number;
+  /** Noise-floor estimate in dBFS (adaptive gate; a fixed gate reports gateDb − 10). */
+  noiseFloorDb: number;
+  /** Nothing reached the gate during the last ~3 s: too quiet to analyse, or not playing. */
+  tooQuiet: boolean;
+  /** A sample reached ±0.99 full scale during the last ~1 s: lower the input gain. */
+  clipping: boolean;
 }
 
 export interface MicStartOptions {
@@ -44,15 +67,23 @@ export interface MicStartOptions {
   a4?: number;
   instrument?: Instrument;
   mode?: JamMode;
+  sensitivity?: number;
 }
 
 /** `AudioInput` plus a few extras the integrator may use. */
 export interface MicInput extends AudioInput {
   start(opts?: MicStartOptions): Promise<void>;
-  /** Live settings change (A4, instrument, Solo/Room) without restarting. */
+  /** Live settings change (A4, instrument, Solo/Room, sensitivity, gate) without restarting. */
   configure(patch: Partial<MicSettings>): void;
-  /** Worker timing, roughly every 1.5 s while running (for a dev overlay). */
+  /** Worker timing + input status, roughly every 1.5 s while running (for a dev overlay). */
   onStats(cb: (s: DspStats) => void): () => void;
+  /**
+   * Latest input status (updated ≈ 3× per second while running). Before the first update, or
+   * when stopped: levelDb −Infinity, noiseFloorDb −Infinity, tooQuiet true, clipping false.
+   */
+  getInputStatus(): InputStatus;
+  /** Input status updates (≈ 3× per second while running). */
+  onStatus(cb: (s: InputStatus) => void): () => void;
   /** Runtime errors after start (track ended, worker crash, …). */
   onError(cb: (e: Error) => void): () => void;
   getSampleRate(): number | null;
@@ -110,6 +141,23 @@ export function createMicInput(): MicInput {
   const frames = createEmitter<ChromaFrame>();
   const stats = createEmitter<DspStats>();
   const errors = createEmitter<Error>();
+  const statuses = createEmitter<InputStatus>();
+  const idleStatus: InputStatus = {
+    levelDb: -Infinity,
+    noiseFloorDb: -Infinity,
+    tooQuiet: true,
+    clipping: false,
+  };
+  let status: InputStatus = idleStatus;
+  const setStatus = (s: InputStatusFields) => {
+    status = {
+      levelDb: s.levelDb,
+      noiseFloorDb: s.noiseFloorDb,
+      tooQuiet: s.tooQuiet,
+      clipping: s.clipping,
+    };
+    statuses.emit(status);
+  };
 
   let settings: MicSettings = { a4: DEFAULT_A4, instrument: 'piano', mode: 'solo' };
   let ctx: AudioContext | null = null;
@@ -135,6 +183,7 @@ export function createMicInput(): MicInput {
       instrument: settings.instrument,
       mode: settings.mode,
       ...(settings.gateDb !== undefined ? { gateDb: settings.gateDb } : {}),
+      ...(settings.sensitivity !== undefined ? { sensitivity: settings.sensitivity } : {}),
     });
   }
 
@@ -190,6 +239,7 @@ export function createMicInput(): MicInput {
     stream = null;
     worker = null;
     ctx = null;
+    status = idleStatus;
     clock.attachAudioContext(null);
     return c && c.state !== 'closed' ? c.close().catch(() => undefined) : Promise.resolve();
   }
@@ -236,8 +286,11 @@ export function createMicInput(): MicInput {
       worker.onmessage = (e: MessageEvent<FromDspWorker>) => {
         const msg = e.data;
         if (msg.type === 'frame') frames.emit(msg.frame);
+        else if (msg.type === 'status') setStatus(msg);
         else if (msg.type === 'stats') {
-          stats.emit({ meanMs: msg.meanMs, maxMs: msg.maxMs, frames: msg.frames, load: msg.load });
+          const { type: _type, ...rest } = msg;
+          stats.emit(rest);
+          setStatus(msg);
         } else if (msg.type === 'error') errors.emit(new Error(`[dsp] ${msg.message}`));
       };
       worker.onerror = (e) => {
@@ -295,6 +348,7 @@ export function createMicInput(): MicInput {
         ...(opts.a4 !== undefined ? { a4: opts.a4 } : {}),
         ...(opts.instrument !== undefined ? { instrument: opts.instrument } : {}),
         ...(opts.mode !== undefined ? { mode: opts.mode } : {}),
+        ...(opts.sensitivity !== undefined ? { sensitivity: opts.sensitivity } : {}),
       };
       if (starting) await starting.catch(() => undefined);
       if (running) {
@@ -324,6 +378,8 @@ export function createMicInput(): MicInput {
     isRunning: () => running,
     onFrame: (cb) => frames.subscribe(cb),
     onStats: (cb) => stats.subscribe(cb),
+    onStatus: (cb) => statuses.subscribe(cb),
+    getInputStatus: () => status,
     onError: (cb) => errors.subscribe(cb),
     getStream: () => stream,
     getContext: () => ctx,

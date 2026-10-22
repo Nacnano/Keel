@@ -1,7 +1,7 @@
 /**
  * Fixed-lag HMM smoother over chord states.
  *
- * Transition model: stay with p = 0.6 + 0.38 * stability, remaining mass uniform over the
+ * Transition model: stay with p = 0.9 + 0.09 * stability, remaining mass uniform over the
  * other N - 1 states. That structure makes every step O(N): the best predecessor of a state
  * is either itself or the global best (second best if the global best is itself).
  *
@@ -12,10 +12,10 @@
  */
 
 export const WINDOW = 32;
-export const DEFAULT_TAU = 0.08;
+export const DEFAULT_TAU = 0.1;
 
 export function stayProbability(stability: number): number {
-  return 0.6 + 0.38 * clamp01(stability);
+  return 0.9 + 0.09 * clamp01(stability);
 }
 
 /** Decoding lag in frames: 4 (snappy) .. 8 (very stable); 6 at the default 0.5. */
@@ -35,6 +35,12 @@ export interface Decoded {
   state: number;
   /** Fixed-lag smoothed posterior of `state`, 0..1. */
   confidence: number;
+  /**
+   * Frames (1..lag+1) the best path stays in `state` from the decided frame on, within the
+   * look-ahead window. A short run means the path only passes through the state on its way
+   * to another one (a transition blip).
+   */
+  run: number;
 }
 
 export interface Smoother {
@@ -64,6 +70,7 @@ export function createSmoother(opts: SmootherOptions): Smoother {
   const backptr = Array.from({ length: WINDOW }, () => new Int16Array(n));
   const emissions = Array.from({ length: WINDOW }, () => new Float64Array(n));
   const alphas = Array.from({ length: WINDOW }, () => new Float64Array(n));
+  const path = new Int32Array(WINDOW + 1);
   let beta = new Float64Array(n);
   let nextBeta = new Float64Array(n);
   let t = -1;
@@ -139,10 +146,16 @@ export function createSmoother(opts: SmootherOptions): Smoother {
 
     if (t < lag) return null;
 
-    // Backtrack lag steps from the current best end state.
+    // Backtrack lag steps from the current best end state (path[i] = state at t - i).
     let s = 0;
     for (let j = 1; j < n; j++) if (delta[j] > delta[s]) s = j;
-    for (let k = t; k > t - lag; k--) s = backptr[k % WINDOW][s];
+    path[0] = s;
+    for (let k = t, i = 1; k > t - lag; k--, i++) {
+      s = backptr[k % WINDOW][s];
+      path[i] = s;
+    }
+    let run = 1;
+    while (run <= lag && path[lag - run] === s) run++;
 
     // Backward pass over the lag window for the smoothed posterior at t - lag.
     beta.fill(1);
@@ -165,7 +178,12 @@ export function createSmoother(opts: SmootherOptions): Smoother {
     let post = 0;
     for (let j = 0; j < n; j++) post += a[j] * beta[j];
     const confidence = post > 0 ? (a[s] * beta[s]) / post : 0;
-    return { frame: t - lag, state: s, confidence: Math.min(1, Math.max(0, confidence)) };
+    return {
+      frame: t - lag,
+      state: s,
+      confidence: Math.min(1, Math.max(0, confidence)),
+      run,
+    };
   }
 
   return {
