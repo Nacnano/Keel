@@ -1,20 +1,110 @@
 name: CI
+
 on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
+
+# Least privilege by default; jobs that need more declare it themselves.
+permissions:
+  contents: read
+
+# One run per ref; new pushes to a PR cancel the previous run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  FORCE_COLOR: 1
+
 jobs:
-  verify:
+  lint:
+    name: Lint and format
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
       - run: pnpm lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
       - run: pnpm typecheck
-      - run: pnpm test
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm test:coverage
+      - name: Coverage summary
+        if: always()
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            node -e '
+              const s = require("./coverage/coverage-summary.json").total;
+              const row = (k) => `| ${k} | ${s[k].pct}% (${s[k].covered}/${s[k].total}) |`;
+              console.log("## Coverage\n\n| Metric | Value |\n| --- | --- |\n" + ["lines","statements","functions","branches"].map(row).join("\n"));
+            ' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage
+          retention-days: 7
+          if-no-files-found: ignore
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
       - run: pnpm build
+      - name: Check build output
+        run: |
+          test -f dist/index.html
+          test -f dist/sw.js
+          ls dist/assets | grep -q 'dsp.worker'
+          ls dist/assets | grep -q 'capture.worklet'
+      - name: Bundle size summary
+        run: |
+          {
+            echo "## Build output"
+            echo
+            echo '| File | Size |'
+            echo '| --- | --- |'
+            du -k dist/assets/*.js dist/assets/*.css | sort -rn | head -12 | awk '{printf "| %s | %s kB |\n", $2, $1}'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload dist
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist
+          retention-days: 7
+
+  # Single required check for branch protection. Fails if any job above failed or was cancelled.
+  ci:
+    name: CI
+    if: always()
+    needs: [lint, typecheck, test, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify all jobs passed
+        run: |
+          echo '${{ toJSON(needs) }}' | tee needs.json
+          if grep -Eq '"result": "(failure|cancelled|skipped)"' needs.json; then
+            echo "::error::One or more CI jobs did not succeed"; exit 1
+          fi
