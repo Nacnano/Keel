@@ -12,6 +12,7 @@ import { Segmented } from '../components/Segmented';
 import { Select } from '../components/Select';
 import { Switch } from '../components/Switch';
 import { toast } from '../components/toastStore';
+import { AccountSync } from './settings/AccountSync';
 
 export const A4_MIN = 415;
 export const A4_MAX = 466;
@@ -246,6 +247,10 @@ export function SettingsScreen() {
             onChange={(v) => set('theme', v as Settings['theme'])}
             hint="The jam screen is designed dark-first; light theme is coming later."
           />
+        </Section>
+
+        <Section title="Account & sync">
+          <AccountSync />
         </Section>
 
         <div className="flex justify-end">
