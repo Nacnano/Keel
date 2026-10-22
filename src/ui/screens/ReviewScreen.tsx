@@ -18,9 +18,11 @@ import { SummaryCard } from '../components/SummaryCard';
 import { toast } from '../components/toastStore';
 import { keyLabel, pretty } from '../lib/chordLabel';
 import { MARKER_LABEL } from '../lib/markers';
+import { useSync } from '@/sync/store';
 import { ExportMenu } from './library/ExportMenu';
 import { chordText, keyAtTime } from './review/chordText';
 import { NameField } from './review/NameField';
+import { ShareDialog } from './review/ShareDialog';
 import { TagEditor } from './review/TagEditor';
 import { TimeRuler } from './review/TimeRuler';
 import {
@@ -90,6 +92,9 @@ function Centered({ children }: { children: ReactNode }) {
 
 function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi }) {
   const { session, chords, keys, markers, midiTrack, recording } = full;
+  const syncConfigured = useSync((s) => s.configured);
+  const syncUser = useSync((s) => s.user);
+  const [shareOpen, setShareOpen] = useState(false);
   const settings = useSettings(
     useShallow((s) => ({
       spellingFollowsKey: s.spellingFollowsKey,
@@ -288,7 +293,22 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
               className="mt-1"
             />
           </div>
-          <ExportMenu getFull={async () => full} />
+          <ExportMenu
+            getFull={async () => full}
+            share={{
+              onSelect: () => setShareOpen(true),
+              disabledReason: !syncConfigured
+                ? 'Sharing needs cloud sync, which is not configured.'
+                : !syncUser
+                  ? 'Sign in under Settings → Account & sync to share.'
+                  : undefined,
+            }}
+          />
+          <ShareDialog
+            open={shareOpen}
+            onClose={() => setShareOpen(false)}
+            sessionId={session.id}
+          />
         </header>
 
         <section
