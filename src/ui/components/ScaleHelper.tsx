@@ -1,4 +1,5 @@
 import { memo, useMemo, useState } from 'react';
+import { Check } from 'lucide-react';
 import { MIN_DISPLAY_CONFIDENCE } from '@/core';
 import type { Chord, ChordQuality, Key, PitchClass } from '@/core';
 import {
@@ -11,13 +12,14 @@ import {
   spell,
 } from '@/theory';
 import type { ScaleId, ScaleSuggestion } from '@/theory';
+import { Badge } from '../kit';
 import { cx } from '../lib/cx';
 import { Piano } from './Piano';
 
-/** Chips shown before "more…". */
+/** Scales listed before "more…". */
 export const SCALE_CHIPS_COLLAPSED = 4;
 
-/** Two octaves, C3 to C5: enough to see the shape without crowding the jam screen. */
+/** Two octaves, C3 to C5: enough to see the shape without crowding the inspector. */
 const HELPER_RANGE = [48, 72] as const;
 
 export interface ScaleHelperProps {
@@ -27,8 +29,9 @@ export interface ScaleHelperProps {
   confidence?: number;
   keyContext: Key | null;
   spellingFollowsKey?: boolean;
-  /** Collapsed panels show only a "Scales" button. Default true. */
+  /** @deprecated Accepted for compatibility; the panel always renders (its container owns visibility). */
   open?: boolean;
+  /** @deprecated Accepted for compatibility; there is no header toggle. */
   onToggle?(): void;
   className?: string;
 }
@@ -45,7 +48,7 @@ function useHeldChord(chord: Chord | null, confidence: number): Chord | null {
   return confident ?? (chord ? held : null);
 }
 
-function Chip({
+function ScaleRow({
   s,
   label,
   active,
@@ -56,23 +59,26 @@ function Chip({
   active: boolean;
   onPick(id: ScaleId): void;
 }) {
+  const reason = prettyAccidentals(s.reason);
   return (
     <button
       type="button"
       role="radio"
       aria-checked={active}
-      title={prettyAccidentals(s.reason)}
+      aria-label={label}
+      title={reason}
       data-rank={s.rank}
       onClick={() => onPick(s.id)}
-      className={cx(
-        'min-h-11 rounded-xl px-3 text-sm font-medium ring-1 transition-colors duration-150',
-        'focus-visible:outline-2 focus-visible:outline-violet-300',
-        active
-          ? 'bg-violet-400/15 text-violet-100 ring-violet-400/50'
-          : 'bg-zinc-900 text-zinc-300 ring-zinc-800 hover:bg-zinc-800 hover:text-zinc-100',
-      )}
+      className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left transition-colors duration-100 hover:bg-fill-4 active:bg-fill-3"
     >
-      {label}
+      <span className="min-w-0 flex-1">
+        <span className="block text-headline text-label">{label}</span>
+        <span className="mt-0.5 block text-footnote text-label-2">{reason}</span>
+      </span>
+      <Check
+        aria-hidden
+        className={cx('size-5 shrink-0 text-accent', active ? 'opacity-100' : 'opacity-0')}
+      />
     </button>
   );
 }
@@ -87,8 +93,6 @@ export const ScaleHelper = memo(function ScaleHelper({
   confidence = 1,
   keyContext,
   spellingFollowsKey = true,
-  open = true,
-  onToggle,
   className,
 }: ScaleHelperProps) {
   const shown = useHeldChord(chord, confidence);
@@ -106,49 +110,10 @@ export const ScaleHelper = memo(function ScaleHelper({
     return scalesForChord({ root, quality }, key);
   }, [root, quality, tonic, mode]);
 
-  const header = (
-    <div className="flex min-h-11 items-center gap-3">
-      <h2 className="text-xs font-medium tracking-widest text-zinc-500 uppercase">Scales</h2>
-      {open && shown && (
-        <span className="text-sm text-zinc-400">
-          over{' '}
-          <span className="font-semibold text-zinc-200">
-            {prettyAccidentals(chordSymbol(shown, keyContext, { ...opts, showSlash: false }))}
-          </span>
-        </span>
-      )}
-      {onToggle && (
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={open}
-          title={open ? 'Hide scale helper (S)' : 'Show scale helper (S)'}
-          className={cx(
-            'ml-auto min-h-11 rounded-xl px-3 text-xs font-medium text-zinc-400',
-            'hover:bg-zinc-800/70 hover:text-zinc-100 focus-visible:outline-2 focus-visible:outline-violet-300',
-          )}
-        >
-          {open ? 'Hide' : 'Show'}
-        </button>
-      )}
-    </div>
-  );
-
-  if (!open) {
-    return (
-      <section aria-label="Scale helper" className={cx('flex flex-col', className)}>
-        {header}
-      </section>
-    );
-  }
-
   if (!shown || ranked.length === 0) {
     return (
-      <section aria-label="Scale helper" className={cx('flex flex-col gap-2', className)}>
-        {header}
-        <p className="flex min-h-12 items-center text-sm text-zinc-600">
-          Play a chord to see scales that fit.
-        </p>
+      <section aria-label="Scale helper" className={className}>
+        <p className="text-subhead text-label-3">Play a chord to see scales that fit.</p>
       </section>
     );
   }
@@ -161,6 +126,7 @@ export const ScaleHelper = memo(function ScaleHelper({
   const hiddenCount = ranked.length - visible.length;
   const labelOf = (s: ScaleSuggestion) =>
     prettyAccidentals(`${spell(s.root, keyContext, opts)} ${s.name}`);
+  const symbol = prettyAccidentals(chordSymbol(shown, keyContext, { ...opts, showSlash: false }));
 
   const notes = scaleNotesSpelled(selected, keyContext, opts).map(prettyAccidentals);
   const chordSet = new Set<number>(chordTones(shown));
@@ -175,12 +141,24 @@ export const ScaleHelper = memo(function ScaleHelper({
   };
 
   return (
-    <section aria-label="Scale helper" className={cx('flex flex-col gap-2', className)}>
-      {header}
-      <div className="flex flex-wrap items-center gap-2">
-        <div role="radiogroup" aria-label="Scales that fit" className="flex flex-wrap gap-2">
+    <section aria-label="Scale helper" className={cx('flex flex-col gap-3', className)}>
+      <p className="text-subhead text-label-2">
+        over <span className="font-semibold text-label">{symbol}</span>
+      </p>
+      <div className="overflow-hidden rounded-cell bg-fill-4">
+        <div
+          role="radiogroup"
+          aria-label="Scales that fit"
+          className="flex flex-col [&>*+*]:hairline-t"
+        >
           {visible.map((s) => (
-            <Chip key={s.id} s={s} label={labelOf(s)} active={s.id === selected.id} onPick={pick} />
+            <ScaleRow
+              key={s.id}
+              s={s}
+              label={labelOf(s)}
+              active={s.id === selected.id}
+              onPick={pick}
+            />
           ))}
         </div>
         {(hiddenCount > 0 || expanded) && ranked.length > SCALE_CHIPS_COLLAPSED && (
@@ -188,33 +166,32 @@ export const ScaleHelper = memo(function ScaleHelper({
             type="button"
             aria-expanded={expanded}
             onClick={() => setExpanded((v) => !v)}
-            className="min-h-11 rounded-xl px-3 text-sm text-zinc-500 hover:text-zinc-200 focus-visible:outline-2 focus-visible:outline-violet-300"
+            className="flex min-h-11 w-full items-center px-3 text-left text-subhead text-accent transition-colors duration-100 hairline-t hover:bg-fill-4 active:bg-fill-3"
           >
             {expanded ? 'less' : `more… (${hiddenCount})`}
           </button>
         )}
       </div>
-      <p className="text-xs text-zinc-500">{prettyAccidentals(selected.reason)}</p>
       <ol
         aria-label={`${labelOf(selected)} notes`}
         data-testid="scale-notes"
-        className="flex gap-1"
+        className="flex flex-wrap gap-1.5"
       >
         {notes.map((n, i) => {
           const p = selected.pitchClasses[i];
+          const tone = chordSet.has(p);
           return (
-            <li
-              key={p}
-              data-chord-tone={chordSet.has(p) || undefined}
-              className={cx(
-                'min-w-8 rounded-md px-1.5 py-0.5 text-center text-sm tabular-nums',
-                chordSet.has(p)
-                  ? 'bg-violet-400/15 font-semibold text-violet-100'
-                  : 'text-zinc-300',
-                i === 0 && 'ring-1 ring-violet-400/40',
-              )}
-            >
-              {n}
+            <li key={p} data-chord-tone={tone || undefined}>
+              <Badge
+                tone={tone ? 'accent' : 'neutral'}
+                title={i === 0 ? 'Root' : undefined}
+                className={cx(
+                  'min-w-8 justify-center tabular',
+                  i === 0 && 'ring-1 ring-current/40 ring-inset',
+                )}
+              >
+                {n}
+              </Badge>
             </li>
           );
         })}
@@ -226,7 +203,7 @@ export const ScaleHelper = memo(function ScaleHelper({
         rootPitchClass={selected.root}
         labels={labels}
         ariaLabel={`Scale keys: ${labelOf(selected)}, ${notes.join(' ')}`}
-        className="max-h-28"
+        className="max-h-36 w-full"
       />
     </section>
   );

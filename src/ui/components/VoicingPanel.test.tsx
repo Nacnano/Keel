@@ -45,7 +45,7 @@ describe('VoicingPanel', () => {
     );
   });
 
-  it('has empty states and a toggle', () => {
+  it('has empty states and no header toggle', () => {
     const onToggle = vi.fn();
     const { rerender } = render(<VoicingPanel chord={null} onToggle={onToggle} />);
     expect(screen.getByText(/appear once a chord is detected/)).toBeInTheDocument();
@@ -53,9 +53,24 @@ describe('VoicingPanel', () => {
       <VoicingPanel key="power" chord={{ root: 0, quality: '5' }} initialStyle="rootlessA" />,
     );
     expect(screen.getByText(/No rootless a voicing/)).toBeInTheDocument();
+    // legacy props are accepted but the panel always renders open
     rerender(<VoicingPanel chord={Cmaj7} open={false} onToggle={onToggle} />);
-    expect(screen.queryByTestId('voicing-card')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Show voicings' }));
-    expect(onToggle).toHaveBeenCalledOnce();
+    expect(screen.getAllByTestId('voicing-card').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /^(Show|Hide) voicings$/ })).toBeNull();
+    expect(onToggle).not.toHaveBeenCalled();
+  });
+
+  it('keeps one selected style across the two style rows', () => {
+    render(<VoicingPanel chord={Cmaj7} />);
+    const tabs = screen.getByRole('radiogroup', { name: 'Voicing style' });
+    const checked = () =>
+      within(tabs)
+        .getAllByRole('radio')
+        .filter((r) => r.getAttribute('aria-checked') === 'true');
+    expect(checked()).toHaveLength(1);
+    fireEvent.click(within(tabs).getByRole('radio', { name: /^Shell:/ }));
+    expect(checked()).toHaveLength(1);
+    expect(checked()[0]).toHaveAccessibleName(/^Shell:/);
+    expect(screen.getByText(/Left-hand 1-3-7/)).toBeInTheDocument();
   });
 });
