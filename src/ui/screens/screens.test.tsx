@@ -76,6 +76,24 @@ describe('JamScreen', () => {
     expect(settingsStore.getState().mode).toBe('room');
     expect(screen.queryByRole('img', { name: /Piano/ })).toBeNull();
   });
+
+  it('S toggles the scale helper and remembers the choice', () => {
+    renderJam();
+    const helper = screen.getByRole('region', { name: 'Scale helper' });
+    expect(helper).toHaveTextContent('Play a chord to see scales that fit.');
+    act(() => {
+      jamStore.setState({ currentChord: { root: 2, quality: 'min7' }, confidence: 0.9 });
+    });
+    expect(screen.getByRole('radio', { name: 'D dorian' })).toBeInTheDocument();
+    act(() => {
+      fireEvent.keyDown(window, { key: 's' });
+    });
+    expect(screen.queryByRole('radio', { name: 'D dorian' })).toBeNull();
+    expect(localStorage.getItem('jamkey.ui.scales')).toBe('0');
+    cleanup();
+    renderJam();
+    expect(screen.getByRole('button', { name: 'Show' })).toBeInTheDocument();
+  });
 });
 
 describe('SettingsScreen', () => {
