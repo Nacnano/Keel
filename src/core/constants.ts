@@ -59,7 +59,7 @@ export const DEFAULT_SETTINGS: Settings = {
   audioDeviceId: null,
   midiDeviceId: null,
   recordAudioByDefault: false,
-  theme: 'dark',
+  theme: 'system',
 };
 
 /** Chord confidence below which the UI shows a dash instead of a label. */

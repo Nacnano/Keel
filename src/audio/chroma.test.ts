@@ -97,3 +97,37 @@ describe('bass', () => {
     expect(detectBass([])).toBeNull();
   });
 });
+
+describe('harmonic attribution', () => {
+  it('folds the 3rd and 5th partials of a single note back onto the note', () => {
+    const sr = 48000;
+    // C3 with 8 strong partials: its 3rd (G) and 5th (E) partials are real spectral peaks.
+    const x = synthChord({ notes: [48], sampleRate: sr, harmonics: 8, rolloff: 0.5 });
+    const peaks = spectrumPeaks(x, sr, 8000);
+    const transfer = computeChroma(peaks, { harmonics: 8 });
+    const hpcp = computeChroma(peaks, { harmonics: 8, method: 'hpcp' });
+    expect(transfer[0]).toBeGreaterThan(0.85);
+    expect(transfer[7] + transfer[4]).toBeLessThan(hpcp[7] + hpcp[4]);
+  });
+
+  it('keeps a real chord tone that is much louder than the predicted partial', () => {
+    const sr = 48000;
+    // C3 + G4: G4 is also the 3rd partial of C3, but here it is played (and louder).
+    const x = synthChord({ notes: [48, 67, 67, 67], sampleRate: sr });
+    const chroma = computeChroma(spectrumPeaks(x, sr, 8000), { harmonics: 8 });
+    expect(chroma[7]).toBeGreaterThan(0.3);
+  });
+});
+
+describe('bass harmonic support', () => {
+  it('ignores a lone low peak (rumble) when harmonic support is required', () => {
+    const peaks = [
+      { freq: 32, mag: 0.05 },
+      { freq: 110, mag: 0.2 },
+      { freq: 220, mag: 0.3 },
+      { freq: 440, mag: 1 },
+    ];
+    expect(detectBass(peaks, { relativeThreshold: 0.03 })?.freq).toBe(32);
+    expect(detectBass(peaks, { relativeThreshold: 0.03, harmonicSupport: 0.01 })?.pc).toBe(9);
+  });
+});

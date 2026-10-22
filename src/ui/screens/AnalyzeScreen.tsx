@@ -1,3 +1,4 @@
+import { ToolsBackLink } from './tools/ToolsBackLink';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
@@ -52,6 +53,8 @@ export function AnalyzeScreen() {
   const [level, setLevel] = useState<VocabLevel>(settings.vocabLevel);
   // A recorded song is a full mix: room mode down-weights vocals and other unstable partials.
   const [mode, setMode] = useState<JamMode>('room');
+  // Decoding is asynchronous: use the latest selections when the samples are ready.
+  const selectedOptions = useRef({ level, mode });
   const [file, setFile] = useState<File | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const decoded = useRef<DecodedAudio | null>(null);
@@ -111,10 +114,12 @@ export function AnalyzeScreen() {
     }
     if (ctrl.signal.aborted) return;
     decoded.current = audio;
-    await analyse(audio, level, mode);
+    await analyse(audio, selectedOptions.current.level, selectedOptions.current.mode);
   };
 
   const pick = (f: File) => {
+    // A pending file warning or error must never re-analyse the previous file.
+    decoded.current = null;
     if (!isSupportedAudio(f)) {
       abort.current?.abort();
       setPhase({
@@ -133,10 +138,12 @@ export function AnalyzeScreen() {
   };
 
   const changeLevel = (l: VocabLevel) => {
+    selectedOptions.current.level = l;
     setLevel(l);
     if (decoded.current && phase.kind !== 'idle') void analyse(decoded.current, l, mode);
   };
   const changeMode = (m: JamMode) => {
+    selectedOptions.current.mode = m;
     setMode(m);
     if (decoded.current && phase.kind !== 'idle') void analyse(decoded.current, level, m);
   };
@@ -154,7 +161,8 @@ export function AnalyzeScreen() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-3xl pb-[max(env(safe-area-inset-bottom),32px)]">
-        <PageHeader title="Analyze a file" subtitle="Key and chords from a song" />
+        <ToolsBackLink />
+        <PageHeader title="Analyze a song" subtitle="Key and chords from a song" />
 
         <div className="flex flex-col gap-6 px-4 pt-2">
           {phase.kind === 'done' && file ? (

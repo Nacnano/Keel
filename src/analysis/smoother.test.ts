@@ -9,8 +9,8 @@ function sims(n: number, winner: number, margin = 0.3): Float32Array {
 
 describe('smoother', () => {
   it('maps stability to stay probability and lag', () => {
-    expect(stayProbability(0)).toBeCloseTo(0.6);
-    expect(stayProbability(1)).toBeCloseTo(0.98);
+    expect(stayProbability(0)).toBeCloseTo(0.9);
+    expect(stayProbability(1)).toBeCloseTo(0.99);
     expect(lagForStability(0)).toBe(4);
     expect(lagForStability(0.5)).toBe(6);
     expect(lagForStability(1)).toBe(8);
@@ -46,5 +46,16 @@ describe('smoother', () => {
     s.reset();
     expect(s.frames).toBe(0);
     expect(s.push(sims(4, 1))).toBeNull();
+  });
+
+  it('reports how long the best path stays in the decided state', () => {
+    const s = createSmoother({ numStates: 4, stability: 0.5 });
+    const runs: number[] = [];
+    for (let t = 0; t < 40; t++) {
+      const d = s.push(sims(4, t < 20 ? 0 : 1));
+      if (d) runs.push(d.run);
+    }
+    expect(Math.max(...runs)).toBe(s.lag + 1);
+    expect(Math.min(...runs)).toBeLessThanOrEqual(s.lag);
   });
 });

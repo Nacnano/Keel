@@ -4,7 +4,8 @@
  * `analyseSamples` (files, tests), so both paths are identical.
  *
  * Per hop:
- *   slide FRAME_SIZE window → RMS of the newest hop → energy gate
+ *   slide FRAME_SIZE window → RMS of the newest hop → energy gate (adaptive: noise floor
+ *   + sensitivity margin, or a fixed `gateDb`)
  *   → short Hann FFT of the newest hop → spectral-flux onset (+ hold)
  *   → long Hann FFT of the window → peaks (parabolic interpolation)
  *   → bass (lowest significant peak 30–260 Hz)
@@ -16,7 +17,14 @@ import type { ChromaFrame, Instrument, JamMode, PitchClass } from '@/core/types'
 import { detectBass } from './bass';
 import { computeChroma } from './chroma';
 import { createRealFFT, isPowerOfTwo, type RealFFT } from './fft';
-import { createEnergyGate, createOnsetDetector, dbToEnergy, rmsDb } from './gate';
+import {
+  createAdaptiveGate,
+  createEnergyGate,
+  createOnsetDetector,
+  dbToEnergy,
+  rmsDb,
+  type AdaptiveGate,
+} from './gate';
 import { findPeaks } from './peaks';
 import { INSTRUMENT_PROFILES } from './profiles';
 import { createRoomProcessor } from './room';
@@ -31,8 +39,27 @@ export interface PipelineConfig {
   frameSize: number;
   /** Hop (power of two, ≤ frameSize). Default HOP_SIZE. */
   hopSize: number;
-  /** Energy gate threshold in dBFS. Default -50. */
+  /**
+   * Fixed energy-gate threshold in dBFS. Unset (default) = adaptive gate that follows the
+   * measured noise floor (see `createAdaptiveGate`).
+   */
+  gateDb?: number;
+  /** 0..1, adaptive gate only: opening margin above the noise floor 14 dB (0) … 4 dB (1). Default 0.5. */
+  sensitivity: number;
+}
+
+/** Live input health, for a level meter and a "can't hear you" hint. */
+export interface InputStatus {
+  /** RMS of the newest hop in dBFS (−Infinity for digital silence). */
+  levelDb: number;
+  /** Noise-floor estimate in dBFS (the fixed gate reports its threshold − 10 dB). */
+  noiseFloorDb: number;
+  /** Current gate opening threshold in dBFS. */
   gateDb: number;
+  /** Nothing reached the gate during the last ~3 s: too quiet to analyse (or not playing). */
+  tooQuiet: boolean;
+  /** A sample reached ±0.99 full scale during the last ~1 s. */
+  clipping: boolean;
 }
 
 export type PipelineConfigInput = Pick<PipelineConfig, 'sampleRate'> &
@@ -51,7 +78,9 @@ export interface ChromaPipeline {
    * covers [t + hop/sr - frame/sr, t + hop/sr].
    */
   process(samples: Float32Array, t: number): ChromaFrame | null;
-  /** Live update (a4, instrument, mode, gateDb). Size/rate changes reset state. */
+  /** Level, noise floor, gate and clipping after the latest hop. */
+  status(): InputStatus;
+  /** Live update (a4, instrument, mode, gateDb, sensitivity). Size/rate changes reset state. */
   configure(patch: Partial<PipelineConfig>): void;
   reset(): void;
 }
@@ -68,9 +97,10 @@ export function resolveConfig(input: PipelineConfigInput): PipelineConfig {
     mode: 'solo',
     frameSize: FRAME_SIZE,
     hopSize: HOP_SIZE,
-    gateDb: -50,
+    sensitivity: 0.5,
     ...input,
   };
+  if (cfg.gateDb === undefined) delete cfg.gateDb;
   if (!(cfg.sampleRate > 0)) throw new Error(`invalid sampleRate ${cfg.sampleRate}`);
   if (!isPowerOfTwo(cfg.frameSize) || !isPowerOfTwo(cfg.hopSize) || cfg.hopSize > cfg.frameSize) {
     throw new Error(`frameSize/hopSize must be powers of two with hop ≤ frame`);
@@ -97,12 +127,35 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
   let pending = 0;
 
   // Behavioural state, rebuilt by `build()` and `reset()`.
-  let gate = createEnergyGate({ openDb: cfg.gateDb });
+  let gate = makeGate();
   let onset = makeOnset();
   let room = createRoomProcessor();
   let lastChroma = new Float32Array(12);
   let lastBass: PitchClass | null = null;
   let energyOut = 0;
+
+  function makeGate(): AdaptiveGate {
+    if (cfg.gateDb !== undefined) {
+      const fixed = createEnergyGate({ openDb: cfg.gateDb });
+      const openDb = cfg.gateDb;
+      return {
+        ...fixed,
+        floorDb: () => openDb - 10,
+        thresholdDb: () => openDb,
+        setSensitivity: () => undefined,
+      };
+    }
+    return createAdaptiveGate({
+      hopSec: cfg.hopSize / cfg.sampleRate,
+      sensitivity: cfg.sensitivity,
+    });
+  }
+
+  // Input status (meter / hints).
+  let levelDb = -Infinity;
+  let lastAudibleT = -Infinity;
+  let lastClipT = -Infinity;
+  let nowT = 0;
 
   function makeOnset() {
     const profile = INSTRUMENT_PROFILES[cfg.instrument];
@@ -115,7 +168,10 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
   }
 
   function resetState() {
-    gate = createEnergyGate({ openDb: cfg.gateDb });
+    gate = makeGate();
+    levelDb = -Infinity;
+    lastAudibleT = -Infinity;
+    lastClipT = -Infinity;
     onset = makeOnset();
     room = createRoomProcessor();
     lastChroma = new Float32Array(12);
@@ -150,6 +206,15 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
 
     const db = rmsDb(hopBuf);
     const open = gate.update(db);
+    levelDb = db;
+    nowT = t;
+    if (open) lastAudibleT = t;
+    for (let i = 0; i < hopSize; i++) {
+      if (hopBuf[i] >= 0.99 || hopBuf[i] <= -0.99) {
+        lastClipT = t;
+        break;
+      }
+    }
     const release = Math.exp(-hopSize / sampleRate / profile.energyReleaseSec);
     energyOut = Math.max(dbToEnergy(db), energyOut * release);
 
@@ -181,11 +246,22 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
       fftSize: frameSize,
       minHz: PEAK_MIN_HZ,
       maxHz: PEAK_MAX_HZ,
+      minProminenceDb: profile.peakProminenceDb,
     });
-    const bassEst = detectBass(peaks, { a4, minHz: BASS_MIN_HZ, maxHz: BASS_MAX_HZ });
+    const bassEst = detectBass(peaks, {
+      a4,
+      minHz: BASS_MIN_HZ,
+      maxHz: BASS_MAX_HZ,
+      relativeThreshold: profile.bassRelativeThreshold,
+      harmonicSupport: profile.bassHarmonicSupport,
+    });
     const room_ = cfg.mode === 'room';
     const chromaPeaks = room_ ? room.deemphasize(peaks) : peaks;
-    let chroma = computeChroma(chromaPeaks, { a4, harmonics: profile.harmonics });
+    let chroma = computeChroma(chromaPeaks, {
+      a4,
+      harmonics: profile.harmonics,
+      magnitudeExponent: profile.peakExponent,
+    });
     if (room_) chroma = room.average(chroma);
 
     let bass: PitchClass | null = bassEst ? bassEst.pc : null;
@@ -219,6 +295,15 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
       }
       return frame;
     },
+    status() {
+      return {
+        levelDb,
+        noiseFloorDb: gate.floorDb(),
+        gateDb: gate.thresholdDb(),
+        tooQuiet: nowT - lastAudibleT > 3,
+        clipping: nowT - lastClipT < 1,
+      };
+    },
     configure(patch) {
       const next = resolveConfig({ ...cfg, ...patch });
       const rebuild =
@@ -226,11 +311,14 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
         next.frameSize !== cfg.frameSize ||
         next.hopSize !== cfg.hopSize;
       const instrumentChanged = next.instrument !== cfg.instrument;
+      const prevGateDb = cfg.gateDb;
+      if ('gateDb' in patch && patch.gateDb === undefined) delete next.gateDb;
       cfg = next;
       if (rebuild) build();
       else {
         if (instrumentChanged) onset = makeOnset();
-        if (patch.gateDb !== undefined) gate = createEnergyGate({ openDb: cfg.gateDb });
+        if ('gateDb' in patch && patch.gateDb !== prevGateDb) gate = makeGate();
+        else if (patch.sensitivity !== undefined) gate.setSensitivity(cfg.sensitivity);
         if (patch.mode !== undefined) room.reset();
       }
     },

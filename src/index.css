@@ -9,13 +9,13 @@
 */
 :root {
   color-scheme: light;
-  --jk-bg: #f2f2f7;
+  --jk-bg: #fbfbfd;
   --jk-bg-2: #ffffff;
   --jk-bg-3: #f2f2f7;
   --jk-surface: #ffffff;
   --jk-surface-2: #f2f2f7;
   --jk-label: #000000;
-  --jk-label-2: rgba(60, 60, 67, 0.6);
+  --jk-label-2: #63636b;
   --jk-label-3: rgba(60, 60, 67, 0.3);
   --jk-label-4: rgba(60, 60, 67, 0.18);
   --jk-fill: rgba(120, 120, 128, 0.2);
@@ -24,9 +24,11 @@
   --jk-fill-4: rgba(120, 120, 128, 0.08);
   --jk-separator: rgba(60, 60, 67, 0.29);
   --jk-separator-opaque: #c6c6c8;
-  --jk-accent: #007aff;
+  --jk-accent: #0059c7;
+  --jk-action: #005ecb;
+  --jk-danger-action: #bd2821;
   --jk-accent-fg: #ffffff;
-  --jk-live: #ff3b30;
+  --jk-live: #c92720;
   --jk-ok: #34c759;
   --jk-warn: #ff9500;
   --jk-material: rgba(249, 249, 249, 0.78);
@@ -35,13 +37,13 @@
 
 .dark {
   color-scheme: dark;
-  --jk-bg: #000000;
+  --jk-bg: #171719;
   --jk-bg-2: #1c1c1e;
-  --jk-bg-3: #2c2c2e;
+  --jk-bg-3: #202023;
   --jk-surface: #1c1c1e;
   --jk-surface-2: #2c2c2e;
   --jk-label: #ffffff;
-  --jk-label-2: rgba(235, 235, 245, 0.6);
+  --jk-label-2: #aaaab2;
   --jk-label-3: rgba(235, 235, 245, 0.3);
   --jk-label-4: rgba(235, 235, 245, 0.18);
   --jk-fill: rgba(120, 120, 128, 0.36);
@@ -50,9 +52,9 @@
   --jk-fill-4: rgba(120, 120, 128, 0.18);
   --jk-separator: rgba(84, 84, 88, 0.6);
   --jk-separator-opaque: #38383a;
-  --jk-accent: #0a84ff;
+  --jk-accent: #70b1ff;
   --jk-accent-fg: #ffffff;
-  --jk-live: #ff453a;
+  --jk-live: #ff6961;
   --jk-ok: #30d158;
   --jk-warn: #ff9f0a;
   --jk-material: rgba(28, 28, 30, 0.72);
@@ -76,6 +78,8 @@
   --color-separator: var(--jk-separator);
   --color-separator-opaque: var(--jk-separator-opaque);
   --color-accent: var(--jk-accent);
+  --color-action: var(--jk-action);
+  --color-danger-action: var(--jk-danger-action);
   --color-accent-fg: var(--jk-accent-fg);
   --color-live: var(--jk-live);
   --color-ok: var(--jk-ok);

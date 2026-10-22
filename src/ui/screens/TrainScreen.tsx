@@ -1,3 +1,4 @@
+import { ToolsBackLink } from './tools/ToolsBackLink';
 import { useEffect, useMemo } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import type { VocabLevel } from '@/core';
@@ -167,8 +168,9 @@ export function TrainScreen({ playback: injected, rng }: TrainScreenProps = {}) 
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-3xl pb-[max(env(safe-area-inset-bottom),32px)]">
+        <ToolsBackLink />
         <PageHeader
-          title="Train"
+          title="Ear training"
           subtitle={DRILL_HINT[drill]}
           actions={
             <>

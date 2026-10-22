@@ -1,6 +1,10 @@
 # Known issues and unverified paths
 
-Updated 2026-10-22 at the end of the build (PR 19).
+Updated 2026-10-23 during the listening-first redesign and detection evaluation.
+
+## Browser verification
+
+The listening-first UI was exercised at desktop (1440 and 1720 px), phone (390 px), and iPad portrait (834 px) viewport sizes in Chromium, in light and dark appearances. Demo start/stop, options, modal focus and background inert behavior, tool navigation, clean/noisy sampled-piano file analysis, save, review, and audio playback were checked. Real live-microphone saved-result states are covered by integration tests, not hardware browser checks.
 
 ## Not yet verified on hardware
 
@@ -13,12 +17,13 @@ See the first-run checklist in `README.md`.
 
 ## Known limitations
 
+- [Detection evaluation](ACCURACY.md) uses ten simulated piano sessions, also used during tuning. It is not held-out or real-device validation. Strong harmonic hum remains difficult, and startup white noise can briefly display a false chord.
+- Sensitivity controls the adaptive noise gate; it does not amplify the microphone.
+
 - Settings persist in localStorage, not the Dexie `settings` table, so they do not sync between devices.
 - Room mode vocal suppression is heuristic; a sustained vocal note can still bias the chord.
 - Relative major/minor is shown as a pair; the bold winner may flip in ambiguous passages.
 - When both mic and MIDI are active, mic frames are dropped for 2 s after any MIDI note.
-- No screen has been checked by hand in a browser beyond the idle jam screen and the empty analyze screen; the Chrome automation session was unreliable during the build. Layout at iPad sizes, canvas piano roll, drag interactions and the sampled piano sound are covered by jsdom tests only.
-- The jam screen's left column can get crowded with try-next, modulation hints, scale helper and voicings all open; voicings start collapsed for that reason.
 
 ## Sync
 
@@ -38,3 +43,7 @@ See the first-run checklist in `README.md`.
   "Security notes", for the RPC alternative.
 - Share links are snapshots; editing the session does not update them.
 - Settings and audio recordings do not sync.
+
+## Custom domain
+
+`jamkey.vercel.app` is reachable. `music.nacnano.dev` is attached and verified on Vercel but currently returns NXDOMAIN. Cloudflare needs a DNS-only CNAME `music` → `f207e94ba4b78857.vercel-dns-017.com`. The existing Wrangler credential expired and the dashboard requires sign-in; DNS could not be changed in this session.

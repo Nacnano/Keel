@@ -309,12 +309,12 @@ export function LibraryScreen() {
             !error && (
               <EmptyState
                 icon={<LibraryBig aria-hidden />}
-                title="No jams saved yet"
-                description="Every jam is saved here when you stop: chords, keys, bookmarks and, if you turn it on, the audio. Everything stays on this device."
+                title="Your jams, ready to revisit"
+                description="Stop listening to save your chords and keys here. Turn on audio recording to keep the sound, too."
                 action={
                   <div className="flex flex-col items-center gap-2">
                     <Link to="/" className={FILLED_LINK}>
-                      Start jamming
+                      Start listening
                     </Link>
                     {!seedMode && (
                       <button
@@ -411,7 +411,7 @@ function TagChip({
         className={cx(
           'inline-flex h-7 items-center rounded-full px-3 text-footnote font-semibold whitespace-nowrap transition-colors duration-150',
           'group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-accent',
-          active ? 'bg-accent text-accent-fg' : 'bg-fill-3 text-label-2 hover:bg-fill-2',
+          active ? 'bg-action text-accent-fg' : 'bg-fill-3 text-label-2 hover:bg-fill-2',
         )}
       >
         {children}

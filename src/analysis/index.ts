@@ -1,4 +1,4 @@
-export { createAnalysisEngine, NOTE_THRESHOLD } from './engine';
+export { createAnalysisEngine, NOTE_THRESHOLD, RELEASE_HOLD_SEC } from './engine';
 export {
   CHORD_VOCAB,
   QUALITY_ORDER,

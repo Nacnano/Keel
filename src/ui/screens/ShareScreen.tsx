@@ -74,7 +74,7 @@ function Frame({ children }: { children: ReactNode }) {
             to="/"
             className="flex items-center gap-2 rounded-[8px] text-subhead font-semibold tracking-tight text-label"
           >
-            <span className="flex size-6 items-center justify-center rounded-[7px] bg-accent text-accent-fg">
+            <span className="flex size-6 items-center justify-center rounded-[7px] bg-action text-accent-fg">
               <AudioLines className="size-3.5" aria-hidden />
             </span>
             JamKey

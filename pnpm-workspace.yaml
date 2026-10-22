@@ -1,0 +1,4 @@
+# esbuild (pulled in by tsx for `pnpm eval`) ships its binary as an optional platform
+# package; its postinstall script only re-checks it, so it is not needed.
+allowBuilds:
+  esbuild: false

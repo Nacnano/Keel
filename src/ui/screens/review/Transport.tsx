@@ -25,9 +25,9 @@ const RATE_OPTIONS = RATES.map((r) => ({ value: r, label: `${r}×`, title: `Spee
 const SKIP_SEC = 5;
 
 const SOURCE_LABEL: Record<ClockSource, string> = {
-  audio: 'Recording',
-  midi: 'MIDI piano',
-  timer: 'Silent',
+  audio: 'Recorded audio',
+  midi: 'Piano playback',
+  timer: 'Chord chart only · no audio recording',
 };
 
 /**
@@ -120,7 +120,7 @@ export function Transport(p: TransportProps) {
         )}
       </div>
       <p className="text-caption text-label-3">
-        <span data-testid="clock-source">Clock: {SOURCE_LABEL[p.source]}</span>
+        <span data-testid="clock-source">{SOURCE_LABEL[p.source]}</span>
         {p.hasMidi && <span> · {pianoNote}</span>}
       </p>
     </div>

@@ -10,12 +10,45 @@ import { MIN_IDENTIFY_SCORE, identifyChord } from '@/theory';
 import type { ChordCandidate } from '@/theory';
 import type { TemplateBank } from './templates';
 
-/** Below this energy (or with an all-zero chroma) the frame is treated as silence. */
-export const SILENCE_ENERGY = 0.01;
-/** Max handicap applied to the no-chord similarity at full energy. */
-export const NO_CHORD_ENERGY_PENALTY = 0.25;
+/**
+ * Frames with `energy` below this, or with an all-zero chroma, are silence. 0: silence is
+ * decided by the audio gate (zero chroma), so quiet but audible input is still analysed
+ * (`energy` is a −60…0 dBFS meter value and reads 0 below −60 dBFS).
+ */
+export const SILENCE_ENERGY = 0;
+/** The no-chord similarity is the cosine with a flat chroma times this (level-independent). */
+export const NO_CHORD_SCALE = 0.8;
 
 const INV_SQRT12 = 1 / Math.sqrt(12);
+const work = new Float64Array(12);
+
+/**
+ * Evidence rules applied on top of the cosine (similarity units, subtracted). Tuned with the
+ * piano evaluation harness (eval/, docs/ACCURACY.md):
+ * - a seventh / sixth / extension must reach `extRatio` of the mean core-tone level, else up to
+ *   `extPenalty` (so a triad with a little partial leakage is not called a 7th or add9);
+ * - power and sus chords lose up to `noThirdPenalty` when a third sounds at `thirdRatio` of the
+ *   root, and power chords pay `powerPrior` (rare on a piano: a decaying triad with a doubled
+ *   root otherwise reads as C5);
+ * - dim / aug lose up to `alteredPenalty` when the perfect fifth sounds at `fifthRatio` of root;
+ * - with a (stable) bass: +`bassRoot` for templates rooted on it, +`bassTone` for templates
+ *   containing it (inversions), −`bassForeign` for templates that do not contain it, and the
+ *   bass bin is raised to `bassFloor` × the loudest bin before the cosine (a left-hand root
+ *   under a rootless right-hand voicing is quiet in the chroma but decides Cm7 vs E♭maj7).
+ */
+export const EVIDENCE = {
+  extRatio: 0.35,
+  extPenalty: 0.15,
+  thirdRatio: 0.25,
+  noThirdPenalty: 0.2,
+  powerPrior: 0.02,
+  fifthRatio: 0.3,
+  alteredPenalty: 0.06,
+  bassRoot: 0.04,
+  bassTone: 0.01,
+  bassForeign: 0.04,
+  bassFloor: 0.8,
+} as const;
 
 /**
  * Fill `out` (length `bank.size + 1`) with similarities; index `bank.size` is no-chord.
@@ -26,18 +59,30 @@ export function scoreChroma(
   energy: number,
   bank: TemplateBank,
   out: Float32Array,
+  bass: PitchClass | null = null,
 ): boolean {
   const n = bank.size;
   let sum = 0;
   let sq = 0;
+  let max = 0;
   for (let b = 0; b < 12; b++) {
     sum += chroma[b];
     sq += chroma[b] * chroma[b];
+    if (chroma[b] > max) max = chroma[b];
   }
   if (sum <= 0 || sq <= 0 || energy < SILENCE_ENERGY) {
     out.fill(0, 0, n);
     out[n] = 1;
     return true;
+  }
+  if (bass !== null && chroma[bass] < EVIDENCE.bassFloor * max) {
+    for (let b = 0; b < 12; b++) work[b] = chroma[b];
+    const lift = EVIDENCE.bassFloor * max - chroma[bass];
+    work[bass] += lift;
+    sum += lift;
+    sq = 0;
+    for (let b = 0; b < 12; b++) sq += work[b] * work[b];
+    chroma = work;
   }
   const inv = 1 / Math.sqrt(sq);
   const c0 = chroma[0] * inv;
@@ -68,9 +113,59 @@ export function scoreChroma(
       c10 * d[r + 10] +
       c11 * d[r + 11];
   }
+  applyEvidence(chroma, bank, out, bass);
   const flat = sum * inv * INV_SQRT12;
-  out[n] = flat * (1 - NO_CHORD_ENERGY_PENALTY * Math.min(1, Math.max(0, energy)));
+  out[n] = flat * NO_CHORD_SCALE;
   return false;
+}
+
+function applyEvidence(
+  c: ArrayLike<number>,
+  bank: TemplateBank,
+  out: Float32Array,
+  bass: PitchClass | null,
+) {
+  const E = EVIDENCE;
+  const { ext, core, kind, alteredFifth, roots, size } = bank;
+  const tiny = 1e-9;
+  for (let k = 0; k < size; k++) {
+    const r = roots[k];
+    const root = c[r] + tiny;
+    let pen = 0;
+    const e0 = ext[k * 3];
+    if (e0 >= 0) {
+      let coreSum = 0;
+      let coreN = 0;
+      for (let i = 0; i < 3; i++) {
+        const pc = core[k * 3 + i];
+        if (pc >= 0) {
+          coreSum += c[pc];
+          coreN++;
+        }
+      }
+      const ref = coreSum / Math.max(1, coreN) + tiny;
+      for (let i = 0; i < 3; i++) {
+        const pc = ext[k * 3 + i];
+        if (pc < 0) break;
+        const ratio = c[pc] / ref;
+        if (ratio < E.extRatio) pen += E.extPenalty * (1 - ratio / E.extRatio);
+      }
+    }
+    if (kind[k] !== 0) {
+      const third = Math.max(c[(r + 3) % 12], c[(r + 4) % 12]) / root;
+      pen += E.noThirdPenalty * Math.min(1, third / E.thirdRatio);
+      if (kind[k] === 1) pen += E.powerPrior;
+    }
+    if (alteredFifth[k]) {
+      pen += E.alteredPenalty * Math.min(1, c[(r + 7) % 12] / root / E.fifthRatio);
+    }
+    if (bass !== null) {
+      if (bass === r) pen -= E.bassRoot;
+      else if (bank.data[k * 12 + bass] > 0.3) pen -= E.bassTone;
+      else pen += E.bassForeign;
+    }
+    out[k] -= pen;
+  }
 }
 
 export type ExactMatch = ChordCandidate;

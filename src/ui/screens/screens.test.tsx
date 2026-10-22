@@ -1,9 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { DEFAULT_SETTINGS } from '@/core';
 import { initialJamData, jamStore } from '@/state/jamStore';
+import { inputStore } from '@/state/inputStore';
 import { settingsStore } from '@/state/settingsStore';
+import { liveInput } from '@/app/live/liveInput';
 import { JamScreen } from './JamScreen';
 import pkg from '../../../package.json';
 import { SettingsScreen } from './SettingsScreen';
@@ -13,6 +15,13 @@ beforeEach(() => {
   localStorage.clear();
   jamStore.setState(initialJamData());
   settingsStore.getState().resetSettings();
+  inputStore.setState({
+    audioDevices: [],
+    midiDevices: [],
+    midiSupported: false,
+    selectedAudioId: null,
+    selectedMidiId: null,
+  });
 });
 
 afterEach(() => {
@@ -22,20 +31,107 @@ afterEach(() => {
 
 const renderJam = () =>
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[window.location.pathname + window.location.search]}>
       <JamScreen />
     </MemoryRouter>,
   );
 
 describe('JamScreen', () => {
+  it('waits for Start before requesting input devices or permissions', () => {
+    const refresh = vi.spyOn(liveInput(), 'refreshDevices');
+    renderJam();
+    expect(refresh).not.toHaveBeenCalled();
+    refresh.mockRestore();
+  });
+
+  it('labels demo playback and prevents changes to unavailable audio recording', () => {
+    window.history.replaceState({}, '', '/?mock=1');
+    renderJam();
+    expect(screen.getByText('Demo')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Start demo' }));
+    expect(screen.getByText(/Example progression · microphone off/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Listening options' }));
+    expect(screen.getByRole('switch', { name: 'Record audio' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Stop demo' }));
+    expect(screen.getByText('That’s the idea.')).toBeInTheDocument();
+    expect(screen.queryByText('Your jam is saved.')).toBeNull();
+  });
+
+  it('starts a demo directly without requesting live input', () => {
+    const start = vi.spyOn(liveInput(), 'start');
+    renderJam();
+    fireEvent.click(screen.getByRole('button', { name: 'Try a demo' }));
+    expect(jamStore.getState().status).toBe('listening');
+    expect(screen.getByTestId('chord-symbol')).toHaveTextContent('C');
+    expect(start).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Stop demo' })).toBeEnabled();
+    start.mockRestore();
+  });
+
+  it('puts sensitivity in Listening options without requesting permissions', () => {
+    const refresh = vi.spyOn(liveInput(), 'refreshDevices');
+    renderJam();
+    fireEvent.click(screen.getByRole('button', { name: 'Listening options' }));
+    const dialog = screen.getByRole('dialog', { name: 'Listening options' });
+    fireEvent.change(within(dialog).getByRole('slider', { name: 'Microphone sensitivity' }), {
+      target: { value: '0.85' },
+    });
+    expect(settingsStore.getState().sensitivity).toBe(0.85);
+    expect(refresh).not.toHaveBeenCalled();
+    refresh.mockRestore();
+  });
+
+  it('shows the saved session directly after Finish & save', async () => {
+    const start = vi.spyOn(liveInput(), 'start').mockImplementation(async () => {
+      jamStore.getState().startSession();
+      jamStore.getState().setSource('mic');
+    });
+    const stop = vi.spyOn(liveInput(), 'stop').mockImplementation(async (options) => {
+      jamStore.getState().stopSession();
+      options?.onSaved?.({ id: 'new-session', name: 'Evening idea' });
+    });
+    renderJam();
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Start listening' })));
+    expect(screen.getByRole('button', { name: 'Finish & save' })).toBeEnabled();
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Finish & save' })));
+    expect(screen.getByText('Your jam is saved.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open session' })).toHaveAttribute(
+      'href',
+      '/review/new-session',
+    );
+    expect(screen.getByRole('button', { name: 'Start a new jam' })).toBeEnabled();
+    start.mockRestore();
+    stop.mockRestore();
+  });
+
+  it('does not claim a session was saved after a storage error', async () => {
+    const start = vi.spyOn(liveInput(), 'start').mockImplementation(async () => {
+      jamStore.getState().startSession();
+    });
+    const stop = vi.spyOn(liveInput(), 'stop').mockImplementation(async (options) => {
+      jamStore.getState().stopSession();
+      options?.onSaveError?.('Storage is full.');
+    });
+    renderJam();
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Start listening' })));
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Finish & save' })));
+    expect(screen.getByRole('alert')).toHaveTextContent('Storage is full.');
+    expect(screen.queryByText('Your jam is saved.')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Open session' })).toBeNull();
+    start.mockRestore();
+    stop.mockRestore();
+  });
+
   it('renders the idle layout', () => {
     renderJam();
     expect(screen.queryByRole('complementary', { name: 'Ideas' })).toBeNull();
-    expect(screen.getByTestId('chord-symbol')).toBeInTheDocument();
-    expect(screen.getByText(/Tap Start, then play/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Start/ })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Options' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /Piano/ })).toBeInTheDocument();
+    expect(screen.queryByTestId('chord-symbol')).toBeNull();
+    expect(screen.getByText('See what you’re playing.')).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Chord timeline' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Start listening' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Try a demo' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Listening options' })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Piano/ })).toBeNull();
   });
 
   it('reports a clear error when no live input is available (jsdom has no mic)', async () => {
@@ -111,6 +207,42 @@ describe('JamScreen', () => {
 });
 
 describe('SettingsScreen', () => {
+  it('finds devices only on request and clears disconnected selections', async () => {
+    settingsStore.getState().update({ audioDeviceId: 'gone-mic', midiDeviceId: 'gone-midi' });
+    const refresh = vi.spyOn(liveInput(), 'refreshDevices').mockImplementation(async () => {
+      inputStore.getState().setAudioDevices([{ id: 'built-in', label: 'Built-in microphone' }]);
+      inputStore.getState().setMidiSupported(true);
+      inputStore.getState().setMidiDevices([{ id: 'piano', name: 'USB piano', manufacturer: '' }]);
+    });
+    render(<SettingsScreen />);
+    expect(refresh).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Microphone')).toHaveValue('gone-mic');
+    await act(async () =>
+      fireEvent.click(screen.getByRole('button', { name: 'Find input devices' })),
+    );
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(screen.getByText('Found 1 microphone and 1 MIDI device.')).toBeInTheDocument();
+    expect(settingsStore.getState().audioDeviceId).toBeNull();
+    expect(settingsStore.getState().midiDeviceId).toBeNull();
+    expect(screen.getByLabelText('Microphone')).toHaveValue('');
+    expect(screen.getByLabelText('MIDI device')).toBeEnabled();
+    fireEvent.change(screen.getByLabelText('MIDI device'), { target: { value: 'piano' } });
+    expect(settingsStore.getState().midiDeviceId).toBe('piano');
+    refresh.mockRestore();
+  });
+
+  it('keeps microphone selection available when MIDI is unsupported', async () => {
+    const refresh = vi.spyOn(liveInput(), 'refreshDevices').mockResolvedValue(undefined);
+    render(<SettingsScreen />);
+    await act(async () =>
+      fireEvent.click(screen.getByRole('button', { name: 'Find input devices' })),
+    );
+    expect(screen.getByText(/No input devices found/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Microphone')).toBeEnabled();
+    expect(screen.getByLabelText('MIDI device')).toBeDisabled();
+    refresh.mockRestore();
+  });
+
   it('edits settings and validates A4', () => {
     render(<SettingsScreen />);
     fireEvent.click(screen.getByRole('switch', { name: 'Show slash chords' }));
@@ -162,7 +294,7 @@ describe('JamScreen voicings', () => {
     });
     expect(screen.getByRole('radiogroup', { name: 'Voicing style' })).toBeInTheDocument();
     expect(localStorage.getItem('jamkey.ui.inspector')).toBe('1:voicings');
-    expect(screen.getByRole('img', { name: /Piano/ })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Piano/ })).toBeNull();
   });
 
   it('voices the current chord', () => {

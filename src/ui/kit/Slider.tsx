@@ -39,7 +39,7 @@ export function Slider({
         {...rest}
       />
       {(minLabel || maxLabel) && (
-        <div className="flex justify-between text-caption text-label-3">
+        <div className="flex justify-between text-caption text-label-2">
           <span>{minLabel}</span>
           <span>{maxLabel}</span>
         </div>

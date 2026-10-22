@@ -25,14 +25,14 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANT: Record<ButtonVariant, string> = {
-  filled: 'bg-accent text-accent-fg hover:brightness-110 active:brightness-95 font-semibold',
+  filled: 'bg-action text-accent-fg hover:brightness-110 active:brightness-95 font-semibold',
   tinted: 'bg-accent/15 text-accent hover:bg-accent/22 active:bg-accent/28 font-semibold',
   gray: 'bg-fill-3 text-label hover:bg-fill-2 active:bg-fill font-medium',
   plain: 'text-accent hover:bg-fill-4 active:bg-fill-3 font-medium',
 };
 
 const DESTRUCTIVE: Record<ButtonVariant, string> = {
-  filled: 'bg-live text-white hover:brightness-110 active:brightness-95 font-semibold',
+  filled: 'bg-danger-action text-white hover:brightness-110 active:brightness-95 font-semibold',
   tinted: 'bg-live/15 text-live hover:bg-live/22 font-semibold',
   gray: 'bg-fill-3 text-live hover:bg-fill-2 font-medium',
   plain: 'text-live hover:bg-live/10 font-medium',

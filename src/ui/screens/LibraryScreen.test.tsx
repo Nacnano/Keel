@@ -57,8 +57,8 @@ afterEach(cleanup);
 describe('LibraryScreen', () => {
   it('shows the first-run empty state', async () => {
     renderAt();
-    expect(await screen.findByText('No jams saved yet')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Start jamming' })).toHaveAttribute('href', '/');
+    expect(await screen.findByText('Your jams, ready to revisit')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Start listening' })).toHaveAttribute('href', '/');
     // Dev seed tools stay hidden without ?seed=1.
     expect(screen.queryByRole('button', { name: 'Seed demo session' })).toBeNull();
   });

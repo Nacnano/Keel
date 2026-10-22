@@ -206,7 +206,7 @@ describe('legacy primitives on the kit', () => {
         <Button pressed>Loop</Button>
       </>,
     );
-    expect(screen.getByRole('button', { name: 'Save' })).toHaveClass('bg-accent');
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveClass('bg-action');
     expect(screen.getByRole('button', { name: 'Delete' })).toHaveClass('text-live');
     expect(screen.getByRole('button', { name: 'Close' })).toHaveClass('size-11');
     expect(screen.getByRole('button', { name: 'Loop' })).toHaveAttribute('aria-pressed', 'true');

@@ -86,10 +86,10 @@ export function KeyDrill({ level, keys, bpm, playback, lifetime, onGraded, rng }
                     right
                       ? 'bg-ok text-white'
                       : wrong
-                        ? 'bg-live text-white'
+                        ? 'bg-danger-action text-white'
                         : feedback
                           ? 'bg-fill-4 text-label-3'
-                          : 'bg-fill-3 text-label hover:bg-accent/15 hover:text-accent active:bg-accent active:text-accent-fg',
+                          : 'bg-fill-3 text-label hover:bg-accent/15 hover:text-accent active:bg-action active:text-accent-fg',
                   )}
                 >
                   {shortName(k)}

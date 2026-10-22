@@ -1,3 +1,4 @@
+import { ToolsBackLink } from './tools/ToolsBackLink';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
@@ -62,8 +63,9 @@ export function StatsScreen() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-2xl pb-[max(env(safe-area-inset-bottom),32px)]">
+        <ToolsBackLink />
         <PageHeader
-          title="Stats"
+          title="Practice history"
           actions={
             !nothingSaved && (
               <Segmented<StatsRange>
@@ -98,7 +100,7 @@ export function StatsScreen() {
               action={
                 <Link
                   to="/"
-                  className="inline-flex h-11 items-center rounded-control bg-accent px-5 text-subhead font-semibold text-accent-fg transition-[filter] hover:brightness-110"
+                  className="inline-flex h-11 items-center rounded-control bg-action px-5 text-subhead font-semibold text-accent-fg transition-[filter] hover:brightness-110"
                 >
                   Start a jam
                 </Link>

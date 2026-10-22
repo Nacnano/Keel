@@ -37,6 +37,38 @@ describe('scoreChroma', () => {
   });
 });
 
+describe('scoreChroma evidence rules', () => {
+  const bank = buildTemplates(2);
+  const out = new Float32Array(bank.size + 1);
+  const chroma = (bins: Record<number, number>) => {
+    const c = new Float32Array(12);
+    for (const [pc, v] of Object.entries(bins)) c[Number(pc)] = v;
+    const sum = c.reduce((a, b) => a + b, 0);
+    return c.map((v) => v / sum);
+  };
+  const top = (c: Float32Array, bass: number | null = null) => {
+    scoreChroma(c, 0.5, bank, out, bass as never);
+    const k = best(out);
+    return k === bank.size ? 'N' : `${bank.roots[k]}:${bank.qualities[k]}`;
+  };
+
+  it('a decaying triad with a doubled root is still a triad, not a power chord', () => {
+    expect(top(chroma({ 0: 0.62, 4: 0.18, 7: 0.14, 2: 0.03, 10: 0.03 }))).toBe('0:maj');
+  });
+
+  it('a little leakage on the 7th does not make a 7th chord; a sounding 7th does', () => {
+    expect(top(chroma({ 0: 0.35, 4: 0.3, 7: 0.25, 11: 0.05 }))).toBe('0:maj');
+    expect(top(chroma({ 0: 0.3, 4: 0.25, 7: 0.2, 11: 0.2 }))).toBe('0:maj7');
+  });
+
+  it('a quiet left-hand root decides a rootless voicing (Cm7 vs Ebmaj7)', () => {
+    // Eb G Bb D (rootless Cm9) with a weak C in the bass.
+    const c = chroma({ 3: 0.25, 7: 0.25, 10: 0.22, 2: 0.18, 0: 0.08 });
+    expect(top(c)).toBe('3:maj7');
+    expect(top(c, 0)).toBe('0:min7');
+  });
+});
+
 describe('identifyExact', () => {
   it('matches exact sets with score 1', () => {
     expect(identifyExact([0, 4, 7], 0, 1)[0]).toEqual({

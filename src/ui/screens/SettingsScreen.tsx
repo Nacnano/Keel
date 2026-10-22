@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Instrument, JamMode, Settings, VocabLevel } from '@/core';
+import { liveInput } from '@/app/live/liveInput';
 import { useInputStore } from '@/state/inputStore';
 import { selectSettings, useSettings } from '@/state/settingsStore';
 import { toast } from '../components/toastStore';
@@ -134,22 +135,66 @@ export function SettingsScreen() {
   );
   const [confirmReset, setConfirmReset] = useState(false);
   const [shortcuts, setShortcuts] = useState(false);
+  const [findingDevices, setFindingDevices] = useState(false);
+  const [deviceMessage, setDeviceMessage] = useState<string | null>(null);
+
+  const findDevices = async () => {
+    setFindingDevices(true);
+    setDeviceMessage(null);
+    try {
+      await liveInput().refreshDevices();
+      const found = useInputStore.getState();
+      const current = useSettings.getState();
+      // A disconnected saved selection must not leave a select with an invisible value.
+      if (
+        current.audioDeviceId &&
+        !found.audioDevices.some((d) => d.id === current.audioDeviceId)
+      ) {
+        current.update({ audioDeviceId: null });
+        found.selectAudioDevice(null);
+      }
+      if (current.midiDeviceId && !found.midiDevices.some((d) => d.id === current.midiDeviceId)) {
+        current.update({ midiDeviceId: null });
+        found.selectMidiDevice(null);
+      }
+      const microphones = found.audioDevices.length;
+      const keyboards = found.midiDevices.length;
+      setDeviceMessage(
+        microphones + keyboards === 0
+          ? 'No input devices found. Check your connections and browser permissions.'
+          : `Found ${microphones} microphone${microphones === 1 ? '' : 's'}${found.midiSupported ? ` and ${keyboards} MIDI device${keyboards === 1 ? '' : 's'}` : '. MIDI is unavailable in this browser'}.`,
+      );
+    } catch {
+      setDeviceMessage('Couldn’t check input devices. Check browser permissions and try again.');
+    } finally {
+      setFindingDevices(false);
+    }
+  };
 
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => update({ [k]: v });
 
   const audioOptions = [
     { value: '', label: 'System default' },
+    ...(settings.audioDeviceId && !inputs.audioDevices.some((d) => d.id === settings.audioDeviceId)
+      ? [{ value: settings.audioDeviceId, label: 'Previous microphone · check connection' }]
+      : []),
     ...inputs.audioDevices.map((d) => ({ value: d.id, label: d.label || 'Unnamed input' })),
   ];
   const midiOptions = [
     { value: '', label: inputs.midiDevices.length ? 'None' : 'No devices' },
+    ...(settings.midiDeviceId && !inputs.midiDevices.some((d) => d.id === settings.midiDeviceId)
+      ? [{ value: settings.midiDeviceId, label: 'Previous MIDI device · check connection' }]
+      : []),
     ...inputs.midiDevices.map((d) => ({ value: d.id, label: d.name || d.manufacturer || d.id })),
   ];
-  const midiHint = !inputs.midiSupported
-    ? 'Web MIDI needs Chrome or Edge on a laptop. Safari uses the microphone.'
-    : inputs.midiDevices.length === 0
-      ? 'Connect a digital piano over USB for exact input.'
-      : 'Exact and instant; the microphone stays as a fallback.';
+  const midiHint =
+    deviceMessage === null
+      ? 'Choose Find input devices to connect a digital piano over USB.'
+      : !inputs.midiSupported
+        ? 'Web MIDI needs Chrome or Edge on a laptop. Safari uses the microphone.'
+        : inputs.midiDevices.length === 0
+          ? 'Connect a digital piano over USB for exact input.'
+          : 'Exact and instant; the microphone stays as a fallback.';
   const sensitivityWord =
     settings.sensitivity < 0.34 ? 'Low' : settings.sensitivity > 0.66 ? 'High' : 'Medium';
   const stabilityWord =
@@ -161,7 +206,10 @@ export function SettingsScreen() {
         <PageHeader title="Settings" />
 
         <div className="flex flex-col gap-6 px-4 pt-2">
-          <Group title="Input" footer="Settings are saved automatically on this device.">
+          <Group
+            title="Input"
+            footer="Settings save automatically. Device changes apply to your next jam."
+          >
             <Row
               label="Microphone"
               detail={
@@ -199,6 +247,16 @@ export function SettingsScreen() {
                 />
               }
             />
+            <div className="px-4 py-3">
+              <Button variant="tinted" loading={findingDevices} onClick={() => void findDevices()}>
+                {findingDevices ? 'Finding devices…' : 'Find input devices'}
+              </Button>
+              <p role="status" className="mt-2 text-footnote leading-relaxed text-label-2">
+                {findingDevices
+                  ? 'Allow MIDI access if your browser asks.'
+                  : (deviceMessage ?? 'Check for connected microphones and USB MIDI keyboards.')}
+              </p>
+            </div>
             <Row
               stacked
               label={

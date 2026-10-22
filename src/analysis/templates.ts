@@ -27,6 +27,17 @@ export interface TemplateBank {
   qualities: ChordQuality[];
   /** Row-major `size x 12`, each row unit L2. */
   data: Float32Array;
+  /**
+   * Evidence checks per template (see `chordScorer.ts`), row-major `size x 3`, -1 = unused:
+   * `ext` = sevenths / sixths / extensions that must actually sound for the template to win,
+   * `core` = root, third (or sus tone) and fifth.
+   */
+  ext: Int8Array;
+  core: Int8Array;
+  /** 0 = has a third, 1 = power chord (no third), 2 = sus (no third), per template. */
+  kind: Uint8Array;
+  /** 1 when the fifth is diminished or augmented (the perfect fifth must be absent). */
+  alteredFifth: Uint8Array;
 }
 
 export function buildTemplates(level: VocabLevel): TemplateBank {
@@ -35,11 +46,25 @@ export function buildTemplates(level: VocabLevel): TemplateBank {
   const roots = new Uint8Array(size);
   const qualities = new Array<ChordQuality>(size);
   const data = new Float32Array(size * 12);
+  const ext = new Int8Array(size * 3).fill(-1);
+  const core = new Int8Array(size * 3).fill(-1);
+  const kind = new Uint8Array(size);
+  const alteredFifth = new Uint8Array(size);
   let k = 0;
   for (const q of qs) {
-    const { intervals, weights } = CHORD_TEMPLATES[q];
+    const { intervals, weights, roles } = CHORD_TEMPLATES[q];
     for (let root = 0; root < 12; root++) {
       const row = k * 12;
+      let ne = 0;
+      let nc = 0;
+      for (let i = 0; i < intervals.length; i++) {
+        const pc = (root + intervals[i]) % 12;
+        if (roles[i] === 'seventh' || roles[i] === 'extension') {
+          if (ne < 3) ext[k * 3 + ne++] = pc;
+        } else if (nc < 3) core[k * 3 + nc++] = pc;
+        if (roles[i] === 'fifth' && intervals[i] !== 7) alteredFifth[k] = 1;
+      }
+      kind[k] = roles.includes('third') ? 0 : roles.includes('sus') ? 2 : 1;
       for (let i = 0; i < intervals.length; i++) {
         const pc = (root + intervals[i]) % 12;
         data[row + pc] += weights[i];
@@ -54,5 +79,5 @@ export function buildTemplates(level: VocabLevel): TemplateBank {
       k++;
     }
   }
-  return { level, size, roots, qualities, data };
+  return { level, size, roots, qualities, data, ext, core, kind, alteredFifth };
 }

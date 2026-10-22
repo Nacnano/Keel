@@ -84,7 +84,7 @@ export function DropZone({ onFile, compact, disabled }: DropZoneProps) {
           </p>
           <label
             htmlFor={id}
-            className="inline-flex h-11 cursor-pointer items-center rounded-control bg-accent px-5 text-subhead font-semibold text-accent-fg transition-[filter] hover:brightness-110 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent"
+            className="inline-flex h-11 cursor-pointer items-center rounded-control bg-action px-5 text-subhead font-semibold text-accent-fg transition-[filter] hover:brightness-110 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent"
           >
             Choose file
           </label>

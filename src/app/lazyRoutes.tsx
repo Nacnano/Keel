@@ -23,6 +23,10 @@ export const AnalyzeScreen = lazy(() =>
   import('../ui/screens/AnalyzeScreen').then((m) => ({ default: m.AnalyzeScreen })),
 );
 
+export const ToolsScreen = lazy(() =>
+  import('../ui/screens/ToolsScreen').then((m) => ({ default: m.ToolsScreen })),
+);
+
 /** Shown while a lazily loaded route chunk downloads. */
 export function RouteFallback() {
   return (

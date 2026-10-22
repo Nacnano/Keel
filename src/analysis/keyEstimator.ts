@@ -19,14 +19,24 @@ export interface KeyEstimatorOptions {
   minEvidence: number;
   /** Largest frame gap counted as continuous time. */
   maxFrameGap: number;
+  /**
+   * Extra lead required to switch to the relative major/minor of the current key. The two
+   * share every pitch class, so their correlations differ by little and a single chord that
+   * leans on vi (or III) would otherwise flip the key back and forth.
+   */
+  relativeMargin: number;
+  /** Added to major-key correlations when choosing (pop/jazz are mostly major). */
+  majorBias: number;
 }
 
 export const DEFAULT_KEY_OPTIONS: KeyEstimatorOptions = {
-  halfLife: 8,
+  halfLife: 12,
   switchMargin: 0.08,
   switchHold: 2,
   minEvidence: 1.5,
   maxFrameGap: 0.25,
+  relativeMargin: 0.15,
+  majorBias: 0.02,
 };
 
 export interface KeyEstimator {
@@ -60,6 +70,11 @@ const PROFILES: Float64Array[] = (() => {
   }
   return rows;
 })();
+
+/** Index of the relative major/minor (C major 0 ↔ A minor 21). */
+function relativeIndex(index: number): number {
+  return index < 12 ? 12 + ((index + 9) % 12) : (index - 12 + 3) % 12;
+}
 
 function keyOf(index: number): Key {
   return { tonic: (index % 12) as PitchClass, mode: MODES[index < 12 ? 0 : 1] };
@@ -120,14 +135,17 @@ export function createKeyEstimator(options: Partial<KeyEstimatorOptions> = {}): 
     if (evidence < opts.minEvidence) return null;
 
     correlate();
+    const biased = (k: number) => score[k] + (k < 12 ? opts.majorBias : 0);
     let best = 0;
-    for (let k = 1; k < 24; k++) if (score[k] > score[best]) best = k;
+    for (let k = 1; k < 24; k++) if (biased(k) > biased(best)) best = k;
     if (currentIdx < 0) {
       currentIdx = best;
       candidateIdx = -1;
       return estimate();
     }
-    if (best !== currentIdx && score[best] - score[currentIdx] >= opts.switchMargin) {
+    const isRelative = best === relativeIndex(currentIdx);
+    const margin = isRelative ? opts.relativeMargin : opts.switchMargin;
+    if (best !== currentIdx && biased(best) - biased(currentIdx) >= margin) {
       if (best === candidateIdx) candidateHeld += dt;
       else {
         candidateIdx = best;

@@ -53,12 +53,12 @@ const SLOTS = 128;
 
 export function createRoomProcessor(opts: RoomOptions = {}): RoomProcessor {
   const {
-    bandHz = [250, 1000],
+    bandHz = [200, 4000],
     smearCurvature = -1.0,
     driftCents = 12,
     matchCents = 80,
-    minFrames = 3,
-    attenuation = 0.2,
+    minFrames = 2,
+    attenuation = 0.05,
     averageFrames = 2,
   } = opts;
   let prevBand: number[] = [];

@@ -17,7 +17,9 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "eval": "tsx --tsconfig eval/tsconfig.json eval/run.ts",
+    "eval:inspect": "tsx --tsconfig eval/tsconfig.json eval/inspect.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -41,9 +43,11 @@
     "@vitest/coverage-v8": "^4.1.12",
     "fake-indexeddb": "^6",
     "jsdom": "^27",
+    "ogg-opus-decoder": "^1.7.5",
     "oxlint": "^1.88.0",
     "prettier": "^3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "vite": "^8.3.4",
     "vite-plugin-pwa": "^1",

@@ -50,6 +50,104 @@ export function createEnergyGate(opts: EnergyGateOptions = {}): EnergyGate {
   };
 }
 
+export interface AdaptiveGateOptions {
+  /** Hop duration in seconds (the follower rates are per second). */
+  hopSec: number;
+  /**
+   * 0..1 (default 0.5). Maps to the margin above the noise floor at which the gate opens:
+   * 0 → 14 dB (only clearly audible playing), 0.5 → 9 dB, 1 → 4 dB (almost anything).
+   */
+  sensitivity?: number;
+  /** Clamp of the opening threshold. Default −78 / −40 dBFS. */
+  minDb?: number;
+  maxDb?: number;
+  /** Once open, the gate stays open down to `floor + closeMarginDb`. Default 3 dB. */
+  closeMarginDb?: number;
+  /** Floor estimate before anything has been measured. Default −70 dBFS. */
+  initialFloorDb?: number;
+  /** During the first `learnSec` the floor is the plain minimum of the hop levels. Default 1 s. */
+  learnSec?: number;
+}
+
+export interface AdaptiveGate extends EnergyGate {
+  /** Current noise-floor estimate in dBFS. */
+  floorDb(): number;
+  /** Current opening threshold in dBFS. */
+  thresholdDb(): number;
+  setSensitivity(sensitivity: number): void;
+}
+
+/** Opening margin above the noise floor (dB) for a sensitivity 0..1. */
+export function sensitivityMarginDb(sensitivity: number): number {
+  const s = Number.isFinite(sensitivity) ? Math.min(1, Math.max(0, sensitivity)) : 0.5;
+  return 14 - 10 * s;
+}
+
+/**
+ * Energy gate that follows the measured noise floor, so a quiet mic a few metres from the
+ * piano still opens it, and a noisy room does not hold it open on noise alone.
+ *
+ * Floor tracker (per-hop level in dBFS):
+ * - first `learnSec`: collect the minimum, using a provisional `initialFloorDb` threshold;
+ *   at warmup completion adopt the measured minimum (startup noise can pass temporarily);
+ * - then it falls quickly towards quieter hops (30 % of the gap per hop) and rises at 1.5 dB/s
+ *   while the gate is closed (the room got noisier), 0.05 dB/s while it is open, so a long
+ *   stretch of continuous playing does not drag the floor up into the music.
+ * Opens at clamp(floor + margin(sensitivity), minDb, maxDb); once open it stays open down to
+ * floor + `closeMarginDb`, so a decaying chord is followed into the noise instead of being cut
+ * 10 dB above it.
+ */
+export function createAdaptiveGate(opts: AdaptiveGateOptions): AdaptiveGate {
+  const {
+    hopSec,
+    minDb = -78,
+    maxDb = -40,
+    closeMarginDb = 3,
+    initialFloorDb = -70,
+    learnSec = 1,
+  } = opts;
+  let margin = sensitivityMarginDb(opts.sensitivity ?? 0.5);
+  let floor = initialFloorDb;
+  let learned = 0;
+  let learningMinimum = Infinity;
+  let open = false;
+  const upClosed = 1.5 * hopSec;
+  const upOpen = 0.05 * hopSec;
+  const threshold = () => Math.min(maxDb, Math.max(minDb, floor + margin));
+
+  return {
+    update(db) {
+      const level = Number.isFinite(db) ? db : -120;
+      if (learned < learnSec) {
+        learningMinimum = Math.min(learningMinimum, level);
+        learned += hopSec;
+        // A provisional quiet-room floor lets an immediate quiet attack through. At the end
+        // of warmup adopt the observed minimum so stationary room noise cannot hold us open.
+        floor = learned < learnSec ? Math.min(initialFloorDb, learningMinimum) : learningMinimum;
+      } else if (level < floor) {
+        floor += 0.3 * (level - floor);
+      } else {
+        floor = Math.min(level, floor + (open ? upOpen : upClosed));
+      }
+      const close = Math.min(threshold(), Math.max(minDb, floor + closeMarginDb));
+      open = open ? level >= close : level >= threshold();
+      return open;
+    },
+    isOpen: () => open,
+    floorDb: () => floor,
+    thresholdDb: threshold,
+    setSensitivity(s) {
+      margin = sensitivityMarginDb(s);
+    },
+    reset() {
+      open = false;
+      floor = initialFloorDb;
+      learned = 0;
+      learningMinimum = Infinity;
+    },
+  };
+}
+
 export interface OnsetOptions {
   sampleRate: number;
   /** FFT size of the short spectrum fed to `update` (bins = size / 2 + 1). */

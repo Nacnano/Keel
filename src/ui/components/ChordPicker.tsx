@@ -88,7 +88,7 @@ export function ChordPicker({
   const chip = (selected: boolean) =>
     cx(
       'min-h-11 rounded-control text-subhead font-semibold transition-colors duration-100',
-      selected ? 'bg-accent text-accent-fg' : 'bg-fill-3 text-label hover:bg-fill-2',
+      selected ? 'bg-action text-accent-fg' : 'bg-fill-3 text-label hover:bg-fill-2',
     );
 
   return (

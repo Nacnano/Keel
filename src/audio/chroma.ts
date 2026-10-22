@@ -1,13 +1,23 @@
 /**
- * HPCP-style harmonic pitch-class profile. Pure, node-safe.
+ * Harmonic pitch-class profile from spectral peaks. Pure, node-safe.
  *
- * Every spectral peak at frequency f votes for the pitch class of f and for
- * the sub-harmonic candidates f/2, f/3, … f/H with weights 1/h
- * ([1, 0.5, 0.33, 0.25, …]). A partial that is really the 3rd harmonic of a
- * lower note therefore also reinforces that lower note, and harmonics end up
- * down-weighted relative to fundamentals. Each vote is shared between the two
- * nearest semitones with cos² weights (a partition of unity), so slightly
- * detuned partials are not dropped.
+ * Default method, `transfer` (harmonic attribution): peaks are visited from low to high.
+ * Each one predicts its partials at h·f (h = 2..H, allowing for piano stretch) with an
+ * expected relative amplitude `PARTIAL_PROFILE[h]`; up to that much of every matching
+ * higher peak is moved onto the lower peak's pitch class. A real piano note's 3rd partial
+ * (a fifth up), 5th (a major third up) and 7th (a minor seventh up) therefore count for the
+ * note itself instead of adding phantom fifths, thirds and sevenths, while a chord tone
+ * that is much louder than the predicted partial keeps most of its own mass. The
+ * prediction uses what is left of the lower peak after even lower notes claimed it, so
+ * chains (C2 → G3 → D5) are not double counted.
+ *
+ * Legacy method, `hpcp`: every peak votes for its own pitch class and for f/2 … f/H with
+ * weights 1/h when a peak exists there (harmonic sieve). Partials keep their full weight on
+ * their own pitch class, which is what made triads read as power chords, sus chords and 7ths
+ * on real pianos (see docs/ACCURACY.md).
+ *
+ * Votes are shared between the two nearest semitones with cos² weights (a partition of unity),
+ * so slightly detuned partials are not dropped.
  */
 import type { Peak } from './peaks';
 
@@ -28,6 +38,75 @@ export interface ChromaOptions {
    */
   requireSupport?: boolean;
   supportCents?: number;
+  /** `transfer` (default) or the legacy `hpcp` sub-harmonic voting. */
+  method?: 'transfer' | 'hpcp';
+}
+
+/**
+ * Expected partial amplitude relative to the fundamental's remaining magnitude, index = h.
+ * Generous on purpose (piano partials 2–4 are often as strong as the fundamental, and laptop
+ * mics lose the fundamental of bass notes): only the excess over this stays on a partial.
+ */
+export const PARTIAL_PROFILE = [0, 1, 1, 0.8, 0.7, 0.55, 0.45, 0.35, 0.3];
+
+/** Partial h of f0 is searched in [h·f0 − 35 cents, h·f0 + 65 cents] (string stretch). */
+const STRETCH_LO = Math.pow(2, -35 / 1200);
+const STRETCH_HI = Math.pow(2, 65 / 1200);
+
+/** Index of the peak nearest `freq` within [freq·lo, freq·hi], or -1. */
+function nearestPeak(sorted: readonly Peak[], freq: number, lo: number, hi: number): number {
+  const a0 = freq * lo;
+  const b0 = freq * hi;
+  let a = 0;
+  let b = sorted.length;
+  while (a < b) {
+    const mid = (a + b) >>> 1;
+    if (sorted[mid].freq < a0) a = mid + 1;
+    else b = mid;
+  }
+  let best = -1;
+  let bestD = Infinity;
+  for (let i = a; i < sorted.length && sorted[i].freq <= b0; i++) {
+    const d = Math.abs(Math.log(sorted[i].freq / freq));
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/**
+ * Per-peak mass after harmonic attribution: `own[i]` stays on peak i's pitch class,
+ * `claimed[i]` is mass taken from i's partials (also voted on i's pitch class).
+ * `peaks` must be sorted by ascending frequency.
+ */
+export function attributeHarmonics(
+  peaks: readonly Peak[],
+  harmonics: number,
+  magnitudeExponent = 1,
+): { own: Float64Array; claimed: Float64Array } {
+  const n = peaks.length;
+  const own = new Float64Array(n);
+  const claimed = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    const m = peaks[i].mag > 0 ? peaks[i].mag : 0;
+    own[i] = magnitudeExponent === 1 ? m : Math.pow(m, magnitudeExponent);
+  }
+  const maxH = Math.min(harmonics, PARTIAL_PROFILE.length - 1);
+  for (let i = 0; i < n; i++) {
+    const base = own[i];
+    if (!(base > 0) || !(peaks[i].freq > 0)) continue;
+    for (let h = 2; h <= maxH; h++) {
+      const j = nearestPeak(peaks, peaks[i].freq * h, STRETCH_LO, STRETCH_HI);
+      if (j <= i) continue;
+      const take = Math.min(own[j], base * PARTIAL_PROFILE[h]);
+      if (take <= 0) continue;
+      own[j] -= take;
+      claimed[i] += take;
+    }
+  }
+  return { own, claimed };
 }
 
 /** True when a peak in `sorted` (ascending freq) lies within `cents` of `freq`. */
@@ -71,9 +150,29 @@ export function accumulateChroma(
     magnitudeExponent = 1,
     requireSupport = true,
     supportCents = 50,
+    method = 'transfer',
   } = opts;
-  const weights = harmonicWeights(harmonics);
+  const vote = (f: number, v: number) => {
+    const midi = hzToMidi(f, a4);
+    const lower = Math.floor(midi);
+    const frac = midi - lower; // 0..1 distance above the lower semitone
+    const wLower = Math.cos((Math.PI / 2) * frac) ** 2;
+    const pcLower = ((lower % 12) + 12) % 12;
+    out[pcLower] += v * wLower;
+    out[(pcLower + 1) % 12] += v * (1 - wLower);
+  };
   let total = 0;
+  if (method === 'transfer') {
+    const { own, claimed } = attributeHarmonics(peaks, harmonics, magnitudeExponent);
+    for (let i = 0; i < peaks.length; i++) {
+      const v = own[i] + claimed[i];
+      if (!(peaks[i].freq >= minCandidateHz) || !(v > 0)) continue;
+      vote(peaks[i].freq, v);
+      total += v;
+    }
+    return total;
+  }
+  const weights = harmonicWeights(harmonics);
   for (const peak of peaks) {
     if (!(peak.freq > 0) || !(peak.mag > 0)) continue;
     const m = magnitudeExponent === 1 ? peak.mag : Math.pow(peak.mag, magnitudeExponent);
@@ -81,14 +180,8 @@ export function accumulateChroma(
       const f = peak.freq / (h + 1);
       if (f < minCandidateHz) break;
       if (h > 0 && requireSupport && !hasPeakNear(peaks, f, supportCents)) continue;
-      const midi = hzToMidi(f, a4);
-      const lower = Math.floor(midi);
-      const frac = midi - lower; // 0..1 distance above the lower semitone
-      const wLower = Math.cos((Math.PI / 2) * frac) ** 2;
       const v = m * weights[h];
-      const pcLower = ((lower % 12) + 12) % 12;
-      out[pcLower] += v * wLower;
-      out[(pcLower + 1) % 12] += v * (1 - wLower);
+      vote(f, v);
       total += v;
     }
   }

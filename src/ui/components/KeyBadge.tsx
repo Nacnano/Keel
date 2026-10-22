@@ -1,4 +1,5 @@
 import type { Key, KeyEstimate } from '@/core';
+import { ChevronDown } from 'lucide-react';
 import { keyLabel, pretty } from '../lib/chordLabel';
 import { cx } from '../lib/cx';
 import { Popover } from '../kit/Popover';
@@ -7,6 +8,7 @@ export interface KeyBadgeProps {
   keyEstimate: KeyEstimate | null;
   spellingFollowsKey?: boolean;
   className?: string;
+  primaryOnly?: boolean;
 }
 
 const label = (k: Key, spellingFollowsKey: boolean) => pretty(keyLabel(k, { spellingFollowsKey }));
@@ -15,8 +17,15 @@ const label = (k: Key, spellingFollowsKey: boolean) => pretty(keyLabel(k, { spel
  * Toolbar title: "C major · A minor" with the winner bold and a confidence dot.
  * Tap for the alternatives.
  */
-export function KeyBadge({ keyEstimate, spellingFollowsKey = true, className }: KeyBadgeProps) {
+export function KeyBadge({
+  keyEstimate,
+  spellingFollowsKey = true,
+  className,
+  primaryOnly,
+}: KeyBadgeProps) {
   if (!keyEstimate) {
+    if (primaryOnly)
+      return <p className={cx('text-subhead text-label-2', className)}>Finding the key…</p>;
     return (
       <div
         className={cx('flex min-h-11 items-center justify-center gap-2 text-label-3', className)}
@@ -51,15 +60,25 @@ export function KeyBadge({ keyEstimate, spellingFollowsKey = true, className }: 
           {...p}
           aria-label={`Key ${label(winner, spellingFollowsKey)}, ${pct}% confident. Show alternatives`}
           className={cx(
-            'flex min-h-10 max-w-full items-center gap-2 rounded-control px-2 text-subhead transition-colors hover:bg-fill-4 sm:gap-2.5 sm:px-2.5 sm:text-headline',
+            'flex min-h-11 max-w-full items-center gap-2 rounded-control px-2 text-subhead transition-colors hover:bg-fill-4 sm:gap-2.5 sm:px-2.5 sm:text-headline',
             className,
           )}
         >
           <span aria-hidden className={cx('size-2 rounded-full', tone)} />
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            {part(major)}
-            <span className="hidden text-label-4 sm:inline">·</span>
-            <span className="hidden sm:inline">{part(minor)}</span>
+            {primaryOnly ? (
+              <>
+                <span className="mr-1 font-normal text-label-2">Key</span>
+                {part(winner)}
+                <ChevronDown className="size-3.5 text-label-2" aria-hidden />
+              </>
+            ) : (
+              <>
+                {part(major)}
+                <span className="hidden text-label-4 sm:inline">·</span>
+                <span className="hidden sm:inline">{part(minor)}</span>
+              </>
+            )}
           </span>
         </button>
       )}
