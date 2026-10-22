@@ -3,16 +3,10 @@
  * with hysteresis so the key only flips on sustained evidence.
  */
 import type { ChromaFrame, Key, KeyEstimate, KeyMode, PitchClass } from '@/core';
+import { KRUMHANSL_MAJOR, KRUMHANSL_MINOR, relativeKey } from '@/theory';
 import { SILENCE_ENERGY } from './chordScorer';
 
-// TODO(integration): replace with import from '@/theory/keys' once feat/theory merges
-export const KRUMHANSL_MAJOR = [
-  6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88,
-];
-// TODO(integration): replace with import from '@/theory/keys' once feat/theory merges
-export const KRUMHANSL_MINOR = [
-  6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17,
-];
+export { KRUMHANSL_MAJOR, KRUMHANSL_MINOR, relativeKey };
 
 export interface KeyEstimatorOptions {
   /** Histogram half-life in seconds. */
@@ -69,12 +63,6 @@ const PROFILES: Float64Array[] = (() => {
 
 function keyOf(index: number): Key {
   return { tonic: (index % 12) as PitchClass, mode: MODES[index < 12 ? 0 : 1] };
-}
-
-export function relativeKey(key: Key): Key {
-  return key.mode === 'major'
-    ? { tonic: ((key.tonic + 9) % 12) as PitchClass, mode: 'minor' }
-    : { tonic: ((key.tonic + 3) % 12) as PitchClass, mode: 'major' };
 }
 
 export function createKeyEstimator(options: Partial<KeyEstimatorOptions> = {}): KeyEstimator {
