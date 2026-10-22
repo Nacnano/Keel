@@ -5,6 +5,7 @@ mic ─ getUserMedia (EC / NS / AGC off)
     └► MediaStreamSource ─► capture.worklet (mono, HOP_SIZE blocks, ctx time)
          └► main thread relay ─► dsp.worker ─► pipeline.ts ─► ChromaFrame ─► onFrame()
 file ─ decodeAudioData (OfflineAudioContext) ─► mono ─► pipeline.ts ─► ChromaFrame[]
+     └► offline.ts: same pipeline ─► @/analysis engine ─► chord + key events (Analyze screen)
 ```
 
 The DSP is in pure modules with no DOM. The worker and `analyseSamples` run
@@ -22,6 +23,7 @@ exactly the same code, and every test runs it in node.
 | `profiles.ts`                | Piano / guitar parameters                                                          |
 | `pipeline.ts`                | `createChromaPipeline(config).process(hop, t) → ChromaFrame \| null`               |
 | `fileInput.ts`               | `analyseSamples(samples, sr, opts)` (sync, node) and `analyseFile(blob)` (browser) |
+| `offline.ts`                 | `analyseFileToEvents(file, opts)`: decode, chroma, analysis engine → events        |
 | `micInput.ts`                | `createMicInput(): MicInput` (implements `AudioInput` from `src/core/types.ts`)    |
 | `worklet/capture.worklet.ts` | AudioWorkletProcessor, posts `{ type: 'hop', samples, t }` (transferable)          |
 | `worker/dsp.worker.ts`       | Message loop around the pipeline; posts frames and timing stats                    |
@@ -50,6 +52,37 @@ to the user. `listDevices()` returns `audioinput` devices. Their labels stay
 empty until mic permission has been granted once. If the saved `deviceId` is
 gone, `start()` falls back to the default mic. Calling `start({ deviceId })`
 while running switches device and keeps the AudioContext.
+
+## Offline song analysis (`offline.ts`)
+
+```ts
+import { analyseFileToEvents } from '@/audio/offline';
+
+const { events, durationSec } = await analyseFileToEvents(file, {
+  vocabLevel: 2,
+  instrument: 'piano',
+  mode: 'room',
+  onProgress: (fraction, stage) => setProgress({ fraction, stage }), // 'decoding' | 'analysing'
+  signal: abort.signal,
+});
+// events: chord + key AnalysisEvents, t = seconds from the start of the file
+```
+
+`decodeFileToMono` + `analyseSamplesToEvents(samples, sr, opts)` are the two halves (the
+Analyze screen keeps the decoded samples so a vocabulary change does not decode again).
+`analyseSamplesToEvents` is node-safe and yields to the event loop every `chunkFrames` hops
+(default 256, about 12 s of audio). Differences from the live path, all offline-only:
+
+- Event `t` is the centre of the frame's analysis window (frame `t` − (frame/2 − hop)/sr,
+  ≈ 46 ms earlier at 44.1 kHz), which is where a chord change registers in the chroma.
+- After the last sample, silent hops are pushed until the window is empty and the smoother
+  has decided every frame, so the last chord and its end (`null` chord) are reported.
+- `dropShortChords`: chords and gaps shorter than `minChordSec` (default 0.2 s) are folded into
+  the chord before them. This removes the one-hop transition labels (`C/G` between C and G).
+- Only `chord` and `key` events are returned (`notes` / `level` are live-display only).
+
+Test: a synthesised C–G–Am–F progression (2 s per chord, twice) gives exactly that sequence,
+each change within 0.3 s, and the key C major.
 
 ## ChromaFrame semantics
 
