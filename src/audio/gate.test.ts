@@ -26,6 +26,19 @@ describe('adaptive gate', () => {
     expect(sensitivityMarginDb(NaN)).toBeCloseTo(9);
   });
 
+  it('admits an immediate quiet attack before a noise-floor lead-in', () => {
+    const g = createAdaptiveGate({ hopSec: HOP });
+    expect(g.update(-58)).toBe(true);
+    expect(feed(g, -62, 0.3)).toBe(true);
+  });
+
+  it('closes after warmup on stationary startup noise', () => {
+    const g = createAdaptiveGate({ hopSec: HOP });
+    expect(g.update(-55)).toBe(true); // provisional startup floor
+    expect(feed(g, -55, 2)).toBe(false);
+    expect(g.floorDb()).toBeCloseTo(-55, 0);
+  });
+
   it('learns the noise floor and stays closed on noise alone', () => {
     const g = createAdaptiveGate({ hopSec: HOP });
     expect(feed(g, -62, 3)).toBe(false);

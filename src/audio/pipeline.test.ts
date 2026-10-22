@@ -204,7 +204,7 @@ describe('chroma pipeline', () => {
     const sr = 48000;
     const p = createChromaPipeline({ sampleRate: sr });
     const hop = p.config.hopSize;
-    const room = noise(sr * 4, 0.002, 3); // about -59 dBFS
+    const room = noise(sr * 5, 0.002, 3); // about -59 dBFS
     for (let i = 0; i + hop <= room.length; i += hop) p.process(room.subarray(i, i + hop), i / sr);
     let st = p.status();
     expect(st.noiseFloorDb).toBeGreaterThan(-62);
@@ -219,7 +219,7 @@ describe('chroma pipeline', () => {
       gain: 1,
     });
     for (let i = 0; i + hop <= loud.length; i += hop) {
-      p.process(loud.subarray(i, i + hop), 4 + i / sr);
+      p.process(loud.subarray(i, i + hop), 5 + i / sr);
     }
     st = p.status();
     expect(st.tooQuiet).toBe(false);

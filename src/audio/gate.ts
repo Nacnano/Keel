@@ -88,7 +88,8 @@ export function sensitivityMarginDb(sensitivity: number): number {
  * piano still opens it, and a noisy room does not hold it open on noise alone.
  *
  * Floor tracker (per-hop level in dBFS):
- * - first `learnSec`: minimum of the hop levels (`initialFloorDb` before the first hop);
+ * - first `learnSec`: collect the minimum, using a provisional `initialFloorDb` threshold;
+ *   at warmup completion adopt the measured minimum (startup noise can pass temporarily);
  * - then it falls quickly towards quieter hops (30 % of the gap per hop) and rises at 1.5 dB/s
  *   while the gate is closed (the room got noisier), 0.05 dB/s while it is open, so a long
  *   stretch of continuous playing does not drag the floor up into the music.
@@ -108,6 +109,7 @@ export function createAdaptiveGate(opts: AdaptiveGateOptions): AdaptiveGate {
   let margin = sensitivityMarginDb(opts.sensitivity ?? 0.5);
   let floor = initialFloorDb;
   let learned = 0;
+  let learningMinimum = Infinity;
   let open = false;
   const upClosed = 1.5 * hopSec;
   const upOpen = 0.05 * hopSec;
@@ -117,8 +119,11 @@ export function createAdaptiveGate(opts: AdaptiveGateOptions): AdaptiveGate {
     update(db) {
       const level = Number.isFinite(db) ? db : -120;
       if (learned < learnSec) {
-        floor = learned === 0 ? level : Math.min(floor, level);
+        learningMinimum = Math.min(learningMinimum, level);
         learned += hopSec;
+        // A provisional quiet-room floor lets an immediate quiet attack through. At the end
+        // of warmup adopt the observed minimum so stationary room noise cannot hold us open.
+        floor = learned < learnSec ? Math.min(initialFloorDb, learningMinimum) : learningMinimum;
       } else if (level < floor) {
         floor += 0.3 * (level - floor);
       } else {
@@ -138,6 +143,7 @@ export function createAdaptiveGate(opts: AdaptiveGateOptions): AdaptiveGate {
       open = false;
       floor = initialFloorDb;
       learned = 0;
+      learningMinimum = Infinity;
     },
   };
 }
