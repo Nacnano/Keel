@@ -103,7 +103,11 @@ function StatusPill({
           <Meter level={level} active bars={7} />
         </span>
       )}
-      {mock && <Badge className="hidden sm:inline-flex">Demo</Badge>}
+      {mock && (
+        <span className="hidden sm:inline-flex">
+          <Badge>Demo</Badge>
+        </span>
+      )}
     </div>
   );
 }
