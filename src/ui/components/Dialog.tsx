@@ -1,6 +1,6 @@
-import { useEffect, useId, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { Sheet } from '../kit';
 
 export interface DialogProps {
   open: boolean;
@@ -10,10 +10,13 @@ export interface DialogProps {
   footer?: ReactNode;
 }
 
-/** Modal dialog: Escape and backdrop close it, focus moves into it on open and back on close. */
+/**
+ * Modal dialog: a thin wrapper over the kit `Sheet placement="center"` that keeps the old
+ * contract. Escape (handled first, so screen shortcuts do not also see it) and the scrim close
+ * it; focus moves into it on open and back to the previous element on close.
+ */
 export function Dialog({ open, onClose, title, children, footer }: DialogProps) {
-  const titleId = useId();
-  const panel = useRef<HTMLDivElement>(null);
+  const body = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   useLayoutEffect(() => {
     closeRef.current = onClose;
@@ -22,7 +25,7 @@ export function Dialog({ open, onClose, title, children, footer }: DialogProps) 
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
-    panel.current?.focus();
+    body.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
@@ -36,25 +39,12 @@ export function Dialog({ open, onClose, title, children, footer }: DialogProps) 
     };
   }, [open]);
 
-  if (!open) return null;
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60" aria-hidden onClick={onClose} />
-      <div
-        ref={panel}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        className="relative w-full max-w-md rounded-2xl bg-zinc-900 p-6 shadow-2xl ring-1 ring-zinc-800 outline-none"
-      >
-        <h2 id={titleId} className="mb-4 text-lg font-semibold text-white">
-          {title}
-        </h2>
-        <div className="text-sm text-zinc-300">{children}</div>
-        {footer && <div className="mt-6 flex justify-end gap-2">{footer}</div>}
+  return (
+    <Sheet open={open} onClose={onClose} title={title} placement="center">
+      <div ref={body} tabIndex={-1} className="pt-1 text-subhead text-label-2 outline-none">
+        {children}
       </div>
-    </div>,
-    document.body,
+      {footer && <div className="mt-5 flex justify-end gap-2">{footer}</div>}
+    </Sheet>
   );
 }
