@@ -51,15 +51,15 @@ export function KeyBadge({ keyEstimate, spellingFollowsKey = true, className }: 
           {...p}
           aria-label={`Key ${label(winner, spellingFollowsKey)}, ${pct}% confident. Show alternatives`}
           className={cx(
-            'flex min-h-10 items-center gap-2.5 rounded-control px-2.5 text-headline transition-colors hover:bg-fill-4',
+            'flex min-h-10 max-w-full items-center gap-2 rounded-control px-2 text-subhead transition-colors hover:bg-fill-4 sm:gap-2.5 sm:px-2.5 sm:text-headline',
             className,
           )}
         >
           <span aria-hidden className={cx('size-2 rounded-full', tone)} />
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
             {part(major)}
-            <span className="text-label-4">·</span>
-            {part(minor)}
+            <span className="hidden text-label-4 sm:inline">·</span>
+            <span className="hidden sm:inline">{part(minor)}</span>
           </span>
         </button>
       )}
