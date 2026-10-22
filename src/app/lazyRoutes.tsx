@@ -10,6 +10,9 @@ export const LibraryScreen = lazy(() =>
 export const SettingsScreen = lazy(() =>
   import('../ui/screens/SettingsScreen').then((m) => ({ default: m.SettingsScreen })),
 );
+export const TrainScreen = lazy(() =>
+  import('../ui/screens/TrainScreen').then((m) => ({ default: m.TrainScreen })),
+);
 
 /** Shown while a lazily loaded route chunk downloads. */
 export function RouteFallback() {
