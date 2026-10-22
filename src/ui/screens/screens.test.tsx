@@ -28,6 +28,7 @@ const renderJam = () =>
 describe('JamScreen', () => {
   it('renders the idle layout', () => {
     renderJam();
+    expect(screen.queryByRole('region', { name: 'Modulation hints' })).toBeNull();
     expect(screen.getByTestId('chord-symbol')).toHaveTextContent('—');
     expect(screen.getByText('Tap Start and allow the microphone.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Start/ })).toBeEnabled();
@@ -52,6 +53,8 @@ describe('JamScreen', () => {
     expect(jamStore.getState().status).toBe('listening');
     expect(screen.getByTestId('chord-symbol')).toHaveTextContent('C');
     expect(screen.getAllByTestId('timeline-chord')).toHaveLength(1);
+    // the mock stream's key brings up modulation hints under Try next
+    expect(screen.getAllByTestId('modulation-hint').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /Stop/ })).toBeInTheDocument();
 
     act(() => {
