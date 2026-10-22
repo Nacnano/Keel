@@ -121,6 +121,21 @@ describe('Piano', () => {
     expect(container.querySelector('[data-note="36"]')).toBeInTheDocument();
     expect(container.querySelector('[data-note="21"]')).toBeNull();
   });
+
+  it('colours left- and right-hand notes over a custom range', () => {
+    const { container } = render(
+      <Piano range={[36, 71]} leftHandNotes={[36, 43]} rightHandNotes={[64, 67]} label="Voicing" />,
+    );
+    expect(container.querySelectorAll('[data-note]')).toHaveLength(36);
+    const state = (n: number) =>
+      container.querySelector(`[data-note="${n}"]`)?.getAttribute('data-state');
+    expect(state(36)).toBe('left');
+    expect(state(43)).toBe('left');
+    expect(state(64)).toBe('right');
+    expect(state(60)).toBe('off');
+    expect(container.querySelector('[data-note="36"]')).toHaveClass('fill-sky-400');
+    expect(screen.getByRole('img', { name: 'Voicing' })).toBeInTheDocument();
+  });
 });
 
 describe('KeyBadge', () => {
