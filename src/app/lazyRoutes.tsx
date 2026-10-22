@@ -7,6 +7,9 @@ export const ReviewScreen = lazy(() =>
 export const LibraryScreen = lazy(() =>
   import('../ui/screens/LibraryScreen').then((m) => ({ default: m.LibraryScreen })),
 );
+export const StatsScreen = lazy(() =>
+  import('../ui/screens/StatsScreen').then((m) => ({ default: m.StatsScreen })),
+);
 export const SettingsScreen = lazy(() =>
   import('../ui/screens/SettingsScreen').then((m) => ({ default: m.SettingsScreen })),
 );
