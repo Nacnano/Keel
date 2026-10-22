@@ -3,11 +3,13 @@ import type { ComponentType, LazyExoticComponent } from 'react';
 import { createBrowserRouter } from 'react-router';
 import { AppShell } from './AppShell';
 import {
+  AnalyzeScreen,
   LibraryScreen,
   ReviewScreen,
   RouteFallback,
   SettingsScreen,
   TrainScreen,
+  StatsScreen,
 } from './lazyRoutes';
 import { JamScreen } from '../ui/screens/JamScreen';
 
@@ -26,6 +28,8 @@ export const routes = [
       { path: 'review/:id', element: suspended(ReviewScreen) },
       { path: 'library', element: suspended(LibraryScreen) },
       { path: 'train', element: suspended(TrainScreen) },
+      { path: 'analyze', element: suspended(AnalyzeScreen) },
+      { path: 'stats', element: suspended(StatsScreen) },
       { path: 'settings', element: suspended(SettingsScreen) },
     ],
   },

@@ -21,6 +21,12 @@ export function AppShell() {
           <NavLink to="/train" className={link}>
             Train
           </NavLink>
+          <NavLink to="/analyze" className={link}>
+            Analyze
+          </NavLink>
+          <NavLink to="/stats" className={link}>
+            Stats
+          </NavLink>
           <NavLink to="/settings" className={link}>
             Settings
           </NavLink>
