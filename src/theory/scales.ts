@@ -3,8 +3,11 @@
  */
 import type { Chord, ChordQuality, Key, PitchClass } from '@/core';
 import { chordTones } from './chordName';
-import { HARMONIC_MINOR_SCALE, mod12, scaleOf } from './keys';
-import { keyName, spell } from './notes';
+import { HARMONIC_MINOR_SCALE, MAJOR_SCALE, MELODIC_MINOR_SCALE, mod12, scaleOf } from './keys';
+import { keyName, spell, spellAbove } from './notes';
+import type { SpellOptions } from './notes';
+import { romanNumeral } from './numerals';
+import { isDominantQuality } from './vocab';
 
 export type ScaleId =
   | 'ionian'
@@ -30,6 +33,8 @@ export type ScaleId =
   | 'diminishedHalfWhole'
   | 'diminishedWholeHalf';
 
+export type ParentScale = 'major' | 'melodic minor' | 'harmonic minor';
+
 export interface ScaleDef {
   id: ScaleId;
   /** Display name, lower case ("dorian", "melodic minor"). */
@@ -38,10 +43,20 @@ export interface ScaleDef {
   intervals: readonly number[];
   /** Where the scale comes from, for reasons ("mode 2 of major"). */
   family: string;
+  /** Parent scale and mode number (1-based) for modes of major / melodic / harmonic minor. */
+  parent?: { scale: ParentScale; mode: number };
 }
 
+const PARENT_INTERVALS: Readonly<Record<ParentScale, readonly number[]>> = {
+  major: MAJOR_SCALE,
+  'melodic minor': MELODIC_MINOR_SCALE,
+  'harmonic minor': HARMONIC_MINOR_SCALE,
+};
+
 function def(id: ScaleId, name: string, family: string, intervals: number[]): ScaleDef {
-  return { id, name, family, intervals };
+  const m = /^mode (\d) of (major|melodic minor|harmonic minor)$/.exec(family);
+  const parent = m ? { scale: m[2] as ParentScale, mode: Number(m[1]) } : undefined;
+  return parent ? { id, name, family, intervals, parent } : { id, name, family, intervals };
 }
 
 export const SCALES: Readonly<Record<ScaleId, ScaleDef>> = {
@@ -96,20 +111,30 @@ export const SCALES: Readonly<Record<ScaleId, ScaleDef>> = {
     'mode 5 of harmonic minor',
     [0, 1, 4, 5, 7, 8, 10],
   ),
-  majorPentatonic: def('majorPentatonic', 'major pentatonic', 'pentatonic', [0, 2, 4, 7, 9]),
-  minorPentatonic: def('minorPentatonic', 'minor pentatonic', 'pentatonic', [0, 3, 5, 7, 10]),
-  blues: def('blues', 'blues', 'blues', [0, 3, 5, 6, 7, 10]),
-  wholeTone: def('wholeTone', 'whole tone', 'symmetric', [0, 2, 4, 6, 8, 10]),
+  majorPentatonic: def(
+    'majorPentatonic',
+    'major pentatonic',
+    'pentatonic, no half steps',
+    [0, 2, 4, 7, 9],
+  ),
+  minorPentatonic: def(
+    'minorPentatonic',
+    'minor pentatonic',
+    'pentatonic, no half steps',
+    [0, 3, 5, 7, 10],
+  ),
+  blues: def('blues', 'blues', 'minor pentatonic plus the b5', [0, 3, 5, 6, 7, 10]),
+  wholeTone: def('wholeTone', 'whole tone', 'symmetric, all whole steps', [0, 2, 4, 6, 8, 10]),
   diminishedHalfWhole: def(
     'diminishedHalfWhole',
     'diminished (half-whole)',
-    'symmetric',
+    'symmetric, half step then whole step',
     [0, 1, 3, 4, 6, 7, 9, 10],
   ),
   diminishedWholeHalf: def(
     'diminishedWholeHalf',
     'diminished (whole-half)',
-    'symmetric',
+    'symmetric, whole step then half step',
     [0, 2, 3, 5, 6, 8, 9, 11],
   ),
 };
@@ -145,6 +170,7 @@ const PREFERENCES: Readonly<Record<ChordQuality, readonly ScaleId[]>> = {
     'mixolydian',
     'lydianDominant',
     'blues',
+    'majorPentatonic',
     'mixolydianB6',
     'phrygianDominant',
     'diminishedHalfWhole',
@@ -157,7 +183,7 @@ const PREFERENCES: Readonly<Record<ChordQuality, readonly ScaleId[]>> = {
   m6: ['dorian', 'melodicMinor', 'minorPentatonic'],
   add9: ['ionian', 'majorPentatonic', 'lydian', 'mixolydian'],
   madd9: ['aeolian', 'dorian', 'melodicMinor'],
-  '9': ['mixolydian', 'lydianDominant', 'blues'],
+  '9': ['mixolydian', 'lydianDominant', 'blues', 'majorPentatonic'],
   maj9: ['ionian', 'lydian', 'majorPentatonic'],
   min9: ['dorian', 'aeolian', 'minorPentatonic'],
   '11': ['mixolydian', 'minorPentatonic'],
@@ -178,9 +204,20 @@ const PREFERENCES: Readonly<Record<ChordQuality, readonly ScaleId[]>> = {
 
 /**
  * Scales allowed to miss chord tones: bluesy colour over dominants and #9 chords, minor
- * pentatonic over power / sus / 11 chords.
+ * pentatonic over power / sus / 11 chords, major pentatonic (no b7) over dominants.
  */
 const COLOUR: ReadonlySet<ScaleId> = new Set<ScaleId>(['blues', 'minorPentatonic']);
+
+function isColour(id: ScaleId, quality: ChordQuality): boolean {
+  return COLOUR.has(id) || (id === 'majorPentatonic' && isDominantQuality(quality));
+}
+
+/** "mode 2 of C major", or the plain family when the scale is not a mode. */
+function familyFor(d: ScaleDef, root: PitchClass, key?: Key | null): string {
+  if (!d.parent) return d.family;
+  const tonic = mod12(root - PARENT_INTERVALS[d.parent.scale][d.parent.mode - 1]);
+  return `mode ${d.parent.mode} of ${spell(tonic, key)} ${d.parent.scale}`;
+}
 
 export interface ScaleSuggestion {
   id: ScaleId;
@@ -191,10 +228,12 @@ export interface ScaleSuggestion {
   /** "D dorian" (root spelled for the key). */
   label: string;
   pitchClasses: PitchClass[];
-  /** Why it fits, e.g. "mode 2 of C major: every note is in the key". */
+  /** Why it fits, e.g. "ii7 in C major: mode 2 of C major; every note in the key". */
   reason: string;
   /** 0..1, higher is better. */
   score: number;
+  /** 1-based position in the ranking (1 = best fit). */
+  rank: number;
 }
 
 /**
@@ -209,7 +248,8 @@ export function scalesForChord(chord: Chord, key?: Key | null): ScaleSuggestion[
   const keyTones = key ? new Set<number>(scaleOf(key)) : null;
   if (key && keyTones && key.mode === 'minor')
     keyTones.add(mod12(key.tonic + HARMONIC_MINOR_SCALE[6]));
-  const out: ScaleSuggestion[] = [];
+  const where = key ? `${romanNumeral(chord, key)} in ${keyName(key)}` : '';
+  const out: Omit<ScaleSuggestion, 'rank'>[] = [];
 
   prefs.forEach((id, rank) => {
     const pcs = scalePitchClasses(chord.root, id);
@@ -218,7 +258,7 @@ export function scalesForChord(chord: Chord, key?: Key | null): ScaleSuggestion[
     const absent = [...tones].filter((t) => !set.has(t));
     // altered-type scales may replace the perfect fifth; only colour scales skip other tones
     const missing = absent.filter((t) => t !== fifth).length;
-    if (missing > 0 && !COLOUR.has(id)) return;
+    if (missing > 0 && !isColour(id, chord.quality)) return;
     const pref = 1 - rank / Math.max(prefs.length, 4);
     let fit = 1;
     let outside = 0;
@@ -230,16 +270,46 @@ export function scalesForChord(chord: Chord, key?: Key | null): ScaleSuggestion[
     const base = keyTones ? 0.55 * fit + 0.45 * pref : pref;
     const penalty = 0.3 * missing + 0.05 * (absent.length - missing);
     const score = Math.round((base - penalty) * 1000) / 1000;
-    const def = SCALES[id];
-    const label = `${spell(chord.root, key)} ${def.name}`;
+    const d = SCALES[id];
+    const label = `${spell(chord.root, key)} ${d.name}`;
+    const family = familyFor(d, chord.root, key);
     let reason: string;
     if (!key)
-      reason = `${def.family}; ${rank === 0 ? 'the usual choice' : 'an option'} over ${chord.quality} chords`;
-    else if (outside === 0) reason = `${def.family}: every note is in ${keyName(key)}`;
-    else reason = `${def.family}: ${outside} note${outside > 1 ? 's' : ''} outside ${keyName(key)}`;
-    if (missing > 0) reason += ', bluesy colour (skips a chord tone)';
-    out.push({ id, name: def.name, root: chord.root, label, pitchClasses: pcs, reason, score });
+      reason = `${family}; ${rank === 0 ? 'the usual choice' : 'an option'} over ${chord.quality} chords`;
+    else if (outside === 0) reason = `${where}: ${family}; every note in the key`;
+    else reason = `${where}: ${family}; ${outside} note${outside > 1 ? 's' : ''} outside the key`;
+    if (missing > 0)
+      reason += `, ${id === 'majorPentatonic' ? 'open' : 'bluesy'} colour (skips a chord tone)`;
+    out.push({ id, name: d.name, root: chord.root, label, pitchClasses: pcs, reason, score });
   });
 
-  return out.sort((a, b) => b.score - a.score || prefs.indexOf(a.id) - prefs.indexOf(b.id));
+  return out
+    .sort((a, b) => b.score - a.score || prefs.indexOf(a.id) - prefs.indexOf(b.id))
+    .map((s, i) => ({ ...s, rank: i + 1 }));
+}
+
+const ODD_NAMES = new Set(['Cb', 'Fb', 'E#', 'B#']);
+
+/**
+ * Note names of a scale, root first, spelled for `key`. Seven-note scales use one letter per
+ * degree from the root's key spelling (D dorian in C: D E F G A B C; E phrygian dominant in
+ * A minor: E F G# A B C D), falling back to the key's own spelling where that would give a
+ * double accidental or an odd enharmonic the key does not use (G altered in C: ... Bb B ...).
+ * Other scales (pentatonic, blues, symmetric) take `spell(pc, key)` per note.
+ */
+export function scaleNotesSpelled(
+  scale: Pick<ScaleSuggestion, 'root' | 'pitchClasses'>,
+  key?: Key | null,
+  opts: SpellOptions = {},
+): string[] {
+  const plain = scale.pitchClasses.map((p) => spell(p, key, opts));
+  if (scale.pitchClasses.length !== 7 || opts.spellingFollowsKey === false) return plain;
+  const rootName = spell(scale.root, key, opts);
+  return scale.pitchClasses.map((p, i) => {
+    if (i === 0) return rootName;
+    const byLetter = spellAbove(rootName, i, p);
+    const byKey = plain[i];
+    if (ODD_NAMES.has(byLetter) && byLetter !== byKey) return byKey;
+    return byLetter;
+  });
 }
