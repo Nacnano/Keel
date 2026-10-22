@@ -10,7 +10,8 @@ text/JSON export and import. Row shapes are the frozen contracts in
 | `sessionRecorder.ts` | `startSession(meta)`: dedupes and buffers events, flushes every 2 s         |
 | `summary.ts`         | Pure `computeSummary(chords, keys, markers, durationSec)`                   |
 | `audioRecorder.ts`   | `createAudioRecorder(stream, opts)`: MediaRecorder, 30 min cap, 25 min warn |
-| `repo.ts`            | List/search, rename, tags, soft delete, chord/marker edits, settings        |
+| `stats.ts`           | Pure `computeStats(sessions, { since, now })`: time, days, streaks, keys    |
+| `repo.ts`            | List/search, rename, tags, soft delete, chord/marker edits, settings, stats |
 | `export.ts`          | `toText`, `toJSON`, `fromJSON`                                              |
 | `cycles.ts`          | Repeat detector (2–8 chords) for summary and text chart (`@/theory`)        |
 | `chordSymbol.ts`     | Chord/key names for export (`@/theory`)                                     |
