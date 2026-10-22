@@ -17,4 +17,4 @@ export {
   type LoadProgress,
 } from './player';
 export { resolveSustain, scheduleWindow, soundingAt, performanceEnd } from './schedule';
-export { playChord, chordToMidiNotes, type PlayChordOptions } from './chordAudition';
+export { playChord, playVoicing, chordToMidiNotes, type PlayChordOptions } from './chordAudition';

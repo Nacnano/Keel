@@ -23,6 +23,9 @@ export interface PianoProps {
   labels?: Partial<Record<PitchClass, string>>;
   /** Overrides the generated accessible name. */
   ariaLabel?: string;
+  /** Voicing display: left-hand notes (one colour) and right-hand notes (another). */
+  leftHandNotes?: readonly MidiNote[];
+  rightHandNotes?: readonly MidiNote[];
   className?: string;
 }
 
@@ -33,7 +36,7 @@ const H = 128;
 const BW = 14;
 const BH = 80;
 
-export type KeyState = 'off' | 'scale' | 'chord' | 'pc' | 'exact';
+export type KeyState = 'off' | 'scale' | 'chord' | 'pc' | 'exact' | 'left' | 'right';
 
 interface KeyGeom {
   note: number;
@@ -58,6 +61,8 @@ const FILL: Record<KeyState, [white: string, black: string]> = {
   chord: ['fill-violet-300', 'fill-violet-400'],
   pc: ['fill-violet-300/45', 'fill-violet-800'],
   exact: ['fill-violet-400', 'fill-violet-400'],
+  left: ['fill-sky-400', 'fill-sky-500'],
+  right: ['fill-violet-400', 'fill-violet-500'],
 };
 
 /** SVG keyboard. Pure props, no store coupling; scales to its container width. */
@@ -71,6 +76,8 @@ export const Piano = memo(function Piano({
   rootPitchClass = null,
   labels,
   ariaLabel,
+  leftHandNotes = [],
+  rightHandNotes = [],
   className,
 }: PianoProps) {
   const [lo, hi] = range ?? RANGE[keys];
@@ -79,18 +86,29 @@ export const Piano = memo(function Piano({
   const exact = new Set<number>(activeMidiNotes);
   const scale = new Set<number>(highlightPitchClasses);
   const accent = new Set<number>(accentPitchClasses);
+  const left = new Set<number>(leftHandNotes);
+  const right = new Set<number>(rightHandNotes);
   const stateOf = (n: number): KeyState =>
-    exact.has(n)
-      ? 'exact'
-      : pcs.has(n % 12)
-        ? 'pc'
-        : accent.has(n % 12)
-          ? 'chord'
-          : scale.has(n % 12)
-            ? 'scale'
-            : 'off';
+    left.has(n)
+      ? 'left'
+      : right.has(n)
+        ? 'right'
+        : exact.has(n)
+          ? 'exact'
+          : pcs.has(n % 12)
+            ? 'pc'
+            : accent.has(n % 12)
+              ? 'chord'
+              : scale.has(n % 12)
+                ? 'scale'
+                : 'off';
 
-  const names = [...new Set([...activeMidiNotes.map((n) => n % 12), ...activePitchClasses])]
+  const names = [
+    ...new Set([
+      ...[...activeMidiNotes, ...leftHandNotes, ...rightHandNotes].map((n) => n % 12),
+      ...activePitchClasses,
+    ]),
+  ]
     .sort((a, b) => a - b)
     .map((pc) => NOTE_NAMES_SHARP[pc]);
 
