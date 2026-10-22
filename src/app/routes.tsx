@@ -8,6 +8,7 @@ import {
   ReviewScreen,
   RouteFallback,
   SettingsScreen,
+  ShareScreen,
   TrainScreen,
   StatsScreen,
 } from './lazyRoutes';
@@ -33,6 +34,8 @@ export const routes = [
       { path: 'settings', element: suspended(SettingsScreen) },
     ],
   },
+  // Public share page: standalone (no nav chrome), works logged out.
+  { path: '/s/:code', element: suspended(ShareScreen) },
 ];
 
 export function createAppRouter() {

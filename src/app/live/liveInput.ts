@@ -25,6 +25,7 @@ import { createMidiInput } from '@/midi';
 import type { WebMidiInput } from '@/midi';
 import { createAnalysisEngine } from '@/analysis';
 import { createAudioRecorder, isAudioRecordingSupported, startSession } from '@/data';
+import { notifySessionSaved } from '@/sync/signals';
 import type { AudioRecorder, SessionHandle } from '@/data';
 import { jamStore } from '@/state/jamStore';
 import { inputStore } from '@/state/inputStore';
@@ -281,6 +282,7 @@ export function createLiveInput(): LiveInputController {
         }
       }
       const saved = await handle.stop({ endT });
+      notifySessionSaved(); // nudge cloud sync (no-op when sync is off)
       if (saved.durationSec >= 2 || saved.summary?.chordCount) {
         const { openReview } = opts;
         toast(`Saved “${saved.name}” to the library`, {

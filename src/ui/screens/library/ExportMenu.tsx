@@ -11,6 +11,12 @@ export interface ExportMenuProps {
   label?: string;
   className?: string;
   align?: 'left' | 'right';
+  /** Adds a "Share link…" item (review screen). */
+  share?: {
+    onSelect(): void;
+    /** When set, the item is disabled and this hint is shown under it. */
+    disabledReason?: string;
+  };
 }
 
 /** "Export" button with copy chart / download text / download JSON. */
@@ -19,6 +25,7 @@ export function ExportMenu({
   label = 'Export',
   className,
   align = 'right',
+  share,
 }: ExportMenuProps) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -94,6 +101,29 @@ export function ExportMenu({
           <button type="button" role="menuitem" className={item} onClick={run(downloadJSON)}>
             Download JSON
           </button>
+          {share && (
+            <>
+              <div role="separator" className="my-1 h-px bg-zinc-800" />
+              <button
+                type="button"
+                role="menuitem"
+                className={cx(item, 'disabled:cursor-not-allowed disabled:opacity-50')}
+                disabled={!!share.disabledReason}
+                aria-describedby={share.disabledReason ? `${menuId}-share-hint` : undefined}
+                onClick={() => {
+                  setOpen(false);
+                  share.onSelect();
+                }}
+              >
+                Share link…
+              </button>
+              {share.disabledReason && (
+                <p id={`${menuId}-share-hint`} className="px-3 pb-2 text-xs text-zinc-500">
+                  {share.disabledReason}
+                </p>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>

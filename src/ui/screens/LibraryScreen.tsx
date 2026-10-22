@@ -16,6 +16,7 @@ import {
 import { useSettings } from '@/state/settingsStore';
 import { Button } from '../components/Button';
 import { Segmented } from '../components/Segmented';
+import { SyncPill } from '../components/SyncPill';
 import { toast } from '../components/toastStore';
 import { cx } from '../lib/cx';
 import { seedDemoSession, seedLongSession } from './library/seed';
@@ -187,7 +188,10 @@ export function LibraryScreen() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 pt-5 pb-24 lg:px-8">
         <header className="flex flex-wrap items-end gap-3">
           <div className="mr-auto">
-            <h1 className="text-2xl font-semibold text-white">Library</h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-semibold text-white">Library</h1>
+              <SyncPill />
+            </div>
             <p data-testid="storage-line" className="text-sm text-zinc-500">
               {storage ? storageLine(storage) : ' '}
             </p>

@@ -28,6 +28,16 @@ describe('App routes', () => {
     render(<RouterProvider router={r} />);
     expect(await screen.findByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument();
   });
+  it('renders the public share page at /s/:code without the app nav', async () => {
+    cleanup();
+    const r = createMemoryRouter(routes, { initialEntries: ['/s/abcdefghij'] });
+    render(<RouterProvider router={r} />);
+    // No env vars in tests: the page explains sharing is unavailable.
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Sharing is not available' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Library' })).toBeNull();
+  });
   it('renders the ear-training screen at /train', async () => {
     const r = createMemoryRouter(routes, { initialEntries: ['/train'] });
     render(<RouterProvider router={r} />);

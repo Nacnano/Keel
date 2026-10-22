@@ -7,6 +7,8 @@ mic ──► audio/ (AudioWorklet → DSP worker → ChromaFrame) ─┐
                                                           ├─► analysis/ (templates + HMM, key) ─► AnalysisEvent ─► state/ ─► ui/
 USB MIDI ─► midi/ (held notes → exact ChromaFrame) ───────┘                                            │
             midi/ recorder + piano player                                                         data/ (Dexie)
+                                                                                                       │ optional
+                                                                                         sync/ (Supabase: LWW sync, share links)
 theory/  pure music theory used by analysis, ui, data
 ```
 
@@ -30,5 +32,14 @@ between workstreams. They are frozen after PR 1. Highlights:
 ## Build
 
 Vite 8 + React 19 + TS 6, Tailwind 4, vite-plugin-pwa, Vitest 4 with two
-projects (`node` for core/theory/audio/analysis/midi, `jsdom` for ui/state/data/app).
+projects (`node` for core/theory/audio/analysis/midi, `jsdom` for ui/state/data/app/sync).
 Workers use ES format; load worklets/workers with `new URL('./x.ts', import.meta.url)`.
+
+## Sync (optional)
+
+`src/sync/` pushes and pulls whole sessions (row + chords, keys, markers, MIDI)
+to Supabase by `updatedAt`, last write wins, soft deletes only; audio never
+leaves the device. Inert unless `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`
+are set; `@supabase/supabase-js` is a lazy chunk. Algorithm and limits:
+[`src/sync/README.md`](../src/sync/README.md). Setup:
+[`supabase/README.md`](../supabase/README.md).
