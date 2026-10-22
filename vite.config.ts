@@ -46,6 +46,12 @@ export default defineConfig({
   },
   test: {
     setupFiles: ['./vitest.setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'json-summary', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/**/testing/**', 'src/**/*.d.ts', 'src/main.tsx'],
+    },
     projects: [
       {
         extends: true,

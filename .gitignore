@@ -27,3 +27,9 @@ dist-ssr
 dev-dist
 # conductor
 .context
+.vercel
+.env.local
+.env.*.local
+
+# test output
+coverage
