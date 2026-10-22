@@ -18,6 +18,7 @@ import { DEFAULT_SETTINGS } from '@/core/constants';
 import { db, sessionRange } from './db';
 import { keyName } from './chordSymbol';
 import { computeSummary } from './summary';
+import { computeStats, rangeStart, type Stats, type StatsRange } from './stats';
 
 export type SessionSort = 'newest' | 'oldest' | 'updated' | 'name' | 'longest';
 
@@ -71,6 +72,16 @@ export async function listSessions(opts: ListSessionsOptions = {}): Promise<Sess
       return terms.every((t) => text.includes(t));
     })
     .sort(SORTERS[opts.sort ?? 'newest']);
+}
+
+/**
+ * Practice stats over non-deleted sessions. Totals, days, keys and progressions cover the
+ * range (last 7 / 30 local days including today, or everything); streaks and least-played
+ * keys always use every session.
+ */
+export async function loadStats(range: StatsRange, now = Date.now()): Promise<Stats> {
+  const rows = (await db.sessions.toArray()).filter((s) => !s.deleted);
+  return computeStats(rows, { since: rangeStart(range, now), now });
 }
 
 /** All distinct tags on non-deleted sessions, sorted. */
