@@ -193,3 +193,24 @@ latency-free. The mic pipeline stays as fallback for acoustic piano and guitar.
 5. **Extras**: analyze audio files, ear training, vocal melody tracking, MIDI/MusicXML export, guitar tools.
 
 Detailed engineering plan, contracts, and PR breakdown: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
+
+## 7. Visual system (redesign, 2026-10-23)
+
+User direction: follow Apple's app conventions; simple, modern, not complicated.
+
+- **Navigation.** Sidebar on wide screens (Jam, Library, Analyze, Train, Stats; Settings
+  pinned at the bottom), iOS-style tab bar on narrow screens (Stats reachable from Library).
+- **Jam screen.** Three things only: the chord (huge, numeral in accent), the key in the
+  toolbar, the timeline strip. One Start/Stop. Bookmark and Section next to it. Everything
+  else is behind two toolbar buttons: **Ideas** (a side sheet with Next · Scales ·
+  Voicings · Modulate) and **Options** (chord detail, listening mode, record audio,
+  keyboard, clear). A level meter sits in the status pill; a quiet-input hint appears
+  after a few silent seconds.
+- **Tokens.** Apple semantic colours for light and dark (`src/index.css`), SF via the
+  system font stack, Apple text styles, radii 10/12/16/20, translucent materials for
+  bars and popovers, one accent (system blue), red only for live/record/destructive.
+- **Components.** `src/ui/kit`: Button, Segmented, Group/Row (inset grouped lists),
+  Switch, Slider, Select, Toolbar/PageHeader, Sheet, Popover, Meter, EmptyState, Badge.
+  Rules in `src/ui/kit/README.md`.
+- **Shortcuts.** Space start/stop · B bookmark · R clear · 1/2/3 chord detail · P keyboard
+  · M listening mode · I ideas · N next · S scales · V voicings · K modulate.

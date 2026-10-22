@@ -53,6 +53,7 @@ export const DEFAULT_SETTINGS: Settings = {
   instrument: 'piano',
   mode: 'solo',
   stability: 0.5,
+  sensitivity: 0.5,
   showSlashChords: true,
   spellingFollowsKey: true,
   audioDeviceId: null,

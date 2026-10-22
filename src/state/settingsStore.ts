@@ -20,6 +20,7 @@ export function selectSettings(s: SettingsState): Settings {
     instrument: s.instrument,
     mode: s.mode,
     stability: s.stability,
+    sensitivity: s.sensitivity,
     showSlashChords: s.showSlashChords,
     spellingFollowsKey: s.spellingFollowsKey,
     audioDeviceId: s.audioDeviceId,
