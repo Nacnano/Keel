@@ -17,6 +17,7 @@ import type { VoicingStyle } from '@/theory';
 import { cx } from '../lib/cx';
 import { Piano } from './Piano';
 import { Segmented } from './Segmented';
+import type { SegmentedOption } from './Segmented';
 
 export interface VoicingPanelProps {
   /** Chord to voice; `null` shows the empty state. */
@@ -34,7 +35,7 @@ export interface VoicingPanelProps {
   className?: string;
 }
 
-const STYLE_OPTIONS = VOICING_STYLES.map((s) => ({
+const STYLE_OPTIONS: SegmentedOption<VoicingStyle>[] = VOICING_STYLES.map((s) => ({
   value: s,
   label: voicingLabel(s),
   title: `${voicingLabel(s)}: ${voicingDescription(s)}`,
@@ -172,7 +173,7 @@ export function VoicingPanel({
       </div>
       {open && (
         <>
-          <Segmented
+          <Segmented<VoicingStyle>
             options={STYLE_OPTIONS}
             value={style}
             onChange={setStyle}

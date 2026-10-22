@@ -247,7 +247,7 @@ function spreadVoicings(chord: Chord, centre: number): MidiNote[][] {
   const bass = bassNote(chord);
   if (isSlash(chord)) {
     // slash chord: the bass alone in the left hand, every other tone in the right
-    const rh = pickTones(chord, { max: 4, min: 3, exclude: [bass % 12] });
+    const rh = pickTones(chord, { max: 4, min: 3, exclude: [mod12(bass)] });
     return rightHand(chord, rh, centre)
       .slice(0, 3)
       .map((r) => [bass, ...r]);
