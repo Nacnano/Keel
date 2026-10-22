@@ -16,3 +16,12 @@ export async function resetDb(): Promise<void> {
     await Promise.all(db.tables.map((t) => t.clear()));
   });
 }
+
+/**
+ * A Blob that survives fake-indexeddb's structured clone. jsdom's Blob does
+ * not (it comes back as a plain object); the platform Blob behind `Response`
+ * does, like in real browsers.
+ */
+export function cloneableBlob(text: string, type = ''): Promise<Blob> {
+  return new Response(text, { headers: type ? { 'content-type': type } : {} }).blob();
+}

@@ -1,4 +1,4 @@
-import { resetDb } from './testing/setup';
+import { cloneableBlob, resetDb } from './testing/setup';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnalysisEvent, Chord, KeyEstimate, MidiEvent } from '@/core/types';
 import { C_MAJOR_KEY, JAZZ_PROGRESSION, POP_PROGRESSION } from '@/core/mocks';
@@ -149,12 +149,14 @@ describe('sessionRecorder', () => {
   it('stores the audio take and sets hasAudio', async () => {
     const h = startSession({ ...META, now: () => WALL });
     h.onAnalysisEvent(chordEvent(0, POP_PROGRESSION[0]));
-    await h.setAudioBlob(new Blob(['abc'], { type: 'audio/webm' }), 'audio/webm', 42);
+    await h.setAudioBlob(await cloneableBlob('abc', 'audio/webm'), 'audio/webm', 42);
     const s = await h.stop();
     expect(s.hasAudio).toBe(true);
     expect(s.durationSec).toBe(42);
     const rec = await db.recordings.get(h.id);
     expect(rec).toMatchObject({ sessionId: h.id, mimeType: 'audio/webm', durationSec: 42 });
+    expect(rec?.blob.size).toBe(3);
+    expect(await rec?.blob.text()).toBe('abc');
   });
 
   it('flushes and stops 5,000 chords + 50,000 MIDI events in < 2 s', async () => {
