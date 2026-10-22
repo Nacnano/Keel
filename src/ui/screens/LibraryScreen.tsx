@@ -16,7 +16,6 @@ import {
 import { useSettings } from '@/state/settingsStore';
 import { Button } from '../components/Button';
 import { Segmented } from '../components/Segmented';
-import { Toaster } from '../components/Toast';
 import { toast } from '../components/toastStore';
 import { cx } from '../lib/cx';
 import { seedDemoSession, seedLongSession } from './library/seed';
@@ -332,7 +331,6 @@ export function LibraryScreen() {
           onDismiss={() => setUndo(null)}
         />
       )}
-      <Toaster />
     </div>
   );
 }

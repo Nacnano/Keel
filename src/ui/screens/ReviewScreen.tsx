@@ -12,7 +12,6 @@ import { MarkerLane, MarkerToolbar } from '../components/MarkerLane';
 import { PianoRoll } from '../components/PianoRoll';
 import { buildNoteIndex } from '../components/PianoRoll.logic';
 import { SummaryCard } from '../components/SummaryCard';
-import { Toaster } from '../components/Toast';
 import { toast } from '../components/toastStore';
 import { keyLabel, pretty } from '../lib/chordLabel';
 import { MARKER_LABEL } from '../lib/markers';
@@ -425,7 +424,6 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
           onSave={(c) => void saveChord(c)}
         />
       )}
-      <Toaster />
     </div>
   );
 }
