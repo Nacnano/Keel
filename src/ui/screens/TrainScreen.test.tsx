@@ -1,6 +1,7 @@
 import { resetDb } from '@/data/testing/setup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { qualityName, randomChordQuestion, seededRng } from '@/theory';
 import { loadPrefs, loadStats } from './train/stats';
 import { createManualPlayback } from './train/testing';
@@ -19,8 +20,12 @@ afterEach(cleanup);
 
 describe('TrainScreen', () => {
   it('switches drills and shows key settings only where they apply', async () => {
-    render(<TrainScreen playback={createManualPlayback()} rng={seededRng(1)} />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Train' })).toBeInTheDocument();
+    render(
+      <MemoryRouter>
+        <TrainScreen playback={createManualPlayback()} rng={seededRng(1)} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: 'Ear training' })).toBeInTheDocument();
     // Difficulty lives behind the Options popover, not inline.
     expect(screen.queryByRole('radiogroup', { name: 'Chord detail' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Options' }));
@@ -46,7 +51,11 @@ describe('TrainScreen', () => {
   it('persists per-drill accuracy and shows it after a reload', async () => {
     const playback = createManualPlayback();
     const expected = randomChordQuestion(1, seededRng(5));
-    const view = render(<TrainScreen playback={playback} rng={seededRng(5)} />);
+    const view = render(
+      <MemoryRouter>
+        <TrainScreen playback={playback} rng={seededRng(5)} />
+      </MemoryRouter>,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Start' }));
     fireEvent.click(screen.getByRole('button', { name: qualityName(expected.chord.quality) }));
     expect(screen.getByLabelText('Score')).toHaveTextContent('1/1');
@@ -56,7 +65,11 @@ describe('TrainScreen', () => {
     expect(screen.getByLabelText('Score')).toHaveTextContent('100%');
 
     view.unmount();
-    render(<TrainScreen playback={createManualPlayback()} />);
+    render(
+      <MemoryRouter>
+        <TrainScreen playback={createManualPlayback()} />
+      </MemoryRouter>,
+    );
     await waitFor(() => expect(screen.getByLabelText('Score')).toHaveTextContent('100%'));
     expect(screen.getByLabelText('Score')).toHaveTextContent('0/0');
   });

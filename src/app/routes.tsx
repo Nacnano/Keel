@@ -11,6 +11,7 @@ import {
   ShareScreen,
   TrainScreen,
   StatsScreen,
+  ToolsScreen,
 } from './lazyRoutes';
 import { JamScreen } from '../ui/screens/JamScreen';
 
@@ -28,6 +29,7 @@ export const routes = [
       { index: true, Component: JamScreen },
       { path: 'review/:id', element: suspended(ReviewScreen) },
       { path: 'library', element: suspended(LibraryScreen) },
+      { path: 'tools', element: suspended(ToolsScreen) },
       { path: 'train', element: suspended(TrainScreen) },
       { path: 'analyze', element: suspended(AnalyzeScreen) },
       { path: 'stats', element: suspended(StatsScreen) },

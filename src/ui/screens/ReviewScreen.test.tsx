@@ -65,7 +65,7 @@ describe('ReviewScreen', () => {
     expect(screen.getByRole('slider', { name: 'Seek' })).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: 'Playback speed' })).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'Piano sound' })).toBeChecked();
-    expect(screen.getByTestId('clock-source')).toHaveTextContent('MIDI piano');
+    expect(screen.getByTestId('clock-source')).toHaveTextContent('Piano playback');
     expect(screen.getAllByTestId('summary-progression')[0]).toHaveTextContent('vi');
   });
 

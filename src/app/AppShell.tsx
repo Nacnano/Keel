@@ -1,16 +1,10 @@
 import { useEffect } from 'react';
-import { NavLink, Outlet } from 'react-router';
-import {
-  AudioLines,
-  BarChart3,
-  FileAudio,
-  GraduationCap,
-  LibraryBig,
-  Settings as SettingsIcon,
-} from 'lucide-react';
+import { Link, Outlet, useLocation } from 'react-router';
+import { AudioLines, Compass, LibraryBig, Settings as SettingsIcon } from 'lucide-react';
 import { isSyncConfigured } from '@/sync/client';
 import { startAutoSync } from '@/sync/engine';
 import { Toaster } from '@/ui/components/Toast';
+import { useJamStore } from '@/state/jamStore';
 import { cx } from '@/ui/lib/cx';
 import { useTheme } from './useTheme';
 
@@ -23,16 +17,13 @@ interface NavItem {
   to: string;
   label: string;
   Icon: typeof AudioLines;
-  end?: boolean;
-  tab: boolean;
+  active?: boolean;
 }
 
 const NAV: NavItem[] = [
-  { to: '/', label: 'Jam', Icon: AudioLines, end: true, tab: true },
-  { to: '/library', label: 'Library', Icon: LibraryBig, tab: true },
-  { to: '/analyze', label: 'Analyze', Icon: FileAudio, tab: true },
-  { to: '/train', label: 'Train', Icon: GraduationCap, tab: true },
-  { to: '/stats', label: 'Stats', Icon: BarChart3, tab: false },
+  { to: '/', label: 'Listen', Icon: AudioLines },
+  { to: '/library', label: 'Library', Icon: LibraryBig },
+  { to: '/tools', label: 'Tools', Icon: Compass },
 ];
 
 const SETTINGS = { to: '/settings', label: 'Settings', Icon: SettingsIcon } as const;
@@ -41,27 +32,25 @@ function SidebarLink({
   to,
   label,
   Icon,
-  end,
+  active,
 }: {
   to: string;
   label: string;
   Icon: typeof AudioLines;
-  end?: boolean;
+  active?: boolean;
 }) {
   return (
-    <NavLink
+    <Link
       to={to}
-      end={end}
-      className={({ isActive }) =>
-        cx(
-          'flex h-10 items-center gap-3 rounded-control px-3 text-subhead font-medium transition-colors duration-100',
-          isActive ? 'bg-accent/15 text-accent' : 'text-label hover:bg-fill-4',
-        )
-      }
+      aria-current={active ? 'page' : undefined}
+      className={cx(
+        'flex min-h-11 items-center gap-3 rounded-control px-3 text-subhead font-medium transition-colors duration-100',
+        active ? 'bg-accent/10 text-accent' : 'text-label-2 hover:bg-fill-4 hover:text-label',
+      )}
     >
       <Icon className="size-[18px] shrink-0" aria-hidden />
       <span className="truncate">{label}</span>
-    </NavLink>
+    </Link>
   );
 }
 
@@ -69,27 +58,25 @@ function TabLink({
   to,
   label,
   Icon,
-  end,
+  active,
 }: {
   to: string;
   label: string;
   Icon: typeof AudioLines;
-  end?: boolean;
+  active?: boolean;
 }) {
   return (
-    <NavLink
+    <Link
       to={to}
-      end={end}
-      className={({ isActive }) =>
-        cx(
-          'flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[10px] font-medium transition-colors',
-          isActive ? 'text-accent' : 'text-label-2',
-        )
-      }
+      aria-current={active ? 'page' : undefined}
+      className={cx(
+        'flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 py-2 text-caption font-medium transition-colors',
+        active ? 'text-accent' : 'text-label-2',
+      )}
     >
       <Icon className="size-6" aria-hidden />
       <span className="truncate">{label}</span>
-    </NavLink>
+    </Link>
   );
 }
 
@@ -100,29 +87,58 @@ function TabLink({
 export function AppShell() {
   useTheme();
   useAutoSync();
+  const { pathname } = useLocation();
+  const listening = useJamStore((state) => state.status === 'listening');
+  const items = NAV.map((item) => ({
+    ...item,
+    active:
+      item.to === '/tools'
+        ? ['/tools', '/analyze', '/train', '/stats', '/settings'].includes(pathname)
+        : pathname === item.to || (item.to === '/library' && pathname.startsWith('/review/')),
+  }));
   return (
     <div className="flex h-full bg-bg text-label">
       <aside
         aria-label="Primary"
-        className="hidden w-56 shrink-0 flex-col gap-1 border-r border-separator bg-bg-2/60 p-3 pt-5 lg:flex dark:bg-bg"
+        className="hidden w-56 shrink-0 flex-col gap-1 border-r border-separator/40 bg-bg-3 p-4 pt-8 lg:flex"
       >
-        <div className="mb-3 flex items-center gap-2 px-2">
-          <span className="flex size-7 items-center justify-center rounded-[8px] bg-accent text-accent-fg">
-            <AudioLines className="size-4" aria-hidden />
+        <div className="mb-8 flex items-center gap-2.5 px-3">
+          <span className="flex size-8 items-center justify-center rounded-control bg-action text-accent-fg">
+            <AudioLines className="size-5" aria-hidden />
           </span>
           <span className="text-headline font-semibold tracking-tight">JamKey</span>
         </div>
         <nav className="flex flex-col gap-0.5" aria-label="Sections">
-          {NAV.map(({ to, label, Icon, end }) => (
-            <SidebarLink key={to} to={to} label={label} Icon={Icon} end={end} />
+          {items.map(({ to, label, Icon, active }) => (
+            <SidebarLink
+              key={to}
+              to={to}
+              label={label}
+              Icon={Icon}
+              active={active && pathname !== '/settings'}
+            />
           ))}
         </nav>
         <div className="mt-auto">
-          <SidebarLink to={SETTINGS.to} label={SETTINGS.label} Icon={SETTINGS.Icon} />
+          <SidebarLink
+            to={SETTINGS.to}
+            label={SETTINGS.label}
+            Icon={SETTINGS.Icon}
+            active={pathname === '/settings'}
+          />
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {listening && pathname !== '/' && (
+          <Link
+            to="/"
+            className="flex min-h-11 shrink-0 items-center justify-center gap-2 bg-accent/10 px-4 text-subhead font-medium text-accent"
+          >
+            <span className="size-2 rounded-full bg-live" aria-hidden />
+            Listening in progress · Return to your jam
+          </Link>
+        )}
         <main className="min-h-0 flex-1">
           <Outlet />
         </main>
@@ -130,10 +146,9 @@ export function AppShell() {
           aria-label="Sections"
           className="material hairline-t flex shrink-0 items-stretch px-2 pb-[max(env(safe-area-inset-bottom),4px)] lg:hidden"
         >
-          {NAV.filter((n) => n.tab).map(({ to, label, Icon, end }) => (
-            <TabLink key={to} to={to} label={label} Icon={Icon} end={end} />
+          {items.map(({ to, label, Icon, active }) => (
+            <TabLink key={to} to={to} label={label} Icon={Icon} active={active} />
           ))}
-          <TabLink to={SETTINGS.to} label={SETTINGS.label} Icon={SETTINGS.Icon} />
         </nav>
       </div>
       <Toaster />

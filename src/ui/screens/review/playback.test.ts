@@ -169,6 +169,31 @@ describe('playback controller', () => {
     expect(c.position()).toBeCloseTo(2);
   });
 
+  it('replays an exhausted recording even when it ends before the session duration', () => {
+    const audio = fakeAudio();
+    const { c } = setup({ getAudio: () => audio });
+    c.play();
+    audio.currentTime = 9.5;
+    c.handleAudioEnded();
+    expect(c.getState()).toMatchObject({ playing: false, time: 9.5 });
+    c.play();
+    expect(audio.currentTime).toBe(0);
+    expect(c.getState()).toMatchObject({ playing: true, time: 0 });
+    c.dispose();
+  });
+
+  it('respects a seek after the recording ends', () => {
+    const audio = fakeAudio();
+    const { c } = setup({ getAudio: () => audio });
+    c.play();
+    audio.currentTime = 9.5;
+    c.handleAudioEnded();
+    c.seek(3);
+    c.play();
+    expect(audio.currentTime).toBe(3);
+    c.dispose();
+  });
+
   it('audio is master; an enabled piano follows and is re-seeked on drift', () => {
     const audio = fakeAudio();
     const { c, player } = setup({ getAudio: () => audio, midiEvents: EVENTS });

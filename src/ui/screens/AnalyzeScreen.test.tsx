@@ -79,7 +79,7 @@ afterEach(() => {
 describe('AnalyzeScreen', () => {
   it('shows the drop zone and options before a file is chosen', () => {
     renderScreen();
-    expect(screen.getByRole('heading', { level: 1, name: 'Analyze a file' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Analyze a song' })).toBeInTheDocument();
     expect(screen.getByTestId('drop-zone')).toHaveTextContent('Drop an audio file here');
     expect(screen.getByLabelText('Choose an audio file')).toHaveAttribute(
       'accept',
@@ -137,6 +137,56 @@ describe('AnalyzeScreen', () => {
     );
     await screen.findByTestId('analyze-result');
     expect(decode).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['unsupported', 'large'] as const)(
+    'keeps a replacement %s file notice when options change',
+    async (kind) => {
+      renderScreen();
+      drop(song());
+      await screen.findByTestId('analyze-result');
+      const replacement =
+        kind === 'unsupported'
+          ? song('notes.txt', 'text/plain')
+          : song('Live set.wav', 'audio/wav');
+      if (kind === 'large') Object.defineProperty(replacement, 'size', { value: 80 * 1024 * 1024 });
+      drop(replacement);
+      const title = kind === 'unsupported' ? 'That is not an audio file' : 'Live set.wav is 80 MB';
+      expect(await screen.findByRole('alert')).toHaveTextContent(title);
+
+      fireEvent.click(screen.getByRole('radio', { name: 'Jazz' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Solo' }));
+      expect(screen.getByRole('alert')).toHaveTextContent(title);
+      expect(screen.queryByTestId('analyze-result')).not.toBeInTheDocument();
+      expect(analyse).toHaveBeenCalledTimes(1);
+      expect(decode).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('uses options changed while the file is decoding', async () => {
+    let finishDecode!: (audio: Awaited<ReturnType<typeof decodeFileToMono>>) => void;
+    decode.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishDecode = resolve;
+        }),
+    );
+    renderScreen();
+    drop(song());
+    expect(
+      await screen.findByRole('progressbar', { name: 'Decoding progress' }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'Jazz' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Solo' }));
+    await act(async () => {
+      finishDecode({ samples: new Float32Array(16), sampleRate: 44100, durationSec: 17 });
+    });
+    await screen.findByTestId('analyze-result');
+    expect(analyse).toHaveBeenCalledWith(
+      expect.any(Float32Array),
+      44100,
+      expect.objectContaining({ vocabLevel: 3, mode: 'solo' }),
+    );
   });
 
   it('shows progress with the stage while working', async () => {

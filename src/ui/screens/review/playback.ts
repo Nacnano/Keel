@@ -71,6 +71,7 @@ export function createPlaybackController(deps: PlaybackDeps): PlaybackController
 
   let rate = 1;
   let playing = false;
+  let audioEnded = false;
   let pos = 0; // position while paused / last anchor
   let timerAnchorPos = 0;
   let timerAnchorWall = 0;
@@ -173,7 +174,8 @@ export function createPlaybackController(deps: PlaybackDeps): PlaybackController
 
     play() {
       if (playing) return;
-      if (pos >= duration - 0.05) pos = 0;
+      if (audioEnded || pos >= duration - 0.05) pos = 0;
+      audioEnded = false;
       playing = true;
       anchorTimer(pos);
       const a = audio();
@@ -209,6 +211,7 @@ export function createPlaybackController(deps: PlaybackDeps): PlaybackController
 
     seek(t) {
       const target = clamp(t);
+      audioEnded = false;
       pos = target;
       anchorTimer(target);
       const a = audio();
@@ -264,6 +267,9 @@ export function createPlaybackController(deps: PlaybackDeps): PlaybackController
 
     handleAudioEnded() {
       api.pause();
+      // The recording can finish slightly before the session clock or last chord.
+      // Replay should start the take again unless the user explicitly seeks.
+      audioEnded = true;
     },
 
     dispose() {

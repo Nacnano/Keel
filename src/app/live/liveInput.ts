@@ -39,6 +39,9 @@ type Unsub = () => void;
 export interface StopOptions {
   /** When set, the "Saved" toast gets an "Open" action that calls this with the session id. */
   openReview?: (sessionId: string) => void;
+  /** Called only after the session has been persisted successfully. */
+  onSaved?: (session: { id: string; name: string }) => void;
+  onSaveError?: (message: string) => void;
 }
 
 export interface LiveInputController {
@@ -88,6 +91,9 @@ export function createLiveInput(): LiveInputController {
   const engine = createAnalysisEngine(analysisConfigFrom(settingsStore.getState()));
 
   let running = false;
+  let stopping: Promise<void> | null = null;
+  let starting: Promise<void> | null = null;
+  let generation = 0;
   let session: SessionHandle | null = null;
   let audioRec: AudioRecorder | null = null;
   let subs: Unsub[] = [];
@@ -101,7 +107,20 @@ export function createLiveInput(): LiveInputController {
     const cfg = analysisConfigFrom(s);
     if (JSON.stringify(cfg) !== JSON.stringify(analysisConfigFrom(prev))) {
       engine.configure(cfg);
-      if (mic.isRunning()) mic.configure({ a4: s.a4, instrument: s.instrument, mode: s.mode });
+    }
+    if (
+      mic.isRunning() &&
+      (s.a4 !== prev.a4 ||
+        s.instrument !== prev.instrument ||
+        s.mode !== prev.mode ||
+        s.sensitivity !== prev.sensitivity)
+    ) {
+      mic.configure({
+        a4: s.a4,
+        instrument: s.instrument,
+        mode: s.mode,
+        sensitivity: s.sensitivity,
+      });
     }
   });
 
@@ -135,7 +154,7 @@ export function createLiveInput(): LiveInputController {
     }
   }
 
-  async function refreshDevices() {
+  async function refreshAudioDevices() {
     const store = inputStore.getState();
     try {
       const devices = await mic.listDevices();
@@ -145,6 +164,11 @@ export function createLiveInput(): LiveInputController {
     } catch {
       /* no permission yet: labels appear after the first start */
     }
+  }
+
+  async function refreshDevices() {
+    await refreshAudioDevices();
+    const store = inputStore.getState();
     const supported = midi.isSupported();
     store.setMidiSupported(supported);
     if (supported) {
@@ -172,8 +196,7 @@ export function createLiveInput(): LiveInputController {
     }
   }
 
-  async function start() {
-    if (running) return;
+  async function beginStart(token: number) {
     running = true;
     const jam = jamStore.getState();
     const settings = settingsStore.getState();
@@ -183,8 +206,6 @@ export function createLiveInput(): LiveInputController {
     lastMidiActivity = -Infinity;
     persistedMarkers = 0;
 
-    await refreshDevices();
-
     let micOk = false;
     let micError: unknown = null;
     try {
@@ -193,15 +214,36 @@ export function createLiveInput(): LiveInputController {
         a4: settings.a4,
         instrument: settings.instrument,
         mode: settings.mode,
+        sensitivity: settings.sensitivity,
       });
       micOk = true;
       // Device labels become available once permission is granted.
-      void refreshDevices();
+      void refreshAudioDevices();
     } catch (err) {
       micError = err;
     }
 
-    midiConnected = await connectMidi();
+    if (token !== generation) return;
+    // Listening should ask for one permission. MIDI is opt-in, or reuses an existing grant.
+    let midiAllowed = Boolean(settings.midiDeviceId);
+    if (!midiAllowed && midi.isSupported()) {
+      try {
+        midiAllowed =
+          (await navigator.permissions.query({ name: 'midi' as PermissionName })).state ===
+          'granted';
+      } catch {
+        /* Browsers without MIDI permission queries wait for explicit device selection. */
+      }
+    }
+    if (token !== generation) return;
+    if (midiAllowed) {
+      await refreshDevices();
+      if (token !== generation) return;
+      midiConnected = await connectMidi();
+    } else {
+      midiConnected = false;
+    }
+    if (token !== generation) return;
 
     if (!micOk && !midiConnected) {
       running = false;
@@ -254,7 +296,7 @@ export function createLiveInput(): LiveInputController {
     }
   }
 
-  async function stop(opts: StopOptions = {}) {
+  async function finishStop(opts: StopOptions) {
     if (!running) return;
     running = false;
     for (const u of subs) u();
@@ -283,6 +325,7 @@ export function createLiveInput(): LiveInputController {
       }
       const saved = await handle.stop({ endT });
       notifySessionSaved(); // nudge cloud sync (no-op when sync is off)
+      opts.onSaved?.({ id: saved.id, name: saved.name });
       if (saved.durationSec >= 2 || saved.summary?.chordCount) {
         const { openReview } = opts;
         toast(`Saved “${saved.name}” to the library`, {
@@ -292,8 +335,38 @@ export function createLiveInput(): LiveInputController {
         });
       }
     } catch (err) {
-      toast(`Could not save the session: ${describeError(err)}`, { tone: 'error' });
+      const message = `Could not save the session: ${describeError(err)}`;
+      opts.onSaveError?.(message);
+      toast(message, { tone: 'error' });
     }
+  }
+
+  function start(): Promise<void> {
+    if (starting) return starting;
+    if (running && !stopping) return Promise.resolve();
+    const token = ++generation;
+    const pendingStop = stopping;
+    starting = (async () => {
+      if (pendingStop) await pendingStop;
+      if (token !== generation) return;
+      await beginStart(token);
+    })().finally(() => {
+      starting = null;
+    });
+    return starting;
+  }
+
+  function stop(opts: StopOptions = {}): Promise<void> {
+    ++generation; // A pending permission request must never start a session after leaving Jam.
+    if (stopping) return stopping;
+    const pendingStart = starting;
+    stopping = (async () => {
+      if (pendingStart) await pendingStart;
+      await finishStop(opts);
+    })().finally(() => {
+      stopping = null;
+    });
+    return stopping;
   }
 
   return {

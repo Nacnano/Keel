@@ -17,6 +17,8 @@ export interface ChordDisplayProps {
   /** Idle (not listening): show a quiet placeholder mark instead of the dash. */
   idle?: boolean;
   className?: string;
+  /** Detailed tones and bass are optional during a focused listening session. */
+  details?: boolean;
 }
 
 export const DASH = '—';
@@ -37,6 +39,7 @@ export function ChordDisplay({
   hint,
   idle,
   className,
+  details = true,
 }: ChordDisplayProps) {
   const shown = chord && confidence >= MIN_DISPLAY_CONFIDENCE ? chord : null;
   const spell = { spellingFollowsKey };
@@ -88,29 +91,34 @@ export function ChordDisplay({
       </div>
       <div
         data-testid="chord-numeral"
-        className="mt-2 h-12 text-4xl font-medium text-accent sm:text-5xl"
+        className={cx(
+          'mt-3 font-medium text-accent',
+          details ? 'h-12 text-4xl sm:text-5xl' : 'min-h-8 text-2xl',
+        )}
       >
         {numeral}
       </div>
-      <div className="mt-3 flex h-7 items-center gap-5 text-body text-label-2">
-        {shown ? (
-          <>
-            <span className="flex gap-3 font-medium tracking-wide text-label">
-              {tones.map((t, i) => (
-                <span key={i}>{t}</span>
-              ))}
-            </span>
-            <span className="text-label-4" aria-hidden>
-              |
-            </span>
-            <span>
-              bass <span className="font-medium text-label">{bass}</span>
-            </span>
-          </>
-        ) : (
-          <span className="max-w-md text-balance text-callout text-label-2">{hint}</span>
-        )}
-      </div>
+      {details && (
+        <div className="mt-3 flex h-7 items-center gap-5 text-body text-label-2">
+          {shown ? (
+            <>
+              <span className="flex gap-3 font-medium tracking-wide text-label">
+                {tones.map((t, i) => (
+                  <span key={i}>{t}</span>
+                ))}
+              </span>
+              <span className="text-label-4" aria-hidden>
+                |
+              </span>
+              <span>
+                bass <span className="font-medium text-label">{bass}</span>
+              </span>
+            </>
+          ) : (
+            <span className="max-w-md text-balance text-callout text-label-2">{hint}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
