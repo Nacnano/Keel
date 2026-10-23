@@ -97,13 +97,15 @@ describe('qualitiesForLevel', () => {
     const l1 = qualitiesForLevel(1);
     const l2 = qualitiesForLevel(2);
     const l3 = qualitiesForLevel(3);
-    expect(l1).toEqual(['5', 'maj', 'min', 'dim', 'aug', 'sus2', 'sus4']);
-    expect(l2.length).toBe(17);
+    expect(l1).toEqual(['maj', 'min', 'dim']);
+    expect(l2).toEqual(['maj', 'min', 'dim', 'maj7', 'min7', '7', 'dim7', 'm7b5', 'sus4']);
     expect(l3.length).toBe(34);
     for (const q of l1) expect(l2).toContain(q);
     for (const q of l2) expect(l3).toContain(q);
     expect(l2).toContain('m7b5');
-    expect(l2).not.toContain('9');
+    for (const q of ['9', 'add9', '6', 'mMaj7', 'aug', '5', 'sus2'] as const) {
+      expect(l2).not.toContain(q);
+    }
   });
 });
 

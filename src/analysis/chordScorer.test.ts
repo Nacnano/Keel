@@ -79,7 +79,7 @@ describe('identifyExact', () => {
   });
 
   it('dyads of a fifth are power chords, single notes are nothing', () => {
-    expect(identifyExact([0, 7], 0, 1)[0].chord).toEqual({ root: 0, quality: '5' });
+    expect(identifyExact([0, 7], 0, 3)[0].chord).toEqual({ root: 0, quality: '5' });
     expect(identifyExact([0], 0, 3)).toEqual([]);
     expect(identifyExact([], null, 3)).toEqual([]);
   });
@@ -89,8 +89,8 @@ describe('identifyExact', () => {
   });
 
   it('prefers the interpretation rooted on the bass, then the simpler one', () => {
-    // C E G A: C6 (bass C) vs Am7 (bass A)
-    expect(identifyExact([0, 4, 7, 9], 0, 2)[0].chord).toEqual({ root: 0, quality: '6' });
+    // C E G A: C6 (bass C) vs Am7 (bass A); C6 is a level-3 name
+    expect(identifyExact([0, 4, 7, 9], 0, 3)[0].chord).toEqual({ root: 0, quality: '6' });
     expect(identifyExact([0, 4, 7, 9], 9, 2)[0].chord).toEqual({ root: 9, quality: 'min7' });
     // G7 at level 1 collapses to G (extra F), not Bdim
     expect(identifyExact([7, 11, 2, 5], 7, 1)[0].chord).toEqual({ root: 7, quality: 'maj' });

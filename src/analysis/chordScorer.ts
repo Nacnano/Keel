@@ -31,6 +31,9 @@ const work = new Float64Array(12);
  *   root, and power chords pay `powerPrior` (rare on a piano: a decaying triad with a doubled
  *   root otherwise reads as C5);
  * - dim / aug lose up to `alteredPenalty` when the perfect fifth sounds at `fifthRatio` of root;
+ * - dominant templates (major third + minor seventh) gain `domBonus` when the ♭7 sounds at
+ *   `domRatio` of the mean core-tone level and the major third is at least as loud as the minor
+ *   third, so a clear C7 is not read as C (or C6 / Am7) on a blues;
  * - with a (stable) bass: +`bassRoot` for templates rooted on it, +`bassTone` for templates
  *   containing it (inversions), −`bassForeign` for templates that do not contain it, and the
  *   bass bin is raised to `bassFloor` × the loudest bin before the cosine (a left-hand root
@@ -48,6 +51,8 @@ export const EVIDENCE = {
   bassTone: 0.01,
   bassForeign: 0.04,
   bassFloor: 0.8,
+  domRatio: 0.6,
+  domBonus: 0.03,
 } as const;
 
 /**
@@ -126,7 +131,7 @@ function applyEvidence(
   bass: PitchClass | null,
 ) {
   const E = EVIDENCE;
-  const { ext, core, kind, alteredFifth, roots, size } = bank;
+  const { ext, core, kind, alteredFifth, dominant, roots, size } = bank;
   const tiny = 1e-9;
   for (let k = 0; k < size; k++) {
     const r = roots[k];
@@ -150,6 +155,8 @@ function applyEvidence(
         const ratio = c[pc] / ref;
         if (ratio < E.extRatio) pen += E.extPenalty * (1 - ratio / E.extRatio);
       }
+      if (dominant[k] && c[(r + 10) % 12] / ref >= E.domRatio && c[(r + 4) % 12] >= c[(r + 3) % 12])
+        pen -= E.domBonus;
     }
     if (kind[k] !== 0) {
       const third = Math.max(c[(r + 3) % 12], c[(r + 4) % 12]) / root;

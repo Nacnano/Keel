@@ -102,6 +102,7 @@ describe('ReviewScreen', () => {
   });
 
   it('fixing a chord with the picker persists it with manual = true', async () => {
+    settingsStore.getState().update({ showSlashChords: true });
     await seed();
     renderAt(`/review/${ID}`);
     const chips = await screen.findAllByTestId('lane-chord');

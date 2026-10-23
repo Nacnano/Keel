@@ -44,7 +44,7 @@ export const DEFAULT_ANALYSIS_CONFIG: AnalysisConfig = {
   instrument: 'piano',
   a4: DEFAULT_A4,
   stability: 0.5,
-  showSlashChords: true,
+  showSlashChords: false,
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -54,7 +54,7 @@ export const DEFAULT_SETTINGS: Settings = {
   mode: 'solo',
   stability: 0.5,
   sensitivity: 0.5,
-  showSlashChords: true,
+  showSlashChords: false,
   spellingFollowsKey: true,
   audioDeviceId: null,
   midiDeviceId: null,

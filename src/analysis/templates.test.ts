@@ -30,8 +30,8 @@ describe('CHORD_VOCAB', () => {
     const l1 = qualitiesForLevel(1);
     const l2 = qualitiesForLevel(2);
     const l3 = qualitiesForLevel(3);
-    expect(l1).toHaveLength(7);
-    expect(l2).toHaveLength(17);
+    expect(l1).toEqual(['maj', 'min', 'dim']);
+    expect(l2).toHaveLength(9);
     expect(l3).toHaveLength(QUALITY_ORDER.length);
     for (const q of l1) expect(l2).toContain(q);
     for (const q of l2) expect(l3).toContain(q);

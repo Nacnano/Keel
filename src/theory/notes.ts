@@ -131,6 +131,15 @@ export function spell(p: PitchClass, key?: Key | null, opts: SpellOptions = {}):
   return name;
 }
 
+/**
+ * `spell` for a chord root: never Cb, Fb, E# or B# (IV in Gb major reads B, not Cb), which
+ * players read as typos on a chord chart. Scale and chord-tone spelling keep them.
+ */
+export function spellRoot(p: PitchClass, key?: Key | null, opts: SpellOptions = {}): string {
+  const name = spell(p, key, opts);
+  return key && ODD.has(name) ? plainName(p, key) : name;
+}
+
 /** `C major`, `Eb major`, `C# minor`. */
 export function keyName(key: Key, opts: SpellOptions = {}): string {
   return `${spell(key.tonic, key, opts)} ${key.mode}`;

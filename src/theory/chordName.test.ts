@@ -56,6 +56,13 @@ describe('chordSymbol', () => {
     expect(chordSymbol({ root: 8, quality: 'maj', bass: 0 }, key(3))).toBe('Ab/C');
   });
 
+  it('never spells a root Cb, Fb, E# or B#', () => {
+    expect(chordSymbol({ root: 11, quality: 'maj' }, key(6))).toBe('B'); // IV in Gb, not Cb
+    expect(chordSymbol({ root: 5, quality: 'min' }, key(6))).toBe('Fm'); // not E#m in F#
+    expect(chordSymbol({ root: 4, quality: 'maj7' }, key(1, 'minor'))).toBe('Emaj7');
+    expect(chordSymbol({ root: 0, quality: '7' }, key(1))).toBe('C7'); // not B#7 in C#
+  });
+
   it('options: no chord, no slash, sharps', () => {
     expect(chordSymbol(null)).toBe('N.C.');
     expect(chordSymbol(null, C, { noChord: '–' })).toBe('–');

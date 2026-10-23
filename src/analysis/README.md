@@ -48,7 +48,7 @@ any frame ─► keyEstimator (decaying histogram × Krumhansl-Kessler, hysteres
 | Parameter                 | Where             | Default                  | Effect                                                             |
 | ------------------------- | ----------------- | ------------------------ | ------------------------------------------------------------------ |
 | `stability`               | config            | 0.5                      | `p_stay` 0.6 → 0.98 and decoding lag 4 → 8 frames (6 at 0.5)       |
-| `vocabLevel`              | config            | 2                        | 7 / 17 / 34 qualities → 84 / 204 / 408 templates                   |
+| `vocabLevel`              | config            | 2                        | 3 / 9 / 34 qualities → 36 / 108 / 408 templates                    |
 | `showSlashChords`         | config            | true                     | slash bass on / off for both paths                                 |
 | `DEFAULT_TAU`             | `smoother.ts`     | 0.08                     | lower = trust each frame more, flickers more                       |
 | `WINDOW`                  | `smoother.ts`     | 32                       | ring size (max lag 31)                                             |
@@ -77,7 +77,7 @@ Node 22); the per-frame work is ~5 k multiply-adds for scoring plus O(lag × N) 
 - **Triads vs. their extensions at level 3.** A thin Cmaj7 voicing can decode as C or Em when the
   7th or root is weak in the chroma; raising the level increases this confusion.
 - **Larger vocabularies switch more slowly**: the switch mass is spread over more states, so the
-  per-switch log penalty grows with N (ln(408 / 84) ≈ 1.6 nats more at level 3 than level 1).
+  per-switch log penalty grows with N (ln(408 / 36) ≈ 2.4 nats more at level 3 than level 1).
 - **Bass**: depends entirely on `frame.bass`; a wrong or wandering bass from the audio side only
   shows as a slash chord if it is a chord tone and holds 3 frames.
 - **Relative major/minor**: the estimate can sit on the relative minor (or the dominant) when the
