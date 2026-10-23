@@ -1,4 +1,4 @@
-# JamKey
+# Keel
 
 Personal web app for jamming and solo piano. It listens to the microphone or a
 USB MIDI piano, shows the current **key** and **chord** in real time, keeps a
@@ -53,14 +53,14 @@ Node 22, pnpm 11.
 
 ## Deploy
 
-Production: **https://jamkey.vercel.app** (Vercel project `jamkey`, connected to this
-repo). The configured custom domain is **music.nacnano.dev**; DNS must resolve before it is usable. Every PR gets a preview deployment; every merge to `main` deploys to production.
+Production: **https://music.nacnano.dev** (Vercel project `keel`, connected to this
+repo; **https://keel.vercel.app** is the fallback URL). Every PR gets a preview deployment; every merge to `main` deploys to production.
 `vercel.json` has the SPA rewrite. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
 in the Vercel project settings only if you set up sync.
 
-DNS for the custom domain lives in Cloudflare: a `CNAME` for `music` pointing at the
-value shown by `vercel domains inspect music.nacnano.dev`, with the Cloudflare proxy
-turned off (DNS only).
+DNS for the custom domain lives in Cloudflare (the personal account, not the work one):
+a DNS-only `CNAME` for `music` pointing at `f207e94ba4b78857.vercel-dns-017.com`, the
+value Vercel shows for the domain. Vercel issues and renews the TLS certificate.
 
 ## Browser support
 

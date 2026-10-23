@@ -46,4 +46,4 @@ See the first-run checklist in `README.md`.
 
 ## Custom domain
 
-`jamkey.vercel.app` is reachable. `music.nacnano.dev` is attached and verified on Vercel but currently returns NXDOMAIN. Cloudflare needs a DNS-only CNAME `music` → `f207e94ba4b78857.vercel-dns-017.com`. The existing Wrangler credential expired and the dashboard requires sign-in; DNS could not be changed in this session.
+Resolved 2026-10-23: the DNS-only CNAME `music` → `f207e94ba4b78857.vercel-dns-017.com` was added in Cloudflare and `music.nacnano.dev` serves production. `keel.vercel.app` remains as a fallback. Wrangler is not logged in on the dev machine; DNS changes go through the Cloudflare dashboard.
