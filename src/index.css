@@ -3,7 +3,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
-  JamKey visual system (2026-10-23 redesign).
+  Keel visual system (2026-10-23 redesign).
   Apple HIG-style semantic colours. Light values on :root, dark values on .dark.
   Tailwind utilities map to these through @theme below (e.g. bg-bg, text-label-2).
 */

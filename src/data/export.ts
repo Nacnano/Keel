@@ -13,7 +13,7 @@ import { computeSummary } from './summary';
 
 export const EXPORT_VERSION = 1;
 
-export interface JamKeyExportV1 {
+export interface KeelExportV1 {
   version: 1;
   session: Session;
   chords: ChordRecord[];
@@ -139,7 +139,7 @@ export function toText(full: SessionFull): string {
 }
 
 /** Versioned, self-contained export (audio is never included). */
-export function toJSON(full: SessionFull): JamKeyExportV1 {
+export function toJSON(full: SessionFull): KeelExportV1 {
   return {
     version: EXPORT_VERSION,
     session: full.session,
@@ -160,7 +160,7 @@ export class ImportError extends Error {
 const isObject = (x: unknown): x is Record<string, unknown> =>
   typeof x === 'object' && x !== null && !Array.isArray(x);
 
-function parseExport(json: unknown): JamKeyExportV1 {
+function parseExport(json: unknown): KeelExportV1 {
   let data = json;
   if (typeof json === 'string') {
     try {
@@ -170,12 +170,12 @@ function parseExport(json: unknown): JamKeyExportV1 {
     }
   }
   if (!isObject(data) || !('version' in data)) {
-    throw new ImportError('Import failed: this is not a JamKey session export.');
+    throw new ImportError('Import failed: this is not a Keel session export.');
   }
   if (data.version !== EXPORT_VERSION) {
     throw new ImportError(
       `Import failed: unsupported export version ${JSON.stringify(data.version)} ` +
-        `(this version of JamKey reads version ${EXPORT_VERSION}).`,
+        `(this version of Keel reads version ${EXPORT_VERSION}).`,
     );
   }
   const s = data.session;
@@ -193,7 +193,7 @@ function parseExport(json: unknown): JamKeyExportV1 {
   ) {
     throw new ImportError('Import failed: "midiTrack" is malformed.');
   }
-  return data as unknown as JamKeyExportV1;
+  return data as unknown as KeelExportV1;
 }
 
 /**

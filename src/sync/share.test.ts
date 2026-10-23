@@ -60,7 +60,7 @@ describe('share links', () => {
     expect(payload.text).toContain('Evening idea in C');
     expect(payload.text).toContain('Key: C major');
 
-    // "Open in JamKey" imports the chart as a new local session.
+    // "Open in Keel" imports the chart as a new local session.
     const newId = await fromJSON(payload.chart);
     const imported = await getSessionFull(newId);
     expect(imported?.session.name).toBe('Evening idea in C');

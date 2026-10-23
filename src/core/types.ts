@@ -1,5 +1,5 @@
 /**
- * Shared contracts for JamKey. FROZEN after PR 1.
+ * Shared contracts for Keel. FROZEN after PR 1.
  * Changes require a dedicated `core:` PR reviewed by the integrator.
  * See docs/IMPLEMENTATION_PLAN.md §2.
  */

@@ -1,5 +1,5 @@
 /**
- * In-memory stand-in for the slice of `@supabase/supabase-js` JamKey uses.
+ * In-memory stand-in for the slice of `@supabase/supabase-js` Keel uses.
  * Mirrors the server rules that matter for sync: upserts keyed by a conflict
  * column, the last-write-wins trigger (older `updated_at` never overwrites),
  * and PostgREST-style filters, ordering and ranges.

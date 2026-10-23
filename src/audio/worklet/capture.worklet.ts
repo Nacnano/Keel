@@ -26,7 +26,7 @@ interface CaptureOptions {
   processorOptions?: { hopSize?: number };
 }
 
-const PROCESSOR_NAME = 'jamkey-capture'; // keep in sync with messages.ts
+const PROCESSOR_NAME = 'keel-capture'; // keep in sync with messages.ts
 
 class CaptureProcessor extends AudioWorkletProcessor {
   private readonly hop: number;

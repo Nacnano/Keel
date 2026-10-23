@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon.svg'],
       manifest: {
-        name: 'JamKey',
-        short_name: 'JamKey',
+        name: 'Keel',
+        short_name: 'Keel',
         description: 'Live key and chord detection for jamming',
         theme_color: '#171719',
         background_color: '#171719',
@@ -31,7 +31,7 @@ export default defineConfig({
               /danigb\.github\.io\/samples|smpldsnds\.github\.io|soundfont/i.test(url.href),
             handler: 'CacheFirst',
             options: {
-              cacheName: 'jamkey-samples',
+              cacheName: 'keel-samples',
               expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 365 },
               cacheableResponse: { statuses: [0, 200] },
             },

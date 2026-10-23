@@ -1,6 +1,7 @@
 /**
- * Dexie (IndexedDB) database for JamKey. Local-first; one database named
- * `jamkey`. Row shapes come from the frozen contracts in `@/core/session`.
+ * Dexie (IndexedDB) database for Keel. Local-first; one database named
+ * `jamkey` (the pre-rename name, kept so saved jams survive). Row shapes come
+ * from the frozen contracts in `@/core/session`.
  *
  * Importing this module never touches IndexedDB: Dexie opens lazily on the
  * first query (or explicitly via `openDb()`). Tests install fake-indexeddb in
@@ -18,6 +19,8 @@ import type {
   Session,
 } from '@/core/session';
 
+// Legacy name from before the app was renamed to Keel. Changing it would orphan
+// every saved jam in existing browsers, so it stays.
 export const DB_NAME = 'jamkey';
 
 /** Key/value row in the `settings` table. Keys are usually `keyof Settings`. */
@@ -44,7 +47,7 @@ export const SCHEMA_V1 = {
   settings: 'key',
 } as const;
 
-export class JamKeyDB extends Dexie {
+export class KeelDB extends Dexie {
   sessions!: EntityTable<Session, 'id'>;
   chords!: EntityTable<ChordRecord, 'id'>;
   keys!: EntityTable<KeyRecord, 'id'>;
@@ -60,10 +63,10 @@ export class JamKeyDB extends Dexie {
 }
 
 /** The app-wide database instance. Safe to import anywhere; opens lazily. */
-export const db = new JamKeyDB();
+export const db = new KeelDB();
 
 /** Open the database (idempotent). Resolves once the schema is ready. */
-export async function openDb(): Promise<JamKeyDB> {
+export async function openDb(): Promise<KeelDB> {
   if (!db.isOpen()) await db.open();
   return db;
 }

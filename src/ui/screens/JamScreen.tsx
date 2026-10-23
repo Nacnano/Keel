@@ -208,7 +208,7 @@ export function JamScreen() {
               See what you’re playing.
             </h2>
             <p className="mt-5 max-w-md text-body leading-relaxed text-label-2 sm:text-title-3">
-              Play your piano or guitar. JamKey follows the chords and finds the key as you go.
+              Play your piano or guitar. Keel follows the chords and finds the key as you go.
             </p>
             {jam.status === 'error' && jam.error && (
               <p role="alert" className="mt-6 max-w-md text-subhead leading-relaxed text-live">

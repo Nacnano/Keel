@@ -77,7 +77,7 @@ function Frame({ children }: { children: ReactNode }) {
             <span className="flex size-6 items-center justify-center rounded-[7px] bg-action text-accent-fg">
               <AudioLines className="size-3.5" aria-hidden />
             </span>
-            JamKey
+            Keel
           </Link>
           <span className="text-caption font-medium tracking-wide text-label-3 uppercase">
             Shared chart
@@ -154,7 +154,7 @@ function SharedChartView({ code }: { code: string }) {
       state.kind === 'unconfigured'
         ? [
             'Sharing is not available',
-            'This copy of JamKey is not connected to a sync server.',
+            'This copy of Keel is not connected to a sync server.',
             <CloudOff key="i" aria-hidden />,
           ]
         : state.kind === 'not-found'
@@ -182,7 +182,7 @@ function SharedChartView({ code }: { code: string }) {
                 </Button>
               )}
               <Link to="/" className={state.kind === 'error' ? GRAY_LINK : FILLED_LINK}>
-                Open JamKey
+                Open Keel
               </Link>
             </>
           }
@@ -194,7 +194,7 @@ function SharedChartView({ code }: { code: string }) {
   const { payload } = state.share;
   const { session } = payload.chart;
 
-  const openInJamKey = async () => {
+  const openInKeel = async () => {
     setImporting(true);
     try {
       const id = await fromJSON(payload.chart);
@@ -245,9 +245,9 @@ function SharedChartView({ code }: { code: string }) {
             round
             size="lg"
             loading={importing}
-            onClick={() => void openInJamKey()}
+            onClick={() => void openInKeel()}
           >
-            Open in JamKey
+            Open in Keel
           </Button>
           <Button
             variant="gray"

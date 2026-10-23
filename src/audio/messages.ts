@@ -2,7 +2,7 @@
 import type { ChromaFrame, Instrument, JamMode } from '@/core/types';
 
 /** Name the capture worklet registers under (duplicated in the worklet, which has no imports). */
-export const CAPTURE_PROCESSOR_NAME = 'jamkey-capture';
+export const CAPTURE_PROCESSOR_NAME = 'keel-capture';
 
 /** Worklet → main → worker: one hop of mono samples starting at AudioContext time `t`. */
 export interface HopMessage {

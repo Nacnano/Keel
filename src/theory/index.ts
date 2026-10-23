@@ -1,5 +1,5 @@
 /**
- * Pure music theory for JamKey. No DOM, no audio; depends only on `@/core`.
+ * Pure music theory for Keel. No DOM, no audio; depends only on `@/core`.
  * See README.md in this folder.
  */
 export * from './vocab';

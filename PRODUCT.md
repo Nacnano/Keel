@@ -28,7 +28,7 @@ Live chord and key detection (mic and Web MIDI), chord vocabulary levels (triads
 
 ## Brand Commitments
 
-Name: JamKey. User-pinned direction (2026-10-23): follow Apple's app UX conventions (Human Interface Guidelines) as the reference for navigation, controls, hierarchy and restraint; "modern, calm, not complicated". [inferred from the user's request]
+Name: Keel. User-pinned direction (2026-10-23): follow Apple's app UX conventions (Human Interface Guidelines) as the reference for navigation, controls, hierarchy and restraint; "modern, calm, not complicated". [inferred from the user's request]
 
 ## Evidence on Hand
 

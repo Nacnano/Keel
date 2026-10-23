@@ -14,7 +14,7 @@ export function fileBase(session: Session): string {
     .trim()
     .replace(/[\s_]+/g, '-')
     .slice(0, 60);
-  return `${slug || 'jamkey-session'}-${date}`;
+  return `${slug || 'keel-session'}-${date}`;
 }
 
 export function downloadBlob(filename: string, blob: Blob): void {

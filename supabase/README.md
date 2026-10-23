@@ -1,18 +1,18 @@
 # Supabase setup (cloud sync + share links)
 
-JamKey works fully offline without any of this. Cloud sync, Google sign-in and
+Keel works fully offline without any of this. Cloud sync, Google sign-in and
 public share links switch on when the app is built with two env vars:
 `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. Chord data syncs; audio
 recordings never leave the device.
 
 Time needed: about 15 minutes. Replace `<project-ref>` with your project's id
 (the subdomain of its URL) and `<your-domain>` with the production domain
-(for example `jamkey.vercel.app`).
+(for example `music.nacnano.dev`).
 
 ## 1. Create the project
 
 1. Sign in at <https://supabase.com/dashboard> and click **New project**.
-2. Pick a name (e.g. `jamkey`), a strong database password (store it; the app
+2. Pick a name (e.g. `keel`), a strong database password (store it; the app
    does not need it) and the region closest to you. Free tier is enough.
 3. Wait until the project finishes provisioning.
 
@@ -34,9 +34,9 @@ then `supabase db push`.)
 
 1. Go to <https://console.cloud.google.com/apis/credentials> (create a Google
    Cloud project if you have none).
-2. **OAuth consent screen**: user type _External_, app name `JamKey`, your
+2. **OAuth consent screen**: user type _External_, app name `Keel`, your
    email as support and developer contact. Scopes: the defaults (`email`,
-   `profile`, `openid`) are all JamKey needs. While the app is in _Testing_,
+   `profile`, `openid`) are all Keel needs. While the app is in _Testing_,
    add your own Google account under **Test users**.
 3. **Credentials** → **Create credentials** → **OAuth client ID** →
    application type **Web application**.
@@ -53,7 +53,7 @@ then `supabase db push`.)
    **Google** → enable it, paste the Client ID and Client secret, **Save**.
 2. **Authentication** → **URL Configuration**:
    - **Site URL**: `https://<your-domain>`
-   - **Redirect URLs** (JamKey returns you to the page you signed in from,
+   - **Redirect URLs** (Keel returns you to the page you signed in from,
      usually `/settings`, so use wildcards):
      - `http://localhost:5173/**`
      - `https://<your-domain>/**`

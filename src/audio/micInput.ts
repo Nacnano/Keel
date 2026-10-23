@@ -281,7 +281,7 @@ export function createMicInput(): MicInput {
 
       worker = new Worker(new URL('./worker/dsp.worker.ts', import.meta.url), {
         type: 'module',
-        name: 'jamkey-dsp',
+        name: 'keel-dsp',
       });
       worker.onmessage = (e: MessageEvent<FromDspWorker>) => {
         const msg = e.data;

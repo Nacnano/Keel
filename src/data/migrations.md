@@ -47,8 +47,8 @@ up.
 
 ## Testing a migration
 
-Write a test that opens a raw `Dexie('jamkey-mig-test')` at the old version,
-seeds rows, closes it, then opens `new JamKeyDB('jamkey-mig-test')` and asserts
+Write a test that opens a raw `Dexie('keel-mig-test')` at the old version,
+seeds rows, closes it, then opens `new KeelDB('keel-mig-test')` and asserts
 the upgraded rows. `fake-indexeddb` keeps data between opens in the same test
 file. Delete the database at the end (`Dexie.delete(name)`).
 

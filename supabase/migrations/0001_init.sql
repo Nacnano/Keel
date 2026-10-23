@@ -1,4 +1,4 @@
--- JamKey cloud sync, schema v1.
+-- Keel cloud sync, schema v1.
 --
 -- One user per account. Every row carries `user_id` and row-level security
 -- limits reads and writes to the owner. Timestamps are epoch milliseconds set
@@ -101,7 +101,7 @@ create index if not exists shares_user_session on public.shares (user_id, sessio
 -- `updated_at` than the stored row is silently skipped.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.jamkey_keep_newer()
+create or replace function public.keel_keep_newer()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -122,7 +122,7 @@ begin
     execute format('drop trigger if exists keep_newer on public.%I', t);
     execute format(
       'create trigger keep_newer before update on public.%I '
-      'for each row execute function public.jamkey_keep_newer()',
+      'for each row execute function public.keel_keep_newer()',
       t
     );
   end loop;

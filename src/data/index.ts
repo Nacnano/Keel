@@ -1,5 +1,5 @@
 /** Local data layer (WS-F): IndexedDB storage, session recorder, export/import. */
-export { db, openDb, DB_NAME, JamKeyDB, type SettingRow } from './db';
+export { db, openDb, DB_NAME, KeelDB, type SettingRow } from './db';
 export {
   startSession,
   FLUSH_INTERVAL_MS,
@@ -54,7 +54,7 @@ export {
   formatTime,
   ImportError,
   EXPORT_VERSION,
-  type JamKeyExportV1,
+  type KeelExportV1,
 } from './export';
 export { chordSymbol, keyName } from './chordSymbol';
 export {

@@ -97,6 +97,6 @@ coalesce into one follow-up run. `syncNow()` never throws; failures set status
 sharedAt }` under a random 10-character base62 code, where `chart` is the
 `toJSON` export without MIDI events (and `hasAudio`/`hasMidi` false) and
 `text` is `toText`. The public page `/s/<code>` (`ShareScreen`) reads it
-without signing in and offers "Open in JamKey", which imports `chart` with
+without signing in and offers "Open in Keel", which imports `chart` with
 `fromJSON` (fresh ids). Editing the session later does not update an existing
 link; create a new one. `revokeShare(code)` deletes the row.

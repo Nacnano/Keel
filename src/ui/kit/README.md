@@ -1,4 +1,4 @@
-# JamKey UI kit
+# Keel UI kit
 
 Apple HIG-style system for the app (dark first, light supported). Every screen uses these
 primitives and tokens; no raw `zinc-*`/`violet-*` classes, no ad-hoc borders.
