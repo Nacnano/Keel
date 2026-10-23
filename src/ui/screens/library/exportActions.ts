@@ -51,6 +51,35 @@ export async function copyChart(full: SessionFull): Promise<'copied' | 'download
   }
 }
 
+export type ShareOutcome = 'shared' | 'cancelled' | 'copied' | 'downloaded';
+
+/**
+ * Share the text chord chart: the system share sheet when the browser has one (Messages,
+ * WhatsApp, Mail, Copy…), otherwise the clipboard, otherwise a .txt download.
+ */
+export async function shareChart(full: SessionFull): Promise<ShareOutcome> {
+  const text = toText(full);
+  const data = { title: full.session.name, text };
+  const nav = typeof navigator !== 'undefined' ? navigator : undefined;
+  if (typeof nav?.share === 'function' && (nav.canShare?.(data) ?? true)) {
+    try {
+      await nav.share(data);
+      return 'shared';
+    } catch (err) {
+      if ((err as { name?: string } | null)?.name === 'AbortError') return 'cancelled';
+      // NotAllowedError and friends: fall back to copying.
+    }
+  }
+  return copyChart(full);
+}
+
+/** Share, then confirm a copy or download with a toast (the share sheet is its own feedback). */
+export async function shareChartWithToast(full: SessionFull): Promise<void> {
+  const how = await shareChart(full);
+  if (how === 'copied') toast('Chord chart copied', { tone: 'success' });
+  else if (how === 'downloaded') toast('Chord chart downloaded', { tone: 'success' });
+}
+
 /** Runs an export action against the full session, toasting failures. */
 export function runExport(
   getFull: () => Promise<SessionFull | undefined>,
@@ -62,7 +91,7 @@ export function runExport(
       if (!full) throw new Error('Session not found');
       await fn(full);
     } catch (err) {
-      toast(`Export failed: ${err instanceof Error ? err.message : String(err)}`, {
+      toast(`Sharing failed: ${err instanceof Error ? err.message : String(err)}`, {
         tone: 'error',
       });
     }

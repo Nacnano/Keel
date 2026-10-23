@@ -11,8 +11,6 @@ import {
   renameSession,
   restoreSession,
   softDeleteSession,
-  storageEstimate,
-  type StorageInfo,
 } from '@/data';
 import { useSettings } from '@/state/settingsStore';
 import { useSync } from '@/sync/store';
@@ -38,32 +36,14 @@ const SEARCH_DEBOUNCE_MS = 150;
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  const units = ['KB', 'MB', 'GB', 'TB'];
-  let v = n / 1024;
-  let i = 0;
-  while (v >= 1024 && i < units.length - 1) {
-    v /= 1024;
-    i++;
-  }
-  return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${units[i]}`;
-}
-
-function storageLine(info: StorageInfo): string {
-  if (!info.exact) return `About ${formatBytes(info.usage)} of audio stored on this device`;
-  return info.quota
-    ? `${formatBytes(info.usage)} used of ${formatBytes(info.quota)} available on this device`
-    : `${formatBytes(info.usage)} used on this device`;
-}
-
 /** `/library`: saved sessions with search, tag filter, sort, rename, delete + undo, export/import. */
 export function LibraryScreen() {
   const location = useLocation();
   const navigate = useNavigate();
   const seedMode = new URLSearchParams(location.search).get('seed') === '1';
   const spellingFollowsKey = useSettings((s) => s.spellingFollowsKey);
-  const canShare = useSync((s) => s.configured && s.user !== null);
+  const syncConfigured = useSync((s) => s.configured);
+  const signedIn = useSync((s) => s.user !== null);
 
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
@@ -71,7 +51,6 @@ export function LibraryScreen() {
   const [sort, setSort] = useState<LibrarySort>('newest');
   const [sessions, setSessions] = useState<Session[] | null>(null);
   const [allTags, setAllTags] = useState<string[]>([]);
-  const [storage, setStorage] = useState<StorageInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [undo, setUndo] = useState<{ id: string; name: string } | null>(null);
@@ -106,17 +85,6 @@ export function LibraryScreen() {
       alive = false;
     };
   }, [debounced, tag, sort, reload]);
-
-  useEffect(() => {
-    let alive = true;
-    storageEstimate().then(
-      (info) => alive && setStorage(info),
-      () => alive && setStorage(null),
-    );
-    return () => {
-      alive = false;
-    };
-  }, [reload]);
 
   const onRename = async (id: string, name: string) => {
     try {
@@ -194,12 +162,7 @@ export function LibraryScreen() {
       <div className="mx-auto flex w-full max-w-3xl flex-col pb-28 lg:px-4 lg:pb-12">
         <PageHeader
           title="Library"
-          subtitle={
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span data-testid="storage-line">{storage ? storageLine(storage) : ' '}</span>
-              <SyncPill />
-            </span>
-          }
+          subtitle={syncConfigured ? <SyncPill /> : undefined}
           actions={
             <>
               <Button
@@ -310,7 +273,7 @@ export function LibraryScreen() {
               <EmptyState
                 icon={<LibraryBig aria-hidden />}
                 title="Your jams, ready to revisit"
-                description="Stop listening to save your chords and keys here. Turn on audio recording to keep the sound, too."
+                description="Finish a jam to see it here."
                 action={
                   <div className="flex flex-col items-center gap-2">
                     <Link to="/" className={FILLED_LINK}>
@@ -340,7 +303,16 @@ export function LibraryScreen() {
                   spellingFollowsKey={spellingFollowsKey}
                   onRename={onRename}
                   onDelete={(x) => void onDelete(x)}
-                  onShare={canShare ? (x) => setSharing(x.id) : undefined}
+                  onShareLink={
+                    syncConfigured
+                      ? (x) =>
+                          signedIn
+                            ? setSharing(x.id)
+                            : toast('Sign in under Settings → Account & sync to share a link.', {
+                                durationMs: 3500,
+                              })
+                      : undefined
+                  }
                 />
               ))}
             </ul>

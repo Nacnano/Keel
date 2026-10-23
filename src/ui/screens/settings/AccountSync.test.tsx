@@ -4,7 +4,6 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { initialSyncState, syncStore } from '@/sync/store';
 import { disableSyncEnv, enableSyncEnv, fake, TEST_USER } from '@/sync/testing/mockSupabase';
-import { ExportMenu } from '../library/ExportMenu';
 import { SettingsScreen } from '../SettingsScreen';
 import { SyncPill } from '../../components/SyncPill';
 import { formatAgo, syncLabel } from '../../lib/syncLabel';
@@ -114,29 +113,5 @@ describe('sync status pill', () => {
     const pill = screen.getByTestId('sync-pill');
     expect(pill).toHaveTextContent('Sync off');
     expect(pill).toHaveAttribute('href', '/settings');
-  });
-});
-
-describe('export menu share item', () => {
-  it('is disabled with a hint when sharing is unavailable', () => {
-    const onSelect = vi.fn();
-    render(
-      <ExportMenu
-        getFull={async () => undefined}
-        share={{ onSelect, disabledReason: 'Sign in to share.' }}
-      />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
-    const item = screen.getByRole('menuitem', { name: 'Share link…' });
-    expect(item).toBeDisabled();
-    expect(item).toHaveAccessibleDescription('Sign in to share.');
-  });
-
-  it('calls onSelect when enabled', () => {
-    const onSelect = vi.fn();
-    render(<ExportMenu getFull={async () => undefined} share={{ onSelect }} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Share link…' }));
-    expect(onSelect).toHaveBeenCalledOnce();
   });
 });
