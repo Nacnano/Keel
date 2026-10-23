@@ -1,7 +1,10 @@
 /**
  * Dexie (IndexedDB) database for Keel. Local-first; one database named
- * `jamkey` (the pre-rename name, kept so saved jams survive). Row shapes come
- * from the frozen contracts in `@/core/session`.
+ * `keel`. Row shapes come from the frozen contracts in `@/core/session`.
+ *
+ * Browsers that used the app before the rename hold their jams in a database
+ * with the old name; `KeelDB` copies that data into `keel` the first time it
+ * opens and then deletes the old database (see `migrateLegacyDb`).
  *
  * Importing this module never touches IndexedDB: Dexie opens lazily on the
  * first query (or explicitly via `openDb()`). Tests install fake-indexeddb in
@@ -9,7 +12,7 @@
  *
  * Schema changes: see `src/data/migrations.md`.
  */
-import { Dexie, type EntityTable } from 'dexie';
+import { Dexie, type EntityTable, type IndexableType } from 'dexie';
 import type {
   AudioRecording,
   ChordRecord,
@@ -19,9 +22,10 @@ import type {
   Session,
 } from '@/core/session';
 
-// Legacy name from before the app was renamed to Keel. Changing it would orphan
-// every saved jam in existing browsers, so it stays.
-export const DB_NAME = 'jamkey';
+export const DB_NAME = 'keel';
+
+/** Database name used before the app was renamed to Keel. Migrated on open. */
+export const LEGACY_DB_NAME = 'jamkey';
 
 /** Key/value row in the `settings` table. Keys are usually `keyof Settings`. */
 export interface SettingRow {
@@ -56,10 +60,44 @@ export class KeelDB extends Dexie {
   recordings!: EntityTable<AudioRecording, 'sessionId'>;
   settings!: EntityTable<SettingRow, 'key'>;
 
-  constructor(name: string = DB_NAME) {
+  constructor(name: string = DB_NAME, legacyName: string | null = LEGACY_DB_NAME) {
     super(name);
     this.version(1).stores(SCHEMA_V1);
+    if (legacyName && legacyName !== name) {
+      // Sticky so it runs on every open; a no-op once the old database is gone.
+      this.on('ready', () => migrateLegacyDb(this, legacyName), true);
+    }
   }
+}
+
+/**
+ * Copy every row of the pre-rename database into `target`, then delete it.
+ * Rows whose primary key already exists in `target` are left alone, so a
+ * browser that already holds new jams never loses them. Runs inside Dexie's
+ * `ready` hook, so queued queries wait for it. Any failure leaves the old
+ * database in place for the next open.
+ */
+export async function migrateLegacyDb(target: Dexie, legacyName: string): Promise<boolean> {
+  if (!(await Dexie.exists(legacyName))) return false;
+  const legacy = new Dexie(legacyName);
+  legacy.version(1).stores(SCHEMA_V1);
+  try {
+    await legacy.open();
+    for (const name of Object.keys(SCHEMA_V1)) {
+      const rows = await legacy.table(name).toArray();
+      if (rows.length === 0) continue;
+      const table = target.table(name);
+      const pk = table.schema.primKey.keyPath as string;
+      const keys = rows.map((r: Record<string, unknown>) => r[pk] as IndexableType);
+      const existing = await table.bulkGet(keys);
+      const fresh = rows.filter((_, i) => existing[i] === undefined);
+      if (fresh.length) await table.bulkAdd(fresh);
+    }
+  } finally {
+    legacy.close();
+  }
+  await Dexie.delete(legacyName);
+  return true;
 }
 
 /** The app-wide database instance. Safe to import anywhere; opens lazily. */

@@ -193,13 +193,13 @@ describe('JamScreen', () => {
     });
     expect(screen.getByRole('complementary', { name: 'Ideas' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'D dorian' })).toBeInTheDocument();
-    expect(localStorage.getItem('jamkey.ui.inspector')).toBe('1:scales');
+    expect(localStorage.getItem('keel.ui.inspector')).toBe('1:scales');
     act(() => {
       fireEvent.keyDown(window, { key: 's' });
     });
     expect(screen.queryByRole('complementary', { name: 'Ideas' })).toBeNull();
     cleanup();
-    localStorage.setItem('jamkey.ui.inspector', '1:next');
+    localStorage.setItem('keel.ui.inspector', '1:next');
     renderJam();
     expect(screen.getByRole('complementary', { name: 'Ideas' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Next', checked: true })).toBeInTheDocument();
@@ -293,12 +293,12 @@ describe('JamScreen voicings', () => {
       fireEvent.keyDown(window, { key: 'v' });
     });
     expect(screen.getByRole('radiogroup', { name: 'Voicing style' })).toBeInTheDocument();
-    expect(localStorage.getItem('jamkey.ui.inspector')).toBe('1:voicings');
+    expect(localStorage.getItem('keel.ui.inspector')).toBe('1:voicings');
     expect(screen.queryByRole('img', { name: /Piano/ })).toBeNull();
   });
 
   it('voices the current chord', () => {
-    localStorage.setItem('jamkey.ui.inspector', '1:voicings');
+    localStorage.setItem('keel.ui.inspector', '1:voicings');
     jamStore.setState({ currentChord: { root: 0, quality: 'maj7' }, confidence: 1 });
     renderJam();
     expect(screen.getAllByTestId('voicing-card').length).toBeGreaterThanOrEqual(1);

@@ -3,8 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { DEFAULT_SETTINGS } from '@/core';
 import type { Settings } from '@/core';
 
-// Legacy key from before the rename to Keel; kept so existing settings survive.
-export const SETTINGS_STORAGE_KEY = 'jamkey.settings';
+export const SETTINGS_STORAGE_KEY = 'keel.settings';
 
 export interface SettingsActions {
   update(patch: Partial<Settings>): void;
@@ -32,7 +31,7 @@ export function selectSettings(s: SettingsState): Settings {
 }
 
 /**
- * User settings, persisted to localStorage under `jamkey.settings`.
+ * User settings, persisted to localStorage under `keel.settings`.
  * WS-F may later back this with the Dexie `settings` table; keep `useSettings()` stable.
  */
 export const useSettings = create<SettingsState>()(

@@ -98,7 +98,7 @@ export function JamScreen() {
   const devices = useInputStore((s) => s.audioDevices);
   const input = useJamInput();
   const wide = useMediaQuery('(min-width: 1024px)', true);
-  const [pianoVisible, togglePiano] = useStoredToggle('jamkey.ui.piano', false);
+  const [pianoVisible, togglePiano] = useStoredToggle('keel.ui.piano', false);
   const inspector = useInspectorPref();
   const listening = jam.status === 'listening';
   const starting = jam.status === 'starting';

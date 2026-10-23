@@ -5,7 +5,7 @@ import { DB_NAME, db, openDb } from './db';
 describe('db', () => {
   beforeEach(resetDb);
 
-  it('opens the jamkey database at version 1', async () => {
+  it('opens the keel database at version 1', async () => {
     const d = await openDb();
     expect(d).toBe(db);
     expect(d.name).toBe(DB_NAME);

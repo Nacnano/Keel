@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { InspectorTab } from './JamInspector';
 
-const KEY = 'jamkey.ui.inspector'; // legacy prefix, kept for existing browsers
+const KEY = 'keel.ui.inspector';
 const TABS: InspectorTab[] = ['next', 'scales', 'voicings', 'keys'];
 
 function read(): { open: boolean; tab: InspectorTab } {

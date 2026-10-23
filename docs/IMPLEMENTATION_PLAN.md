@@ -471,7 +471,7 @@ Acceptance: usable at 1 m distance on a 13" laptop (chord symbol ≥ 120 px), no
 
 Owner: data agent. Folder: `src/data/`.
 
-1. `db.ts` — Dexie database `jamkey` v1 with tables from `src/core/session.ts`: `sessions`, `chords`, `keys`, `markers`, `midiTracks`, `recordings`, `settings`. Indexes: `sessionId+t`, `updatedAt`, `deleted`.
+1. `db.ts` — Dexie database `keel` v1 with tables from `src/core/session.ts`: `sessions`, `chords`, `keys`, `markers`, `midiTracks`, `recordings`, `settings`. Indexes: `sessionId+t`, `updatedAt`, `deleted`.
 2. `sessionRecorder.ts` — `startSession(meta) → SessionHandle`; subscribes to an `AnalysisEvent` stream and a `MidiEvent` stream, buffers and bulk-writes every 2 s, `addMarker`, `stop()` computes `SessionSummary` (key seconds, top progressions via `theory/timeline`, chord count).
 3. `audioRecorder.ts` — `MediaRecorder` on the `AudioInput` stream, opt-in, `audio/webm;codecs=opus` (Chrome) or `audio/mp4` (Safari), chunks stored on stop; duration and size cap (default 30 min, warn at 25).
 4. `repo.ts` — CRUD: `listSessions({query, tag})`, `getSessionFull(id)`, `rename`, `setTags`, `softDelete`, `updateChord(id, chord, manual=true)`, `storageEstimate()`.
@@ -603,4 +603,4 @@ Report back: what landed, what deviated from the plan and why, open questions fo
 - Confirm `main` as the GitHub default branch (remote currently has no branches; PR 1 will push it).
 - Vercel: connect the GitHub repo to a Vercel project so preview deploys appear on PRs (user action).
 - Supabase project + Google OAuth are needed only in wave 4.
-- App name: "JamKey" was the placeholder; renamed to "Keel" on 2026-10-23 (PR 29). Persisted storage ids (IndexedDB `jamkey`, `jamkey.*` localStorage keys, `jamkey-auth`) keep the old name on purpose.
+- App name: the placeholder name was replaced by "Keel" on 2026-10-23 (PR 29). Persisted storage ids followed in PR 30: the IndexedDB database is `keel` and localStorage keys use the `keel` prefix; `KeelDB` copies the pre-rename database on first open and `src/data/legacyStorage.ts` renames old localStorage keys at startup, so saved jams, settings and sign-ins survive.

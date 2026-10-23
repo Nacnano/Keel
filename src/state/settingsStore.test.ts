@@ -12,7 +12,7 @@ describe('settingsStore', () => {
     expect(selectSettings(settingsStore.getState())).toEqual(DEFAULT_SETTINGS);
   });
 
-  it('writes updates to localStorage under jamkey.settings', () => {
+  it('writes updates to localStorage under keel.settings', () => {
     settingsStore.getState().update({ a4: 442, vocabLevel: 3, mode: 'room' });
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
     expect(raw).toBeTruthy();

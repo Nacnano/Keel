@@ -1,6 +1,6 @@
 # Dexie schema migrations
 
-The database is `jamkey` (see `db.ts`). Version 1 is `SCHEMA_V1`. Once a
+The database is `keel` (see `db.ts`). Version 1 is `SCHEMA_V1`. Once a
 version has shipped, **never edit it in place**: users already have that
 schema on disk, and Dexie only runs upgrade code when the version number goes
 up.

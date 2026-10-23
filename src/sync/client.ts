@@ -48,7 +48,7 @@ export function getSupabase(): Promise<SupabaseClient | null> {
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
-          storageKey: 'jamkey-auth', // legacy key, kept so sessions stay signed in
+          storageKey: 'keel-auth',
         },
       }),
     )
