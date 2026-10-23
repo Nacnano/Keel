@@ -19,12 +19,18 @@ export interface ChordDisplayProps {
   className?: string;
   /** Detailed tones and bass are optional during a focused listening session. */
   details?: boolean;
+  /** Smaller, height-aware symbol while a half-height sheet shares the screen. */
+  compact?: boolean;
 }
 
 export const DASH = '—';
 
+/** Below this the chord is still shown, but dimmed: the only sign of a tentative match. */
+export const TENTATIVE_BELOW = 0.6;
+
 /** Base symbol size: at least 120 px on a 1024 px+ laptop, readable from the piano bench. */
 const SYMBOL_SIZE = 'clamp(96px, 13vw, 208px)';
+const COMPACT_SYMBOL_SIZE = 'clamp(80px, min(13vw, 15dvh), 208px)';
 
 /**
  * The glanceable centre of the jam screen. Fixed-height rows so nothing jumps when the chord,
@@ -40,8 +46,11 @@ export function ChordDisplay({
   idle,
   className,
   details = true,
+  compact = false,
 }: ChordDisplayProps) {
+  const size = compact ? COMPACT_SYMBOL_SIZE : SYMBOL_SIZE;
   const shown = chord && confidence >= MIN_DISPLAY_CONFIDENCE ? chord : null;
+  const tentative = shown !== null && confidence < TENTATIVE_BELOW;
   const spell = { spellingFollowsKey };
   const symbol = shown ? pretty(chordSymbol(shown, keyContext, { ...spell, showSlash })) : DASH;
   const numeral = shown && keyContext ? pretty(romanNumeral(shown, keyContext)) : '';
@@ -58,12 +67,17 @@ export function ChordDisplay({
         aria-live="polite"
         aria-atomic="true"
         data-testid="chord-symbol"
-        className="flex w-full items-center justify-center overflow-hidden"
-        style={{ height: `calc(${SYMBOL_SIZE} * 1.1)` }}
+        data-tentative={tentative || undefined}
+        // Opacity sits on the wrapper so it never fights the change animation on the glyph.
+        className={cx(
+          'flex w-full items-center justify-center overflow-hidden transition-opacity duration-500 ease-out',
+          tentative && 'opacity-55',
+        )}
+        style={{ height: `calc(${size} * 1.1)` }}
       >
         <span
           ref={symbolRef}
-          style={{ fontSize: `calc(${SYMBOL_SIZE} * ${scale})` }}
+          style={{ fontSize: `calc(${size} * ${scale})` }}
           className={cx(
             'leading-none font-semibold tracking-[-0.03em] whitespace-nowrap',
             shown ? 'text-label' : 'text-label-4',
@@ -93,7 +107,8 @@ export function ChordDisplay({
         data-testid="chord-numeral"
         className={cx(
           'mt-3 font-medium text-accent',
-          details ? 'h-12 text-4xl sm:text-5xl' : 'min-h-8 text-2xl',
+          // In the focused jam view the numeral stays below the key line in the hierarchy.
+          details ? 'h-12 text-4xl sm:text-5xl' : 'min-h-7 text-headline sm:text-title-3',
         )}
       >
         {numeral}

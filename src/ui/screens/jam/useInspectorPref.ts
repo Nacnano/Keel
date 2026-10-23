@@ -4,25 +4,22 @@ import type { InspectorTab } from './JamInspector';
 const KEY = 'keel.ui.inspector';
 const TABS: InspectorTab[] = ['next', 'scales', 'voicings', 'keys'];
 
-function read(): { open: boolean; tab: InspectorTab } {
+/** Only the tab is restored: Ideas always starts closed so it never covers a new session. */
+function readTab(): InspectorTab {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return { open: false, tab: 'next' };
-    const [o, t] = raw.split(':');
-    return {
-      open: o === '1',
-      tab: TABS.includes(t as InspectorTab) ? (t as InspectorTab) : 'next',
-    };
+    const t = localStorage.getItem(KEY)?.split(':')[1];
+    return TABS.includes(t as InspectorTab) ? (t as InspectorTab) : 'next';
   } catch {
-    return { open: false, tab: 'next' };
+    return 'next';
   }
 }
 
-/** Inspector open state + tab, remembered across sessions. Closed by default. */
+/** Ideas open state (closed on every visit) and the last tab (remembered). */
 export function useInspectorPref() {
-  const [state, setState] = useState(read);
+  const [state, setState] = useState(() => ({ open: false, tab: readTab() }));
   useEffect(() => {
     try {
+      // Same `open:tab` format as before, so older builds keep reading it.
       localStorage.setItem(KEY, `${state.open ? '1' : '0'}:${state.tab}`);
     } catch {
       /* private mode */

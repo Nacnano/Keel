@@ -1,0 +1,13 @@
+import type { JamMode, VocabLevel } from '@/core';
+
+/** One vocabulary for the listening mode, wherever it is offered. */
+export const MODE_OPTIONS: ReadonlyArray<{ value: JamMode; label: string }> = [
+  { value: 'solo', label: 'Just me' },
+  { value: 'room', label: 'With a band' },
+];
+
+export const VOCAB_OPTIONS: ReadonlyArray<{ value: VocabLevel; label: string }> = [
+  { value: 1, label: 'Simple' },
+  { value: 2, label: 'With 7ths' },
+  { value: 3, label: 'Everything' },
+];

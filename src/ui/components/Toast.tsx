@@ -8,10 +8,13 @@ const TONE: Record<ToastTone, string> = {
   error: 'text-live',
 };
 
-const SHELL =
-  'pointer-events-auto material min-h-11 rounded-full text-subhead font-medium shadow-elevated anim-rise';
+const SHELL = 'material min-h-11 rounded-full text-subhead font-medium shadow-elevated anim-rise';
 
-/** Renders queued toasts bottom-centre (above the tab bar). Mount once in the app shell. */
+/**
+ * Renders queued toasts bottom-centre (above the tab bar). Mount once in the app shell.
+ * Plain toasts are status text that taps pass straight through, so a confirmation never
+ * blocks the next tap on the control underneath; only toasts with an action take taps.
+ */
 export function Toaster() {
   const toasts = useToastStore((s) => s.toasts);
   const dismiss = useToastStore((s) => s.dismiss);
@@ -24,18 +27,19 @@ export function Toaster() {
         const action = t.action;
         if (!action) {
           return (
-            <button
+            <p
               key={t.id}
-              type="button"
-              onClick={() => dismiss(t.id)}
-              className={cx(SHELL, 'px-5 py-2', TONE[t.tone])}
+              className={cx(SHELL, 'pointer-events-none flex items-center px-5 py-2', TONE[t.tone])}
             >
               {t.message}
-            </button>
+            </p>
           );
         }
         return (
-          <div key={t.id} className={cx(SHELL, 'flex items-center pr-1', TONE[t.tone])}>
+          <div
+            key={t.id}
+            className={cx(SHELL, 'pointer-events-auto flex items-center pr-1', TONE[t.tone])}
+          >
             <button
               type="button"
               onClick={() => dismiss(t.id)}

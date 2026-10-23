@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
-import { ArrowUpRight, Bookmark, Check, Lightbulb, Mic, Play, Square, Usb } from 'lucide-react';
+import { Check, ChevronRight, Lightbulb, Mic, Play, Square, Usb } from 'lucide-react';
 import { clock, MIN_DISPLAY_CONFIDENCE } from '@/core';
-import type { Chord, MarkerKind, VocabLevel } from '@/core';
+import type { Chord, JamMode, MarkerKind, VocabLevel } from '@/core';
 import { jamStore, useJamStore } from '@/state/jamStore';
 import { useInputStore } from '@/state/inputStore';
 import { useSettings } from '@/state/settingsStore';
@@ -13,7 +13,7 @@ import { KeyBadge } from '../components/KeyBadge';
 import { Piano } from '../components/Piano';
 import { Timeline } from '../components/Timeline';
 import { toast } from '../components/toastStore';
-import { Badge, Button, Meter } from '../kit';
+import { Badge, Button, Meter, Segmented } from '../kit';
 import { cx } from '../lib/cx';
 import { MARKER_LABEL } from '../lib/markers';
 import { playNotes } from '../lib/playNotes';
@@ -21,6 +21,8 @@ import { suggestNext } from '../lib/suggest';
 import { useMediaQuery } from '../lib/useMediaQuery';
 import { JamInspector } from './jam/JamInspector';
 import { JamOptions } from './jam/JamOptions';
+import { MODE_OPTIONS } from './jam/labels';
+import { MarkMenu } from './jam/MarkMenu';
 import { useInspectorPref } from './jam/useInspectorPref';
 import { useJamInput } from './jam/useJamInput';
 import { useJamShortcuts } from './jam/useJamShortcuts';
@@ -98,6 +100,9 @@ export function JamScreen() {
   const devices = useInputStore((s) => s.audioDevices);
   const input = useJamInput();
   const wide = useMediaQuery('(min-width: 1024px)', true);
+  const phone = !useMediaQuery('(min-width: 640px)', true);
+  // Ideas docks at the side only where the centred chord column stays clear of it.
+  const sideIdeas = useMediaQuery('(min-width: 1440px)', true);
   const [pianoVisible, togglePiano] = useStoredToggle('keel.ui.piano', false);
   const inspector = useInspectorPref();
   const listening = jam.status === 'listening';
@@ -106,6 +111,8 @@ export function JamScreen() {
   const quiet = useQuietInput(listening && !input.mock && jam.source !== 'midi', jam.level);
   const stopped = input.finished && !listening && !starting;
   const hasChord = jam.currentChord && jam.confidence >= MIN_DISPLAY_CONFIDENCE;
+  // Compact widths: Ideas is a half-height sheet and the screen keeps chord + Finish above it.
+  const halfIdeas = inspector.open && !sideIdeas;
   const inputLabel =
     jam.source === 'midi' && listening
       ? 'USB MIDI'
@@ -123,19 +130,18 @@ export function JamScreen() {
     if (status === 'listening') void stop();
     else if (status !== 'starting') void start();
   }, [start, stop, input.saving]);
-  const reset = useCallback(() => jamStore.getState().reset(), []);
   const addMarker = useCallback((kind: MarkerKind) => {
     const marker = jamStore.getState().addMarker(kind);
     if (marker) toast(`${MARKER_LABEL[kind]} at ${formatTime(marker.t)}`, { durationMs: 1600 });
   }, []);
   const audition = useCallback((chord: Chord) => auditionChord(chord), []);
+  const setMode = (mode: JamMode) => settings.update({ mode });
   useJamShortcuts({
     toggleListening,
-    reset,
     bookmark: () => jamStore.getState().status === 'listening' && addMarker('bookmark'),
     setLevel: (vocabLevel: VocabLevel) => settings.update({ vocabLevel }),
     togglePiano,
-    toggleMode: () => settings.update({ mode: settings.mode === 'solo' ? 'room' : 'solo' }),
+    toggleMode: () => setMode(settings.mode === 'solo' ? 'room' : 'solo'),
     toggleInspector: () => inspector.setOpen(!inspector.open),
     showNext: () => inspector.toggleTab('next'),
     showScales: () => inspector.toggleTab('scales'),
@@ -150,12 +156,13 @@ export function JamScreen() {
     () => suggestNext(jam.keyEstimate, recent, settings.vocabLevel),
     [jam.keyEstimate, recent, settings.vocabLevel],
   );
-  const options = (
+  const options = (compact: boolean) => (
     <JamOptions
+      compact={compact}
       vocabLevel={settings.vocabLevel}
       onVocabLevel={(vocabLevel) => settings.update({ vocabLevel })}
       mode={settings.mode}
-      onMode={(mode) => settings.update({ mode })}
+      onMode={setMode}
       sensitivity={settings.sensitivity}
       onSensitivity={(sensitivity) => settings.update({ sensitivity })}
       recordAudio={jam.recordAudio}
@@ -163,16 +170,29 @@ export function JamScreen() {
       onRecordAudio={(on) => jamStore.getState().setRecordAudio(on)}
       pianoVisible={pianoVisible}
       onPianoVisible={togglePiano}
-      onReset={reset}
-      canReset={listening && jam.timeline.length > 0}
-      listening={listening}
-      onSection={addMarker}
-      inputLabel={inputLabel}
+      canShowPiano={!phone}
+    />
+  );
+  const timeline = (live: boolean) => (
+    <Timeline
+      align={live ? 'start' : 'center'}
+      timeline={jam.timeline}
+      keyHistory={jam.keyHistory}
+      markers={live ? jam.markers : undefined}
+      onAudition={audition}
+      showSlash={settings.showSlashChords}
+      spellingFollowsKey={settings.spellingFollowsKey}
     />
   );
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div
+      className={cx(
+        'flex h-full flex-col overflow-y-auto',
+        // Room for the half-height Ideas sheet (below lg it also covers the tab bar).
+        halfIdeas && 'pb-[calc(min(42dvh,420px)-3.75rem)] lg:pb-[min(42dvh,420px)]',
+      )}
+    >
       <header className="mx-auto flex w-full max-w-[900px] items-center justify-between gap-3 px-6 py-5 sm:px-10 sm:py-7">
         <h1 className="text-title-2 font-semibold tracking-tight">Listen</h1>
         {listening || starting ? (
@@ -196,19 +216,22 @@ export function JamScreen() {
         )}
       </header>
 
+      {/* One centred column for idle, listening and finished; Ideas overlays it, never shifts it. */}
       <main
         className={cx(
-          'mx-auto flex w-full max-w-[900px] flex-1 flex-col px-6 pb-8 sm:px-10 sm:pb-10',
-          inspector.open && wide && 'lg:pr-[400px]',
+          'mx-auto flex w-full max-w-[900px] flex-1 flex-col px-6 sm:px-10',
+          halfIdeas ? 'pb-3' : 'pb-8 sm:pb-10',
         )}
       >
         {!listening && !starting && !stopped && !input.saving ? (
-          <div className="flex flex-1 flex-col items-start justify-center py-12 sm:py-20">
+          <div className="flex flex-1 flex-col items-center justify-center py-12 text-center sm:py-20">
             <h2 className="max-w-lg text-[clamp(2.25rem,5vw,3.5rem)] leading-[1.08] font-semibold tracking-[-0.035em] text-balance">
               See what you’re playing.
             </h2>
-            <p className="mt-5 max-w-md text-body leading-relaxed text-label-2 sm:text-title-3">
-              Play your piano or guitar. Keel follows the chords and finds the key as you go.
+            <p className="mt-4 text-body text-label-2 sm:text-title-3">
+              {input.mock
+                ? 'A scripted progression. Nothing is saved.'
+                : 'Chords and key, as you play.'}
             </p>
             {jam.status === 'error' && jam.error && (
               <p role="alert" className="mt-6 max-w-md text-subhead leading-relaxed text-live">
@@ -231,30 +254,35 @@ export function JamScreen() {
             >
               {input.mock ? 'Start demo' : jam.status === 'error' ? 'Try again' : 'Start listening'}
             </Button>
-            <div className="mt-3 flex flex-wrap items-center gap-x-3">
-              {input.mock ? (
-                <Button variant="plain" onClick={() => void input.startLive()}>
-                  Use my microphone
-                </Button>
-              ) : (
-                <Button
-                  variant="plain"
-                  onClick={input.startDemo}
-                  leading={<Play className="size-3.5" aria-hidden />}
-                >
-                  Try a demo
-                </Button>
-              )}
-              {options}
+            {input.mock ? (
+              <Button className="mt-2" variant="plain" onClick={() => void input.startLive()}>
+                Use my microphone
+              </Button>
+            ) : (
+              <Button
+                className="mt-2"
+                variant="plain"
+                onClick={input.startDemo}
+                leading={<Play className="size-3.5" aria-hidden />}
+              >
+                Try a demo
+              </Button>
+            )}
+            <div className="mt-8 flex items-center gap-1">
+              <Segmented
+                aria-label="Listen to"
+                value={settings.mode}
+                onChange={setMode}
+                options={MODE_OPTIONS}
+              />
+              {options(true)}
             </div>
-            <p className="mt-8 max-w-md text-footnote leading-relaxed text-label-2">
-              {input.mock
-                ? 'An example progression. No microphone access or saving.'
-                : 'Your microphone stays on this device. Chord charts save to your Library when you finish.'}
-            </p>
+            {!input.mock && (
+              <p className="mt-6 text-footnote text-label-2">Audio stays on this device.</p>
+            )}
           </div>
         ) : stopped || input.saving ? (
-          <div className="flex flex-1 flex-col items-start justify-center py-12 sm:py-16">
+          <div className="flex flex-1 flex-col items-center justify-center py-12 text-center sm:py-16">
             {input.saved && (
               <span className="mb-5 flex size-12 items-center justify-center rounded-full bg-ok/12 text-ok">
                 <Check className="size-6" aria-hidden />
@@ -271,27 +299,27 @@ export function JamScreen() {
                       ? 'Your jam is saved.'
                       : 'Session finished.'}
             </h2>
-            <p
-              role={input.saveError ? 'alert' : 'status'}
-              className="mt-4 max-w-md text-body leading-relaxed text-label-2"
-            >
-              {input.saving
-                ? 'Keeping your chord chart in Library.'
-                : input.mock
-                  ? 'Now try your own instrument. The microphone will follow what you play.'
+            {!input.saving && (
+              <p
+                role={input.saveError ? 'alert' : 'status'}
+                className="mt-4 max-w-md text-body leading-relaxed text-label-2"
+              >
+                {input.mock
+                  ? 'Now try your own instrument.'
                   : (input.saveError ??
                     (input.saved
-                      ? `“${input.saved.name}” is ready in your Library.`
+                      ? `“${input.saved.name}” is in your Library.`
                       : 'Start a new jam whenever you’re ready.'))}
-            </p>
+              </p>
+            )}
             {!input.saving && (
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-8 flex flex-wrap justify-center gap-3">
                 {input.saved && (
                   <Link
                     to={`/review/${input.saved.id}`}
-                    className="inline-flex min-h-13 items-center gap-2 rounded-full bg-action px-6 text-body font-semibold text-accent-fg"
+                    className="inline-flex min-h-13 items-center gap-1 rounded-full bg-action pr-5 pl-6 text-body font-semibold text-accent-fg transition-[filter] hover:brightness-110"
                   >
-                    Open session <ArrowUpRight className="size-4" aria-hidden />
+                    Open session <ChevronRight className="size-5" aria-hidden />
                   </Link>
                 )}
                 <Button
@@ -303,22 +331,14 @@ export function JamScreen() {
                   {input.mock ? 'Start listening' : 'Start a new jam'}
                 </Button>
                 {input.mock && (
-                  <Button variant="plain" onClick={input.startDemo}>
+                  <Button variant="plain" size="lg" onClick={input.startDemo}>
                     Play demo again
                   </Button>
                 )}
               </div>
             )}
             {jam.timeline.length > 0 && !input.saveError && (
-              <div className="mt-9 w-full hairline-t pt-5">
-                <Timeline
-                  timeline={jam.timeline}
-                  keyHistory={jam.keyHistory}
-                  onAudition={audition}
-                  showSlash={settings.showSlashChords}
-                  spellingFollowsKey={settings.spellingFollowsKey}
-                />
-              </div>
+              <div className="mt-9 w-full hairline-t pt-5">{timeline(false)}</div>
             )}
           </div>
         ) : (
@@ -338,25 +358,28 @@ export function JamScreen() {
                 </>
               )}
             </div>
-            <div className="flex min-h-[260px] flex-1 flex-col items-center justify-center py-8 sm:min-h-[340px] sm:py-10">
+            <div
+              className={cx(
+                'flex flex-1 flex-col items-center justify-center',
+                halfIdeas ? 'py-2' : 'min-h-[260px] py-8 sm:min-h-[340px] sm:py-10',
+              )}
+            >
               {hasChord ? (
                 <>
                   <ChordDisplay
                     details={false}
+                    compact={halfIdeas}
                     chord={jam.currentChord}
                     confidence={jam.confidence}
                     keyContext={jam.keyEstimate}
                     showSlash={settings.showSlashChords}
                     spellingFollowsKey={settings.spellingFollowsKey}
                   />
-                  <p className="mt-2 text-footnote text-label-2" aria-label="Chord match strength">
-                    {jam.confidence >= 0.8 ? 'Strong chord match' : 'Tentative chord match'}
-                  </p>
                   <KeyBadge
                     primaryOnly
                     keyEstimate={jam.keyEstimate}
                     spellingFollowsKey={settings.spellingFollowsKey}
-                    className="mt-4"
+                    className="mt-3"
                   />
                 </>
               ) : (
@@ -382,7 +405,7 @@ export function JamScreen() {
                   Can’t hear much. Move closer, or raise sensitivity in Listening options.
                 </p>
               )}
-              {pianoVisible && listening && (
+              {pianoVisible && listening && !phone && !halfIdeas && (
                 <Piano
                   keys={wide ? 88 : 61}
                   activePitchClasses={jam.activePitchClasses}
@@ -391,19 +414,19 @@ export function JamScreen() {
                 />
               )}
             </div>
-            {jam.timeline.length > 0 && (
-              <section aria-label="Your progression" className="hairline-t py-4">
-                <Timeline
-                  timeline={jam.timeline}
-                  keyHistory={jam.keyHistory}
-                  markers={jam.markers}
-                  onAudition={audition}
-                  showSlash={settings.showSlashChords}
-                  spellingFollowsKey={settings.spellingFollowsKey}
-                />
+            {jam.timeline.length > 0 && !halfIdeas && (
+              <section
+                aria-label="Your progression"
+                className={cx(
+                  'hairline-t py-4',
+                  // Keep the newest chords clear of the side Ideas panel.
+                  inspector.open && 'pr-[max(0px,calc(930px-50vw))]',
+                )}
+              >
+                {timeline(true)}
               </section>
             )}
-            <div className="flex flex-col items-center gap-4 pt-5">
+            <div className={cx('flex flex-col items-center gap-4', halfIdeas ? 'pt-2' : 'pt-5')}>
               <div className="flex w-full flex-wrap items-center justify-center gap-3">
                 <Button
                   variant="filled"
@@ -416,32 +439,24 @@ export function JamScreen() {
                 >
                   {starting ? 'Connecting…' : input.mock ? 'Stop demo' : 'Finish & save'}
                 </Button>
-                {listening && (
-                  <Button
-                    variant="gray"
-                    round
-                    aria-label="Bookmark"
-                    leading={<Bookmark className="size-4" aria-hidden />}
-                    onClick={() => addMarker('bookmark')}
-                  >
-                    <span className="hidden sm:inline">Bookmark</span>
-                  </Button>
-                )}
+                {listening && <MarkMenu onMark={addMarker} />}
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-x-3">
-                {options}
-                {listening && (
-                  <Button
-                    variant="plain"
-                    leading={<Lightbulb className="size-4" aria-hidden />}
-                    onClick={() => inspector.setOpen(!inspector.open)}
-                    pressed={inspector.open}
-                  >
-                    Ideas
-                  </Button>
-                )}
-              </div>
-              {input.mock && (
+              {!halfIdeas && (
+                <div className="flex flex-wrap items-center justify-center gap-x-3">
+                  {options(false)}
+                  {listening && (
+                    <Button
+                      variant="plain"
+                      leading={<Lightbulb className="size-4" aria-hidden />}
+                      onClick={() => inspector.setOpen(!inspector.open)}
+                      pressed={inspector.open}
+                    >
+                      Ideas
+                    </Button>
+                  )}
+                </div>
+              )}
+              {input.mock && !halfIdeas && (
                 <p className="text-footnote text-label-2">Demo sessions aren’t saved.</p>
               )}
             </div>
@@ -461,6 +476,7 @@ export function JamScreen() {
         spellingFollowsKey={settings.spellingFollowsKey}
         onAudition={audition}
         onPlayNotes={playNotes}
+        layout={sideIdeas ? 'side' : 'half'}
       />
     </div>
   );

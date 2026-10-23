@@ -20,9 +20,11 @@ import type {
   Marker,
   MarkerKind,
   Session,
+  SessionSummary,
 } from '@/core/session';
 import type { AnalysisEvent, Instrument, JamMode, MidiEvent, VocabLevel } from '@/core/types';
 import { db as defaultDb, type KeelDB } from './db';
+import { keyName, prettyAccidentals } from '@/theory';
 import { chordKey } from './chordSymbol';
 import { computeSummary } from './summary';
 
@@ -76,10 +78,13 @@ export interface SessionHandle {
   stop(opts?: { endT?: number }): Promise<Session>;
 }
 
-function defaultName(epochMs: number): string {
-  const d = new Date(epochMs);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `Jam ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+/** Placeholder name while the session runs; the date is shown next to the name, not in it. */
+export const DEFAULT_SESSION_NAME = 'Jam';
+
+/** "Jam in C major" from the key heard longest, or "Jam" when no key was found. */
+export function sessionName(summary: SessionSummary | null): string {
+  const key = summary?.keys[0]?.key;
+  return key ? `Jam in ${prettyAccidentals(keyName(key))}` : DEFAULT_SESSION_NAME;
 }
 
 const round3 = (x: number) => Math.round(x * 1000) / 1000;
@@ -98,7 +103,7 @@ export function startSession(meta: SessionMeta): SessionHandle {
 
   const session: Session = {
     id,
-    name: meta.name?.trim() || defaultName(startedAt),
+    name: meta.name?.trim() || DEFAULT_SESSION_NAME,
     createdAt: startedAt,
     endedAt: null,
     durationSec: 0,
@@ -290,18 +295,23 @@ export function startSession(meta: SessionMeta): SessionHandle {
       const flushed = writePending(true);
       stopPromise = (async () => {
         await flushed;
+        const summary = computeSummary(allChords, allKeys, allMarkers, durationSec);
         const final: Partial<Session> = {
           endedAt: now(),
           durationSec,
           hasAudio: audio !== null,
           hasMidi: midiEvents.length > 0,
-          summary: computeSummary(allChords, allKeys, allMarkers, durationSec),
+          summary,
           updatedAt: now(),
         };
-        Object.assign(session, final);
         await enqueue(async () => {
+          // Name it after the key unless it was named up front or renamed while running.
+          const current = (await database.sessions.get(id))?.name ?? session.name;
+          final.name =
+            !meta.name?.trim() && current === DEFAULT_SESSION_NAME ? sessionName(summary) : current;
           await database.sessions.update(id, final);
         });
+        Object.assign(session, final);
         return { ...session };
       })().catch((err: unknown) => {
         // Rows were put back in the buffer; allow the caller to retry stop().

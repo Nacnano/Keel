@@ -25,7 +25,16 @@ export function KeyBadge({
 }: KeyBadgeProps) {
   if (!keyEstimate) {
     if (primaryOnly)
-      return <p className={cx('text-subhead text-label-2', className)}>Finding the key…</p>;
+      return (
+        <p
+          className={cx(
+            'flex min-h-11 items-center text-title-2 text-label-3 sm:text-title-1',
+            className,
+          )}
+        >
+          Finding the key…
+        </p>
+      );
     return (
       <div
         className={cx('flex min-h-11 items-center justify-center gap-2 text-label-3', className)}
@@ -51,7 +60,9 @@ export function KeyBadge({
 
   return (
     <Popover
-      align="start"
+      // End-aligned panels are clamped to the viewport on both sides (start-aligned ones
+      // could run off a 390 px phone when the key sits in the middle of the screen).
+      align="end"
       width={280}
       aria-label="Key alternatives"
       trigger={(p) => (
@@ -60,17 +71,24 @@ export function KeyBadge({
           {...p}
           aria-label={`Key ${label(winner, spellingFollowsKey)}, ${pct}% confident. Show alternatives`}
           className={cx(
-            'flex min-h-11 max-w-full items-center gap-2 rounded-control px-2 text-subhead transition-colors hover:bg-fill-4 sm:gap-2.5 sm:px-2.5 sm:text-headline',
+            'flex min-h-11 max-w-full items-center gap-2 rounded-control px-2 transition-colors hover:bg-fill-4',
+            primaryOnly
+              ? 'px-3 text-title-2 tracking-tight sm:text-title-1'
+              : 'text-subhead sm:gap-2.5 sm:px-2.5 sm:text-headline',
             className,
           )}
         >
-          <span aria-hidden className={cx('size-2 rounded-full', tone)} />
+          {!primaryOnly && <span aria-hidden className={cx('size-2 rounded-full', tone)} />}
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
             {primaryOnly ? (
               <>
-                <span className="mr-1 font-normal text-label-2">Key</span>
+                <span className="font-normal text-label-2">Key</span>
                 {part(winner)}
-                <ChevronDown className="size-3.5 text-label-2" aria-hidden />
+                <ChevronDown
+                  className="size-5 self-center text-label-3 sm:size-6"
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
               </>
             ) : (
               <>
@@ -86,7 +104,7 @@ export function KeyBadge({
       <div className="px-2 pt-1 pb-2">
         <div className="flex items-baseline justify-between">
           <span className="text-headline font-semibold">{label(winner, spellingFollowsKey)}</span>
-          <span className="text-footnote text-label-2 tabular">{pct}% sure</span>
+          <span className="text-footnote text-label-2 tabular">{pct}%</span>
         </div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-fill-3">
           <div
@@ -115,8 +133,8 @@ export function KeyBadge({
                     style={{ width: `${Math.round(a.score * 100)}%` }}
                   />
                 </span>
-                <span className="w-8 text-right text-label-2 tabular">
-                  {Math.round(a.score * 100)}
+                <span className="w-10 text-right text-label-2 tabular">
+                  {Math.round(a.score * 100)}%
                 </span>
               </span>
             </li>
