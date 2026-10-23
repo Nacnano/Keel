@@ -4,6 +4,7 @@ import type { Session } from '@/core/session';
 import { mockChordRecords, mockKeyRecords, mockMarkers, mockSession } from '@/core/mocks';
 import { DEFAULT_SETTINGS } from '@/core/constants';
 import { db } from './db';
+import { startSession } from './sessionRecorder';
 import {
   addMarker,
   deleteMarker,
@@ -69,6 +70,25 @@ describe('repo', () => {
     expect((await listSessions({ sort: 'oldest' })).map((s) => s.id)).toEqual(['s1', 's2', 's3']);
     expect((await listSessions({ sort: 'name' })).map((s) => s.id)).toEqual(['s3', 's1', 's2']);
     expect((await listSessions({ sort: 'longest' }))[0].id).toBe('s2');
+  });
+
+  it('hides the session being recorded and empty unfinished stubs', async () => {
+    await db.sessions.add(mockSession({ id: 'stub', endedAt: null, createdAt: BASE + 3 * DAY }));
+    await db.sessions.add(mockSession({ id: 'crashed', endedAt: null, createdAt: BASE + 4 * DAY }));
+    await db.chords.bulkAdd(mockChordRecords('crashed', 1));
+    const live = startSession({ mode: 'solo', instrument: 'piano', vocabLevel: 1, t0: 0 });
+    await live.ready;
+    live.onAnalysisEvent({
+      type: 'chord',
+      t: 1,
+      chord: { root: 0, quality: 'maj' },
+      confidence: 1,
+      source: 'mic',
+    });
+    await live.flush();
+    expect((await listSessions()).map((s) => s.id)).toEqual(['crashed', 's3', 's2', 's1']);
+    await live.stop({ endT: 5 });
+    expect((await listSessions()).map((s) => s.id)).toContain(live.id);
   });
 
   it('searches name, tags, key names and date; filters by tag', async () => {

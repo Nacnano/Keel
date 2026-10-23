@@ -7,7 +7,13 @@ export {
   type SessionHandle,
   type SessionMeta,
 } from './sessionRecorder';
-export { computeSummary, keySeconds, topProgressions, chordSequence } from './summary';
+export {
+  computeSummary,
+  keySeconds,
+  topProgressions,
+  chordSequence,
+  chordFamilyKey,
+} from './summary';
 export {
   createAudioRecorder,
   isAudioRecordingSupported,
@@ -49,6 +55,11 @@ export {
 } from './repo';
 export {
   toText,
+  chartLines,
+  barText,
+  sectionTitle,
+  type ChartBar,
+  type ChartLine,
   toJSON,
   fromJSON,
   formatTime,

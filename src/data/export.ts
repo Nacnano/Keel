@@ -3,7 +3,14 @@
  * JSON back with fresh ids.
  */
 import { v4 as uuid } from 'uuid';
-import type { ChordRecord, KeyRecord, Marker, MidiTrack, Session } from '@/core/session';
+import type {
+  ChordRecord,
+  KeyRecord,
+  Marker,
+  MarkerKind,
+  MidiTrack,
+  Session,
+} from '@/core/session';
 import type { Chord, Key } from '@/core/types';
 import { db } from './db';
 import { chordKey, chordSymbol, keyName } from './chordSymbol';
@@ -39,21 +46,48 @@ function formatDate(epochMs: number): string {
 
 const MAX_CHORDS_PER_LINE = 8;
 
-/** Chord lines for one block: repeating cycles become `| … | ×n`. */
-function chordLines(chords: Chord[], key: Key | null): string[] {
+const SECTION_TITLE: Record<MarkerKind, string> = {
+  bookmark: 'Bookmark',
+  intro: 'Intro',
+  verse: 'Verse',
+  pre: 'Pre-chorus',
+  chorus: 'Chorus',
+  bridge: 'Bridge',
+  outro: 'Outro',
+  custom: 'Section',
+};
+
+/** Title-case heading for a section marker: "Chorus", or the user's label capitalised. */
+export function sectionTitle(m: Pick<Marker, 'kind' | 'label'>): string {
+  const label = m.label?.trim();
+  return label ? label[0].toUpperCase() + label.slice(1) : SECTION_TITLE[m.kind];
+}
+
+/** One `| … |` group: a literal run of chords, or one pass of a loop played `repeat` times. */
+export interface ChartBar {
+  chords: Chord[];
+  repeat: number;
+}
+
+/** One line of the chord chart: chords (optionally headed by a section) or a key change. */
+export type ChartLine =
+  | { type: 'chords'; section: string | null; key: Key | null; bars: ChartBar[] }
+  | { type: 'key'; key: Key; t: number };
+
+/** Bars for one block: repeating cycles become one bar with `repeat > 1`. */
+function chordBars(chords: Chord[]): ChartBar[][] {
   const seq = collapseRuns(chords, chordKey);
   const keys = seq.map(chordKey);
-  const bar = (cs: Chord[]) => `| ${cs.map((c) => chordSymbol(c, key)).join(' ')} |`;
-  const lines: string[] = [];
+  const lines: ChartBar[][] = [];
   const literal = (from: number, to: number) => {
     for (let i = from; i < to; i += MAX_CHORDS_PER_LINE) {
-      lines.push(bar(seq.slice(i, Math.min(to, i + MAX_CHORDS_PER_LINE))));
+      lines.push([{ chords: seq.slice(i, Math.min(to, i + MAX_CHORDS_PER_LINE)), repeat: 1 }]);
     }
   };
   let i = 0;
   for (const c of findCycles(keys)) {
     literal(i, c.start);
-    lines.push(`${bar(seq.slice(c.start, c.start + c.period))} ×${c.repeats}`);
+    lines.push([{ chords: seq.slice(c.start, c.start + c.period), repeat: c.repeats }]);
     i = c.start + c.period * c.repeats;
   }
   literal(i, seq.length);
@@ -64,21 +98,11 @@ type Boundary =
   { t: number; type: 'section'; label: string } | { t: number; type: 'key'; key: Key };
 
 /**
- * Plain-text chord chart:
- *
- *   Evening idea in C — 2026-10-22 — 5:00
- *   Key: C major
- *   [intro] | C G Am F | ×4
- *   [verse] | Dm7 G7 Cmaj7 | ×2
- *   → A minor at 2:35
- *   Bookmarks: 1:00 nice
+ * The chord chart as lines: a line per loop or per run of up to eight chords, the section
+ * heading on the first line of its section, key changes on their own line. A lone chord left
+ * over after a loop (`| F |`) is folded onto the line before it.
  */
-export function toText(full: SessionFull): string {
-  const { session } = full;
-  const out = [
-    `${session.name} — ${formatDate(session.createdAt)} — ${formatTime(session.durationSec)}`,
-  ];
-
+export function chartLines(full: Pick<SessionFull, 'chords' | 'keys' | 'markers'>): ChartLine[] {
   const keys = [...full.keys].sort((a, b) => a.t - b.t);
   const keyChanges: KeyRecord[] = [];
   for (const k of keys) {
@@ -86,13 +110,12 @@ export function toText(full: SessionFull): string {
     if (!prev || prev.key.tonic !== k.key.tonic || prev.key.mode !== k.key.mode) keyChanges.push(k);
   }
   let currentKey: Key | null = keyChanges[0]?.key ?? null;
-  if (currentKey) out.push(`Key: ${keyName(currentKey)}`);
 
   const markers = [...full.markers].sort((a, b) => a.t - b.t);
   const boundaries: Boundary[] = [
     ...markers
       .filter((m) => m.kind !== 'bookmark')
-      .map((m): Boundary => ({ t: m.t, type: 'section', label: m.label ?? m.kind })),
+      .map((m): Boundary => ({ t: m.t, type: 'section', label: sectionTitle(m) })),
     ...keyChanges.slice(1).map((k): Boundary => ({ t: k.t, type: 'key', key: k.key })),
   ].sort((a, b) => a.t - b.t || (a.type === 'key' ? -1 : 1));
 
@@ -107,29 +130,76 @@ export function toText(full: SessionFull): string {
     return block;
   };
 
-  let prefix = '';
+  const out: ChartLine[] = [];
+  let section: string | null = null;
   const emitBlock = (until: number) => {
-    const lines = chordLines(takeChordsUntil(until), currentKey);
-    if (lines.length) {
-      out.push(prefix ? `${prefix} ${lines[0]}` : lines[0], ...lines.slice(1));
-    } else if (prefix) {
-      out.push(prefix);
+    const lines = chordBars(takeChordsUntil(until));
+    if (!lines.length && section) {
+      out.push({ type: 'chords', section, key: currentKey, bars: [] });
     }
-    prefix = '';
+    lines.forEach((bars, i) => {
+      const head = i === 0 ? section : null;
+      const prev = out[out.length - 1];
+      const orphan =
+        !head && bars.length === 1 && bars[0].repeat === 1 && bars[0].chords.length === 1;
+      if (orphan && prev?.type === 'chords' && prev.bars.length) {
+        prev.bars.push(...bars);
+      } else {
+        out.push({ type: 'chords', section: head, key: currentKey, bars });
+      }
+    });
+    section = null;
   };
 
   for (const b of boundaries) {
     emitBlock(b.t);
     if (b.type === 'section') {
-      prefix = `[${b.label}]`;
+      section = b.label;
     } else {
       currentKey = b.key;
-      out.push(`→ ${keyName(b.key)} at ${formatTime(b.t)}`);
+      out.push({ type: 'key', key: b.key, t: b.t });
     }
   }
   emitBlock(Infinity);
+  return out;
+}
 
-  const bookmarks = markers.filter((m) => m.kind === 'bookmark');
+/** `| C G Am F | ×4`, with chord names from `symbol`. */
+export function barText(bar: ChartBar, symbol: (c: Chord) => string): string {
+  const body = `| ${bar.chords.map(symbol).join(' ')} |`;
+  return bar.repeat > 1 ? `${body} ×${bar.repeat}` : body;
+}
+
+/**
+ * Plain-text chord chart, the format shared to a band chat:
+ *
+ *   Evening idea in C — 2026-10-22 — 5:00
+ *   Key: C major
+ *   [Intro] | C G Am F | ×4
+ *   [Verse] | Dm7 G7 Cmaj7 | ×2 | Dm7 |
+ *   → A minor at 2:35
+ *   Bookmarks: 1:00 nice
+ */
+export function toText(full: SessionFull): string {
+  const { session } = full;
+  const out = [
+    `${session.name} — ${formatDate(session.createdAt)} — ${formatTime(session.durationSec)}`,
+  ];
+  const firstKey = [...full.keys].sort((a, b) => a.t - b.t)[0]?.key;
+  if (firstKey) out.push(`Key: ${keyName(firstKey)}`);
+
+  for (const line of chartLines(full)) {
+    if (line.type === 'key') {
+      out.push(`→ ${keyName(line.key)} at ${formatTime(line.t)}`);
+      continue;
+    }
+    const bars = line.bars.map((b) => barText(b, (c) => chordSymbol(c, line.key))).join(' ');
+    out.push([line.section ? `[${line.section}]` : '', bars].filter(Boolean).join(' '));
+  }
+
+  const bookmarks = [...full.markers]
+    .sort((a, b) => a.t - b.t)
+    .filter((m) => m.kind === 'bookmark');
   if (bookmarks.length) {
     out.push(
       `Bookmarks: ${bookmarks.map((m) => (m.label ? `${formatTime(m.t)} ${m.label}` : formatTime(m.t))).join(', ')}`,

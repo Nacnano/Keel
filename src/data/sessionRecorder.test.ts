@@ -147,6 +147,28 @@ describe('sessionRecorder', () => {
     expect((await db.chords.toArray()).map((c) => c.t).sort()).toEqual([0, 1]);
   });
 
+  it('discards a session in which nothing was heard when asked to', async () => {
+    const h = startSession({ ...META, t0: 0, now: () => WALL });
+    await h.ready;
+    h.onAnalysisEvent({ type: 'key', t: 1, key: C_MAJOR_KEY });
+    h.onAnalysisEvent(chordEvent(1, null));
+    h.addMarker('bookmark', undefined, 2);
+    await h.flush();
+    expect(await h.stop({ endT: 10, discardIfEmpty: true })).toBeNull();
+    expect(await db.sessions.count()).toBe(0);
+    expect(await db.keys.count()).toBe(0);
+    expect(await db.chords.count()).toBe(0);
+    expect(await db.markers.count()).toBe(0);
+  });
+
+  it('keeps a session with chords even when discardIfEmpty is set', async () => {
+    const h = startSession({ ...META, t0: 0, now: () => WALL });
+    h.onAnalysisEvent(chordEvent(1, POP_PROGRESSION[0]));
+    const s = await h.stop({ endT: 10, discardIfEmpty: true });
+    expect(s?.summary?.chordCount).toBe(1);
+    expect(await db.sessions.count()).toBe(1);
+  });
+
   it('stores the audio take and sets hasAudio', async () => {
     const h = startSession({ ...META, now: () => WALL });
     h.onAnalysisEvent(chordEvent(0, POP_PROGRESSION[0]));

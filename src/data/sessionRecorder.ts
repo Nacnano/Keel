@@ -11,6 +11,9 @@
  *   next flush (or `stop()`) retries them.
  * - The MIDI performance is one `MidiTrack` row per session, checkpointed every
  *   30 s while dirty and written in full on `stop()`.
+ * - `stop({ discardIfEmpty: true })` deletes a session in which nothing was heard
+ *   (no chord, no MIDI, no audio) and resolves with `null`, so silent runs never
+ *   reach the library.
  */
 import { v4 as uuid } from 'uuid';
 import type {
@@ -22,7 +25,7 @@ import type {
   Session,
 } from '@/core/session';
 import type { AnalysisEvent, Instrument, JamMode, MidiEvent, VocabLevel } from '@/core/types';
-import { db as defaultDb, type KeelDB } from './db';
+import { db as defaultDb, sessionRange, type KeelDB } from './db';
 import { chordKey } from './chordSymbol';
 import { computeSummary } from './summary';
 
@@ -72,8 +75,17 @@ export interface SessionHandle {
    * Flush everything, compute the summary and finalise the session row.
    * `endT` (event clock) overrides the end time. Idempotent while pending or
    * after success; after a failed write it may be called again to retry.
+   *
+   * With `discardIfEmpty`, a session with no chord, no MIDI and no audio is
+   * deleted instead and the promise resolves with `null`.
    */
-  stop(opts?: { endT?: number }): Promise<Session>;
+  stop(opts: StopOptions & { discardIfEmpty: true }): Promise<Session | null>;
+  stop(opts?: StopOptions): Promise<Session>;
+}
+
+export interface StopOptions {
+  endT?: number;
+  discardIfEmpty?: boolean;
 }
 
 function defaultName(epochMs: number): string {
@@ -84,17 +96,27 @@ function defaultName(epochMs: number): string {
 
 const round3 = (x: number) => Math.round(x * 1000) / 1000;
 
+/** Sessions started in this tab and not stopped yet. */
+const recording = new Set<string>();
+
+/** True while `id` is being recorded in this tab (the library hides it until it is saved). */
+export function isRecordingSession(id: string): boolean {
+  return recording.has(id);
+}
+
 export function startSession(meta: SessionMeta): SessionHandle {
   const database = meta.database ?? defaultDb;
   const now = meta.now ?? Date.now;
   const clock = meta.clock;
   const id = uuid();
   const startedAt = now();
+  recording.add(id);
 
   let t0: number | null = meta.t0 ?? (clock ? clock() : null);
   let lastT = 0;
   let stopped = false;
-  let stopPromise: Promise<Session> | null = null;
+  let discarded = false;
+  let stopPromise: Promise<Session | null> | null = null;
 
   const session: Session = {
     id,
@@ -261,6 +283,7 @@ export function startSession(meta: SessionMeta): SessionHandle {
     },
 
     setAudioBlob(blob, mimeType, durationSec) {
+      if (discarded) return Promise.resolve();
       audio = { sessionId: id, blob, mimeType, durationSec };
       session.hasAudio = true;
       const rec = audio;
@@ -278,9 +301,11 @@ export function startSession(meta: SessionMeta): SessionHandle {
       return writePending(false);
     },
 
-    stop(opts) {
+    // The overloads only narrow the result type; one implementation serves both.
+    stop: ((opts?: StopOptions): Promise<Session | null> => {
       if (stopPromise) return stopPromise;
       stopped = true;
+      recording.delete(id);
       clearInterval(timer);
       const endRel =
         opts?.endT !== undefined && t0 !== null
@@ -290,6 +315,26 @@ export function startSession(meta: SessionMeta): SessionHandle {
       const flushed = writePending(true);
       stopPromise = (async () => {
         await flushed;
+        const heard = allChords.some((c) => c.chord !== null) || midiEvents.length > 0 || audio;
+        if (opts?.discardIfEmpty && !heard) {
+          await enqueue(async () => {
+            const [lo, hi] = sessionRange(id);
+            await database.transaction(
+              'rw',
+              [database.sessions, database.chords, database.keys, database.markers],
+              async () => {
+                await Promise.all([
+                  database.chords.where('[sessionId+t]').between(lo, hi, true, true).delete(),
+                  database.keys.where('[sessionId+t]').between(lo, hi, true, true).delete(),
+                  database.markers.where('[sessionId+t]').between(lo, hi, true, true).delete(),
+                  database.sessions.delete(id),
+                ]);
+              },
+            );
+          });
+          discarded = true;
+          return null;
+        }
         const final: Partial<Session> = {
           endedAt: now(),
           durationSec,
@@ -309,7 +354,7 @@ export function startSession(meta: SessionMeta): SessionHandle {
         throw err;
       });
       return stopPromise;
-    },
+    }) as SessionHandle['stop'],
   };
   return handle;
 }
