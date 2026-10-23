@@ -39,7 +39,10 @@ type Unsub = () => void;
 export interface StopOptions {
   /** When set, the "Saved" toast gets an "Open" action that calls this with the session id. */
   openReview?: (sessionId: string) => void;
-  /** Called only after the session has been persisted successfully. */
+  /**
+   * Called only after the session has been persisted successfully. A caller that handles
+   * this shows its own confirmation, so the "Saved" toast is skipped.
+   */
   onSaved?: (session: { id: string; name: string }) => void;
   onSaveError?: (message: string) => void;
 }
@@ -85,6 +88,60 @@ function describeError(err: unknown): string {
   return String(err);
 }
 
+/**
+ * Keeps the screen awake while listening (a phone or tablet on the music stand must not
+ * sleep mid-song). The browser drops the lock when the page is hidden, so it is taken
+ * again when the page becomes visible. Unsupported browsers and refusals are ignored.
+ */
+function createWakeLock() {
+  let wanted = false;
+  let sentinel: WakeLockSentinel | null = null;
+
+  async function acquire() {
+    if (!wanted || sentinel || typeof navigator === 'undefined' || !('wakeLock' in navigator)) {
+      return;
+    }
+    try {
+      const lock = await navigator.wakeLock.request('screen');
+      if (!wanted) {
+        void lock.release().catch(() => {});
+        return;
+      }
+      sentinel = lock;
+      lock.addEventListener('release', () => {
+        if (sentinel === lock) sentinel = null;
+      });
+    } catch {
+      /* not allowed right now (battery saver, hidden page): listening goes on regardless */
+    }
+  }
+
+  const onVisibility = () => {
+    if (document.visibilityState === 'visible') void acquire();
+  };
+
+  return {
+    hold() {
+      if (wanted) return;
+      wanted = true;
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', onVisibility);
+      }
+      void acquire();
+    },
+    release() {
+      if (!wanted) return;
+      wanted = false;
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibility);
+      }
+      const lock = sentinel;
+      sentinel = null;
+      void lock?.release().catch(() => {});
+    },
+  };
+}
+
 export function createLiveInput(): LiveInputController {
   const mic = createMicInput();
   const midi = createMidiInput();
@@ -101,6 +158,7 @@ export function createLiveInput(): LiveInputController {
   let midiConnected = false;
   let persistedMarkers = 0;
   let unsubDevices: Unsub | null = null;
+  const wakeLock = createWakeLock();
 
   // Keep engine + mic settings live.
   settingsStore.subscribe((s, prev) => {
@@ -291,6 +349,7 @@ export function createLiveInput(): LiveInputController {
 
     jam.startSession(t0);
     jam.setSource(midiConnected && !micOk ? 'midi' : 'mic');
+    wakeLock.hold();
     if (!micOk && midiConnected) {
       toast('Microphone unavailable; using MIDI only.', { tone: 'info' });
     }
@@ -303,6 +362,7 @@ export function createLiveInput(): LiveInputController {
     subs = [];
     const endT = clock.now();
     jamStore.getState().stopSession();
+    wakeLock.release();
 
     try {
       if (mic.isRunning()) await mic.stop();
@@ -326,7 +386,7 @@ export function createLiveInput(): LiveInputController {
       const saved = await handle.stop({ endT });
       notifySessionSaved(); // nudge cloud sync (no-op when sync is off)
       opts.onSaved?.({ id: saved.id, name: saved.name });
-      if (saved.durationSec >= 2 || saved.summary?.chordCount) {
+      if (!opts.onSaved && (saved.durationSec >= 2 || saved.summary?.chordCount)) {
         const { openReview } = opts;
         toast(`Saved “${saved.name}” to the library`, {
           tone: 'success',
