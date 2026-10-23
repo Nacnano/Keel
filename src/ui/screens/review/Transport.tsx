@@ -36,6 +36,8 @@ const SOURCE_LABEL: Record<ClockSource, string> = {
  */
 export function Transport(p: TransportProps) {
   const pianoLabel = useId();
+  // The MIDI clock waits for the samples: show that instead of a pause button stuck at 0:00.
+  const pianoLoading = p.piano === 'loading' && p.source === 'midi';
   const pianoNote =
     p.piano === 'loading'
       ? 'Loading piano sound…'
@@ -53,11 +55,12 @@ export function Transport(p: TransportProps) {
           size="lg"
           icon
           round
-          aria-label={p.playing ? 'Pause' : 'Play'}
+          aria-label={pianoLoading ? 'Loading piano sound' : p.playing ? 'Pause' : 'Play'}
           title={p.playing ? 'Pause (Space)' : 'Play (Space)'}
+          loading={pianoLoading}
           onClick={p.onToggle}
         >
-          {p.playing ? (
+          {pianoLoading ? null : p.playing ? (
             <Pause className="size-5 fill-current" aria-hidden />
           ) : (
             <Play className="size-5 translate-x-px fill-current" aria-hidden />

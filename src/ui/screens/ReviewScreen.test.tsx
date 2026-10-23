@@ -6,6 +6,7 @@ import { mockChordRecords, mockKeyRecords, mockMarkers, mockSession } from '@/co
 import type { MidiEvent } from '@/core';
 import { db } from '@/data';
 import { settingsStore } from '@/state/settingsStore';
+import { useToastStore } from '../components/toastStore';
 import { ReviewScreen } from './ReviewScreen';
 
 const ID = 'review-test-1';
@@ -67,6 +68,28 @@ describe('ReviewScreen', () => {
     expect(screen.getByRole('switch', { name: 'Piano sound' })).toBeChecked();
     expect(screen.getByTestId('clock-source')).toHaveTextContent('Piano playback');
     expect(screen.getAllByTestId('summary-progression')[0]).toHaveTextContent('vi');
+  });
+
+  it('leads with the chord chart and shares it as text (copy without a share sheet)', async () => {
+    await seed();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    renderAt(`/review/${ID}`);
+    const chart = await screen.findByTestId('review-chart');
+    expect(within(chart).getAllByTestId('chart-line')[0]).toHaveTextContent('Intro');
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    expect(writeText.mock.calls[0][0]).toMatch(/^Evening idea in C — .*\nKey: C major\n/);
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.map((t) => t.message)).toContain('Chord chart copied'),
+    );
+
+    // No cloud sync: More holds the downloads but no share link.
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
+    const items = screen.getAllByRole('menuitem').map((m) => m.textContent);
+    expect(items).toContain('Download .txt');
+    expect(items).toContain('Download JSON');
+    expect(items).not.toContain('Share link…');
   });
 
   it('clicking a chord seeks the playhead', async () => {
