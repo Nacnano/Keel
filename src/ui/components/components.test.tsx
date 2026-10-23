@@ -100,6 +100,23 @@ describe('Timeline', () => {
     rerender(<Timeline timeline={[rec(0, 0, C), rec(1, 2, G)]} markers={markers} />);
     expect(screen.getByTestId('timeline-marker')).toHaveTextContent('Chorus');
   });
+
+  it('draws key chips and section flags as the same pill', () => {
+    const markers: Marker[] = [{ id: 'm1', sessionId: 's', t: 1.5, kind: 'verse' }];
+    render(
+      <Timeline
+        timeline={[rec(0, 0, C), rec(1, 2, G)]}
+        keyHistory={[{ t: 0, key: C_MAJOR }]}
+        markers={markers}
+      />,
+    );
+    const key = screen.getByTestId('timeline-key');
+    const flag = screen.getByTestId('timeline-marker');
+    for (const cls of ['h-7', 'rounded-full', 'text-footnote']) {
+      expect(key).toHaveClass(cls);
+      expect(flag).toHaveClass(cls);
+    }
+  });
 });
 
 describe('Piano', () => {
@@ -156,6 +173,19 @@ describe('KeyBadge', () => {
     fireEvent.click(screen.getByRole('button', { name: /Key C major, 82%/ }));
     const pop = screen.getByRole('dialog', { name: 'Key alternatives' });
     expect(within(pop).getByText('G major')).toBeInTheDocument();
+    expect(within(pop).getByText('82%')).toBeInTheDocument();
+    // every alternative score carries a % like the winner
+    const scores = within(pop)
+      .getAllByRole('listitem')
+      .map((li) => li.lastElementChild?.textContent);
+    expect(scores.every((t) => /^\d+%$/.test(t ?? ''))).toBe(true);
+  });
+
+  it('shows the key as a large tappable line in the jam view', () => {
+    render(<KeyBadge primaryOnly keyEstimate={C_MAJOR_KEY} />);
+    const key = screen.getByRole('button', { name: /Key C major/ });
+    expect(key).toHaveTextContent(/^Key\s*C major$/);
+    expect(key).toHaveClass('text-title-2', 'sm:text-title-1');
   });
 });
 
@@ -179,11 +209,17 @@ describe('TryNext', () => {
 describe('Toaster', () => {
   afterEach(() => useToastStore.setState({ toasts: [] }));
 
-  it('dismisses a plain toast on tap', () => {
+  it('shows a plain toast as status text that taps pass through, then hides it', () => {
+    vi.useFakeTimers();
     render(<Toaster />);
-    act(() => void toast('Saved', { durationMs: 0 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Saved' }));
-    expect(screen.queryByText('Saved')).toBeNull();
+    act(() => void toast('Chorus at 0:24', { durationMs: 1600 }));
+    const text = screen.getByText('Chorus at 0:24');
+    expect(text.tagName).toBe('P');
+    expect(text).toHaveClass('pointer-events-none');
+    expect(screen.queryByRole('button')).toBeNull();
+    act(() => void vi.advanceTimersByTime(1700));
+    expect(screen.queryByText('Chorus at 0:24')).toBeNull();
+    vi.useRealTimers();
   });
 
   it('runs the action and dismisses the toast', () => {

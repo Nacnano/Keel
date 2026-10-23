@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Chord, ChordRecord, Key, Marker } from '@/core';
 import { chordSymbol, keyLabel, pretty, sameChord } from '../lib/chordLabel';
 import { compressRepeats } from '../lib/compress';
@@ -20,6 +20,8 @@ export interface TimelineProps {
   onAudition?(chord: Chord): void;
   showSlash?: boolean;
   spellingFollowsKey?: boolean;
+  /** `center` puts a short, finished timeline on the screen's axis (it still scrolls when long). */
+  align?: 'start' | 'center';
   className?: string;
 }
 
@@ -29,6 +31,22 @@ type Entry =
   | { type: 'chords'; key: Key | null; segments: Segment<ChordRecord>[]; last: boolean };
 
 const eqRecord = (a: ChordRecord, b: ChordRecord) => sameChord(a.chord, b.chord);
+
+/** Key chips and section flags share one pill shape so the row reads as one system. */
+const PILL =
+  'mx-1 inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-3 text-footnote font-semibold whitespace-nowrap';
+
+const FADE = '32px';
+
+/** Fade whichever edge has more chords beyond it, instead of cutting a chord in half. */
+function edgeMask(left: boolean, right: boolean): string | undefined {
+  if (!left && !right) return undefined;
+  const stops = [
+    left ? `transparent 0, #000 ${FADE}` : '#000 0',
+    right ? `#000 calc(100% - ${FADE}), transparent 100%` : '#000 100%',
+  ];
+  return `linear-gradient(to right, ${stops.join(', ')})`;
+}
 
 /** Split the chord list at key changes and markers, then compress repeats inside each run. */
 function buildEntries(
@@ -88,6 +106,7 @@ export function Timeline({
   onAudition,
   showSlash = true,
   spellingFollowsKey = true,
+  align = 'start',
   className,
 }: TimelineProps) {
   const entries = useMemo(
@@ -96,16 +115,36 @@ export function Timeline({
   );
   const scroller = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
+  const [edges, setEdges] = useState({ left: false, right: false });
+
+  const measureEdges = useCallback(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const left = el.scrollLeft > 1;
+    const right = el.scrollWidth - el.scrollLeft - el.clientWidth > 1;
+    setEdges((e) => (e.left === left && e.right === right ? e : { left, right }));
+  }, []);
 
   useLayoutEffect(() => {
     const el = scroller.current;
     if (el && pinned.current) el.scrollLeft = el.scrollWidth;
-  }, [entries]);
+    measureEdges();
+  }, [entries, measureEdges]);
+
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measureEdges);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [measureEdges]);
 
   const onScroll = () => {
     const el = scroller.current;
     if (el) pinned.current = el.scrollWidth - el.scrollLeft - el.clientWidth < 48;
+    measureEdges();
   };
+  const mask = edgeMask(edges.left, edges.right);
 
   const chip = (rec: ChordRecord, key: Key | null, newest: boolean) => {
     const c = rec.chord!;
@@ -137,6 +176,7 @@ export function Timeline({
       onScroll={onScroll}
       role="list"
       aria-label="Chord timeline"
+      style={mask ? { maskImage: mask, WebkitMaskImage: mask } : undefined}
       className={cx('overflow-x-auto overscroll-x-contain [scrollbar-width:thin]', className)}
     >
       {entries.length === 0 ? (
@@ -144,7 +184,12 @@ export function Timeline({
           Chords you play will appear here.
         </p>
       ) : (
-        <div className="flex min-h-16 w-max items-center gap-1.5 pr-2">
+        <div
+          className={cx(
+            'flex min-h-16 w-max items-center gap-1.5 pr-2',
+            align === 'center' && 'mx-auto',
+          )}
+        >
           {entries.map((e, i) => {
             if (e.type === 'key') {
               return (
@@ -152,7 +197,7 @@ export function Timeline({
                   role="listitem"
                   key={`k${i}`}
                   data-testid="timeline-key"
-                  className="mx-1 shrink-0 rounded-full bg-accent/12 px-3 py-1 text-footnote font-semibold whitespace-nowrap text-accent"
+                  className={cx(PILL, 'bg-accent/12 text-accent')}
                 >
                   {e.first ? '' : '→ '}
                   {pretty(keyLabel(e.key, { spellingFollowsKey }))}
@@ -167,9 +212,9 @@ export function Timeline({
                   role="listitem"
                   key={e.marker.id}
                   data-testid="timeline-marker"
-                  className="mx-1 flex shrink-0 flex-col items-center gap-0.5 self-stretch border-l border-warn/50 pl-2 text-caption whitespace-nowrap text-warn"
+                  className={cx(PILL, 'bg-warn/14 text-warn')}
                 >
-                  {bookmark ? <BookmarkIcon size={14} /> : <FlagIcon size={14} />}
+                  {bookmark ? <BookmarkIcon size={13} /> : <FlagIcon size={13} />}
                   <span>{text}</span>
                 </span>
               );

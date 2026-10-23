@@ -1,12 +1,14 @@
 import { useCallback, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router';
 import { liveInput } from '@/app/live/liveInput';
-import { isMockMode, useMockInput } from './useMockInput';
+import { isDemoRunning, isMockMode, useMockInput } from './useMockInput';
 
 export function useJamInput() {
-  const navigate = useNavigate();
   const [search, setSearch] = useSearchParams();
-  const [mock, setMock] = useState(() => isMockMode(search.toString()) || isMockMode());
+  // Coming back to a demo that kept playing on another screen keeps its demo controls.
+  const [mock, setMock] = useState(
+    () => isMockMode(search.toString()) || isMockMode() || isDemoRunning(),
+  );
   const [saving, setSaving] = useState(false);
   const [finished, setFinished] = useState(false);
   const [saved, setSaved] = useState<{ id: string; name: string } | null>(null);
@@ -57,8 +59,8 @@ export function useJamInput() {
     }
     setSaving(true);
     try {
+      // The finished screen confirms the save, so no extra toast.
       await liveInput().stop({
-        openReview: (id) => void navigate(`/review/${id}`),
         onSaved: setSaved,
         onSaveError: setSaveError,
       });
@@ -66,7 +68,7 @@ export function useJamInput() {
     } finally {
       setSaving(false);
     }
-  }, [mock, stopDemo, navigate]);
+  }, [mock, stopDemo]);
 
   return { start, stop, startLive, startDemo, mock, saving, finished, saved, saveError };
 }

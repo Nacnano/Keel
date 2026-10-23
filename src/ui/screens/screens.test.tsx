@@ -7,6 +7,7 @@ import { inputStore } from '@/state/inputStore';
 import { settingsStore } from '@/state/settingsStore';
 import { liveInput } from '@/app/live/liveInput';
 import { JamScreen } from './JamScreen';
+import { stopDemo } from './jam/useMockInput';
 import pkg from '../../../package.json';
 import { SettingsScreen } from './SettingsScreen';
 import { APP_VERSION } from './settings/about';
@@ -26,6 +27,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  stopDemo(); // the demo outlives the screen, like a live session
   window.history.replaceState({}, '', '/');
 });
 
@@ -95,6 +97,10 @@ describe('JamScreen', () => {
     expect(screen.getByRole('button', { name: 'Finish & save' })).toBeEnabled();
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Finish & save' })));
     expect(screen.getByText('Your jam is saved.')).toBeInTheDocument();
+    expect(screen.getByText('“Evening idea” is in your Library.')).toBeInTheDocument();
+    expect(stop).toHaveBeenCalledWith(
+      expect.not.objectContaining({ openReview: expect.anything() }),
+    );
     expect(screen.getByRole('link', { name: 'Open session' })).toHaveAttribute(
       'href',
       '/review/new-session',
@@ -132,6 +138,85 @@ describe('JamScreen', () => {
     expect(screen.getByRole('button', { name: 'Try a demo' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Listening options' })).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /Piano/ })).toBeNull();
+    // the whole idle screen stays under 25 words
+    const words = screen.getByRole('main').textContent!.trim().split(/\s+/);
+    expect(words.length).toBeLessThan(25);
+  });
+
+  it('chooses the listening mode right on the idle screen', () => {
+    renderJam();
+    const mode = screen.getByRole('radiogroup', { name: 'Listen to' });
+    expect(within(mode).getByRole('radio', { name: 'Just me', checked: true })).toBeInTheDocument();
+    fireEvent.click(within(mode).getByRole('radio', { name: 'With a band' }));
+    expect(settingsStore.getState().mode).toBe('room');
+  });
+
+  it('keeps Listening options to listening and display choices', () => {
+    window.history.replaceState({}, '', '/?mock=1');
+    renderJam();
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Start demo' })));
+    fireEvent.click(screen.getByRole('button', { name: 'Listening options' }));
+    const dialog = screen.getByRole('dialog', { name: 'Listening options' });
+    expect(within(dialog).getByText('Quieter room')).toBeInTheDocument();
+    expect(within(dialog).getByText('Soft playing')).toBeInTheDocument();
+    expect(within(dialog).getByRole('radio', { name: 'With a band' })).toBeInTheDocument();
+    expect(within(dialog).getByText(/Steadier, simpler chords/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('radio', { name: 'Simple' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('radio', { name: 'With 7ths' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('radio', { name: 'Everything' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('switch', { name: 'Show keyboard' })).toBeInTheDocument();
+    expect(within(dialog).queryByText('Clear timeline')).toBeNull();
+    expect(within(dialog).queryByText('Chorus')).toBeNull();
+  });
+
+  it('marks a bookmark or a section from one Mark button', () => {
+    window.history.replaceState({}, '', '/?mock=1');
+    renderJam();
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Start demo' })));
+    expect(screen.queryByRole('button', { name: 'Bookmark' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Mark' }));
+    const menu = screen.getByRole('menu', { name: 'Mark' });
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((m) => m.textContent),
+    ).toEqual(['Bookmark', 'Intro', 'Verse', 'Chorus', 'Bridge', 'Outro']);
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Chorus' }));
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(jamStore.getState().markers.map((m) => m.kind)).toEqual(['chorus']);
+    expect(screen.getByTestId('timeline-marker')).toHaveTextContent('Chorus');
+  });
+
+  it('shows the chord, a large key line and no match-strength text', () => {
+    window.history.replaceState({}, '', '/?mock=1');
+    renderJam();
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Start demo' })));
+    expect(screen.queryByText(/chord match/)).toBeNull();
+    expect(screen.getByRole('button', { name: /^Key C major/ })).toHaveClass('text-title-2');
+    act(() => jamStore.setState({ currentChord: { root: 7, quality: 'maj' }, confidence: 0.4 }));
+    expect(screen.getByTestId('chord-symbol')).toHaveAttribute('data-tentative', 'true');
+    act(() => jamStore.setState({ confidence: 0.9 }));
+    expect(screen.getByTestId('chord-symbol')).not.toHaveAttribute('data-tentative');
+  });
+
+  it('R no longer clears the timeline', () => {
+    window.history.replaceState({}, '', '/?mock=1');
+    renderJam();
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Start demo' })));
+    expect(jamStore.getState().timeline).toHaveLength(1);
+    act(() => void fireEvent.keyDown(window, { key: 'r' }));
+    expect(jamStore.getState().timeline).toHaveLength(1);
+  });
+
+  it('keeps a running demo going when the screen unmounts, and resumes its controls', () => {
+    renderJam();
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Try a demo' })));
+    cleanup();
+    window.history.replaceState({}, '', '/');
+    expect(jamStore.getState().status).toBe('listening');
+    expect(jamStore.getState().demo).toBe(true);
+    renderJam();
+    expect(screen.getByRole('button', { name: 'Stop demo' })).toBeEnabled();
   });
 
   it('reports a clear error when no live input is available (jsdom has no mic)', async () => {
@@ -199,10 +284,14 @@ describe('JamScreen', () => {
     });
     expect(screen.queryByRole('complementary', { name: 'Ideas' })).toBeNull();
     cleanup();
-    localStorage.setItem('keel.ui.inspector', '1:next');
+    // a stored "open" flag is ignored: Ideas never reopens by itself; the tab is remembered
+    localStorage.setItem('keel.ui.inspector', '1:scales');
     renderJam();
-    expect(screen.getByRole('complementary', { name: 'Ideas' })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'Next', checked: true })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Ideas' })).toBeNull();
+    act(() => {
+      fireEvent.keyDown(window, { key: 'i' });
+    });
+    expect(screen.getByRole('radio', { name: 'Scales', checked: true })).toBeInTheDocument();
   });
 });
 
@@ -301,9 +390,11 @@ describe('JamScreen voicings', () => {
   });
 
   it('voices the current chord', () => {
-    localStorage.setItem('keel.ui.inspector', '1:voicings');
     jamStore.setState({ currentChord: { root: 0, quality: 'maj7' }, confidence: 1 });
     renderJam();
+    act(() => {
+      fireEvent.keyDown(window, { key: 'v' });
+    });
     expect(screen.getAllByTestId('voicing-card').length).toBeGreaterThanOrEqual(1);
   });
 });

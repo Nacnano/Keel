@@ -47,6 +47,8 @@ export function TryNext({
       {suggestions.map((s, i) => {
         const symbol = pretty(chordSymbol(s.chord, keyContext, { spellingFollowsKey }));
         const numeral = keyContext ? pretty(romanNumeral(s.chord, keyContext)) : '';
+        // Reasons often start with the numeral ("V7: dominant"); it is already shown beside it.
+        const reason = s.reason.replace(/^[^\s:]{1,12}:\s+/, '');
         return (
           <li key={`${s.chord.root}-${s.chord.quality}-${i}`}>
             <button
@@ -65,7 +67,7 @@ export function TryNext({
               <span className="text-footnote font-medium text-accent">{numeral}</span>
               {detailed && (
                 <span className="ml-auto max-w-[55%] truncate text-footnote text-label-2">
-                  {s.reason}
+                  {reason.charAt(0).toUpperCase() + reason.slice(1)}
                 </span>
               )}
             </button>

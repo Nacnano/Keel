@@ -89,6 +89,7 @@ export function AppShell() {
   useAutoSync();
   const { pathname } = useLocation();
   const listening = useJamStore((state) => state.status === 'listening');
+  const demo = useJamStore((state) => state.demo);
   const items = NAV.map((item) => ({
     ...item,
     active:
@@ -132,11 +133,14 @@ export function AppShell() {
       <div className="flex min-w-0 flex-1 flex-col">
         {listening && pathname !== '/' && (
           <Link
-            to="/"
+            to={demo ? '/?mock=1' : '/'}
             className="flex min-h-11 shrink-0 items-center justify-center gap-2 bg-accent/10 px-4 text-subhead font-medium text-accent"
           >
-            <span className="size-2 rounded-full bg-live" aria-hidden />
-            Listening in progress · Return to your jam
+            <span
+              className={cx('size-2 rounded-full', demo ? 'bg-accent' : 'bg-live')}
+              aria-hidden
+            />
+            {demo ? 'Demo in progress' : 'Listening in progress'} · Return to your jam
           </Link>
         )}
         <main className="min-h-0 flex-1">

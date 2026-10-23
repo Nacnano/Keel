@@ -39,6 +39,7 @@ vi.mock('@/data', () => ({
 }));
 vi.mock('@/sync/signals', () => ({ notifySessionSaved: vi.fn() }));
 vi.mock('@/ui/components/toastStore', () => ({ toast: vi.fn() }));
+import { toast } from '@/ui/components/toastStore';
 import { createLiveInput } from './liveInput';
 
 function deferred() {
@@ -140,5 +141,50 @@ describe('live input lifecycle', () => {
     expect(mocks.startSession).toHaveBeenCalledTimes(2);
     expect(input.isRunning()).toBe(true);
     await input.stop();
+  });
+
+  it('does not toast "Saved" when the caller shows its own confirmation', async () => {
+    const input = createLiveInput();
+    await input.start();
+    await input.stop({ onSaved: vi.fn() });
+    expect(toast).not.toHaveBeenCalled();
+    await input.start();
+    await input.stop();
+    expect(toast).toHaveBeenCalledWith(expect.stringContaining('Saved'), expect.anything());
+  });
+
+  it('keeps the screen awake while listening and lets it sleep after', async () => {
+    const release = vi.fn().mockResolvedValue(undefined);
+    const request = vi.fn().mockResolvedValue({ release, addEventListener: vi.fn() });
+    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+    try {
+      const input = createLiveInput();
+      await input.start();
+      await vi.waitFor(() => expect(request).toHaveBeenCalledWith('screen'));
+      // the browser drops the lock when the page is hidden; it comes back when visible
+      document.dispatchEvent(new Event('visibilitychange'));
+      await input.stop();
+      expect(release).toHaveBeenCalledOnce();
+      request.mockClear();
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(request).not.toHaveBeenCalled();
+    } finally {
+      Reflect.deleteProperty(navigator, 'wakeLock');
+    }
+  });
+
+  it('keeps listening when the wake lock is refused', async () => {
+    const request = vi.fn().mockRejectedValue(new Error('NotAllowedError'));
+    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+    try {
+      const input = createLiveInput();
+      await input.start();
+      await vi.waitFor(() => expect(request).toHaveBeenCalled());
+      expect(input.isRunning()).toBe(true);
+      expect(jamStore.getState().status).toBe('listening');
+      await input.stop();
+    } finally {
+      Reflect.deleteProperty(navigator, 'wakeLock');
+    }
   });
 });
