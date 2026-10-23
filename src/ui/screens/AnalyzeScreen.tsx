@@ -21,6 +21,7 @@ import { Button, Group, PageHeader, Row, Segmented, Slider, Switch } from '../ki
 import { chordSymbol, keyLabel, pretty } from '../lib/chordLabel';
 import { cx } from '../lib/cx';
 import { romanNumeral } from '../lib/numeral';
+import { useMediaQuery } from '../lib/useMediaQuery';
 import { buildChart, keyAt, keySpans, locate } from './analyze/chart';
 import { ChordChart } from './analyze/ChordChart';
 import { DropZone } from './analyze/DropZone';
@@ -242,16 +243,20 @@ function AnalyzeOptions({
   onLevel(l: VocabLevel): void;
   onMode(m: JamMode): void;
 }) {
+  // On a phone the two segmented controls need the full row width.
+  const narrow = useMediaQuery('(max-width: 479px)');
   return (
     <Group
       title="Options"
       footer="With a band suits a full mix with vocals; Just me suits a single instrument. Changing either analyzes the file again."
     >
       <Row
+        stacked={narrow}
         label="Chord detail"
         accessory={
           <Segmented<VocabLevel>
             size="sm"
+            fill={narrow}
             aria-label="Chord detail"
             options={LEVEL_OPTIONS}
             value={level}
@@ -260,10 +265,12 @@ function AnalyzeOptions({
         }
       />
       <Row
+        stacked={narrow}
         label="Listening mode"
         accessory={
           <Segmented<JamMode>
             size="sm"
+            fill={narrow}
             aria-label="Listening mode"
             options={MODE_OPTIONS}
             value={mode}
