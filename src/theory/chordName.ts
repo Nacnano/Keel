@@ -5,7 +5,7 @@
 import type { Chord, ChordQuality, Key, PitchClass } from '@/core';
 import { NOTE_NAMES_SHARP } from '@/core';
 import { mod12 } from './keys';
-import { pc, spell, spellAbove } from './notes';
+import { pc, spell, spellAbove, spellRoot } from './notes';
 import type { SpellOptions } from './notes';
 import { CHORD_TEMPLATES, QUALITY_ORDER } from './vocab';
 import type { ToneRole } from './vocab';
@@ -69,7 +69,7 @@ export function spellChord(chord: Chord, key?: Key | null, opts: SpellOptions = 
   if (opts.spellingFollowsKey === false) {
     return t.intervals.map((i) => NOTE_NAMES_SHARP[mod12(chord.root + i)]);
   }
-  const root = spell(chord.root, key, opts);
+  const root = spellRoot(chord.root, key, opts);
   return t.intervals.map((i, k) =>
     k === 0
       ? root
@@ -95,7 +95,7 @@ export function chordSymbol(
   opts: ChordSymbolOptions = {},
 ): string {
   if (!chord) return opts.noChord ?? 'N.C.';
-  const base = spell(chord.root, key, opts) + CHORD_TEMPLATES[chord.quality].symbol;
+  const base = spellRoot(chord.root, key, opts) + CHORD_TEMPLATES[chord.quality].symbol;
   if (opts.showSlash === false) return base;
   const bass = spellBass(chord, key, opts);
   return bass ? `${base}/${bass}` : base;
