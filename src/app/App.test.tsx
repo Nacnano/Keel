@@ -25,7 +25,7 @@ describe('App routes', () => {
     for (const [name, href] of [
       ['Analyze a song', '/analyze'],
       ['Ear training', '/train'],
-      ['Practice history', '/stats'],
+      ['Stats', '/stats'],
       ['Settings', '/settings'],
     ]) {
       const links = screen.getAllByRole('link', { name: new RegExp(`^${name}`) });
@@ -47,9 +47,7 @@ describe('App routes', () => {
   it('renders the stats screen at /stats', async () => {
     const r = createMemoryRouter(routes, { initialEntries: ['/stats'] });
     render(<RouterProvider router={r} />);
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Practice history' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Stats' })).toBeInTheDocument();
     expect(
       screen
         .getAllByRole('link', { name: 'Tools' })

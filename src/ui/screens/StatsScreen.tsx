@@ -65,7 +65,7 @@ export function StatsScreen() {
       <div className="mx-auto max-w-2xl pb-[max(env(safe-area-inset-bottom),32px)]">
         <ToolsBackLink />
         <PageHeader
-          title="Practice history"
+          title="Stats"
           actions={
             !nothingSaved && (
               <Segmented<StatsRange>
@@ -187,7 +187,7 @@ export function StatsScreen() {
 
                   <Group title="Chord qualities" flush>
                     {stats.chordQualities.length === 0 ? (
-                      <Muted>Chord colours show up once you have repeating progressions.</Muted>
+                      <Muted>Chord colors show up once you have repeating progressions.</Muted>
                     ) : (
                       <ul
                         className="flex flex-wrap gap-1.5 px-4 py-3"

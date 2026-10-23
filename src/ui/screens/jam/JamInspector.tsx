@@ -27,12 +27,26 @@ export interface JamInspectorProps {
   spellingFollowsKey: boolean;
   onAudition(chord: Chord): void;
   onPlayNotes(notes: MidiNote[]): void;
+  /**
+   * `side`: a panel over the right edge (only where the chord column stays clear of it).
+   * `half`: a half-height bottom sheet (`min(42dvh, 420px)`); the listening screen keeps the chord
+   * and Finish above it.
+   */
+  layout: 'side' | 'half';
 }
 
 /** Ideas on demand: what to play next, which scale fits, how to voice it, where to modulate. */
 export function JamInspector(p: JamInspectorProps) {
   return (
-    <Sheet open={p.open} onClose={p.onClose} modeless title="Ideas" aria-label="Ideas">
+    <Sheet
+      open={p.open}
+      onClose={p.onClose}
+      modeless
+      title="Ideas"
+      aria-label="Ideas"
+      placement={p.layout === 'side' ? 'side' : 'bottom'}
+      className={p.layout === 'half' ? 'h-[min(42dvh,420px)] lg:left-56' : undefined}
+    >
       <Segmented
         fill
         size="sm"

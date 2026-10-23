@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { ChevronRight, Ellipsis, Link2, Pencil, Trash2 } from 'lucide-react';
-import type { Session } from '@/core';
-import { getSessionFull } from '@/data';
+import { ChevronRight, Ellipsis, Pencil, Trash2 } from 'lucide-react';
+import type { Chord, Session } from '@/core';
+import { chordFamilyKey, getSessionFull } from '@/data';
 import { Button } from '../../kit';
 import { chordSymbol, keyLabel, pretty } from '../../lib/chordLabel';
 import { cx } from '../../lib/cx';
 import { romanNumeral } from '../../lib/numeral';
 import { clockLabel } from '../review/timeline';
-import { ExportItems } from './ExportMenu';
+import { DownloadItems, ShareItem, ShareLinkItem } from './ShareItems';
 import { Menu, MenuItem, MenuSeparator } from './Menu';
 
 export interface SessionRowProps {
@@ -16,8 +16,8 @@ export interface SessionRowProps {
   spellingFollowsKey?: boolean;
   onRename(id: string, name: string): Promise<void>;
   onDelete(session: Session): void;
-  /** Present when share links are available (sync configured and signed in). */
-  onShare?(session: Session): void;
+  /** Present when cloud share links are available (sync configured). */
+  onShareLink?(session: Session): void;
 }
 
 /** "Oct 23", or "Oct 23, 2025" outside the current year. */
@@ -32,6 +32,21 @@ function shortDate(ms: number, now = Date.now()): string {
 }
 
 /**
+ * The loop as a player reads it: slash basses dropped and neighbours with the same root and
+ * quality merged (older summaries were computed with the bass).
+ */
+function foldProgression(chords: readonly Chord[]): Chord[] {
+  const out: Chord[] = [];
+  for (const c of chords) {
+    const plain: Chord = { root: c.root, quality: c.quality };
+    if (!out.length || chordFamilyKey(out[out.length - 1]) !== chordFamilyKey(plain))
+      out.push(plain);
+  }
+  if (out.length > 1 && chordFamilyKey(out[0]) === chordFamilyKey(out[out.length - 1])) out.pop();
+  return out;
+}
+
+/**
  * One saved session in the inset list. The whole row opens the review screen; the ellipsis
  * button above the link holds rename, export, share and delete.
  */
@@ -40,7 +55,7 @@ export function SessionRow({
   spellingFollowsKey = true,
   onRename,
   onDelete,
-  onShare,
+  onShareLink,
 }: SessionRowProps) {
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState(s.name);
@@ -104,7 +119,7 @@ export function SessionRow({
             className="mt-1 flex items-baseline gap-x-2.5 overflow-hidden text-subhead whitespace-nowrap"
             data-testid="session-progression"
           >
-            {prog.chords.map((c, i) => (
+            {foldProgression(prog.chords).map((c, i) => (
               <span key={i} className="inline-flex items-baseline gap-1">
                 <span className="font-semibold text-label">
                   {pretty(chordSymbol(c, home, { spellingFollowsKey }))}
@@ -141,13 +156,10 @@ export function SessionRow({
           >
             Rename
           </MenuItem>
+          <ShareItem getFull={() => getSessionFull(s.id)} />
+          {onShareLink && <ShareLinkItem onSelect={() => onShareLink(s)} />}
           <MenuSeparator />
-          <ExportItems getFull={() => getSessionFull(s.id)} />
-          {onShare && (
-            <MenuItem icon={<Link2 />} onSelect={() => onShare(s)}>
-              Share link…
-            </MenuItem>
-          )}
+          <DownloadItems getFull={() => getSessionFull(s.id)} />
           <MenuSeparator />
           <MenuItem icon={<Trash2 />} destructive onSelect={() => onDelete(s)}>
             Delete

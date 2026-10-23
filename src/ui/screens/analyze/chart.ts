@@ -3,7 +3,7 @@
  * segments (`| C G Am F | ×4`), plus "where is the playhead" lookups for highlighting.
  */
 import type { Chord, ChordRecord, Key, KeyRecord } from '@/core';
-import { compressRepeats, sameChord, sameKey } from '@/theory';
+import { compressRepeats, sameKey } from '@/theory';
 import { indexAt } from '../review/timeline';
 
 export interface ChartItem {
@@ -46,6 +46,12 @@ export interface ChartPosition {
   item: ChartItem;
 }
 
+/**
+ * Same root and quality: a different bass (C, C/G) or a repeated detection is the same cell,
+ * so bass flicker neither splits a chord nor breaks a loop.
+ */
+const sameCell = (a: Chord, b: Chord) => a.root === b.root && a.quality === b.quality;
+
 /** Key changes only (consecutive identical keys merged). */
 export function keyChanges(keys: readonly KeyRecord[]): KeyRecord[] {
   const out: KeyRecord[] = [];
@@ -56,8 +62,9 @@ export function keyChanges(keys: readonly KeyRecord[]): KeyRecord[] {
 }
 
 /**
- * Chart items: named chords with consecutive duplicates merged (a short no-chord gap
- * between two identical chords does not split them). Blocks start at each key change.
+ * Chart items: named chords with consecutive duplicates (same root + quality) merged; a short
+ * no-chord gap between two of them does not split them. Blocks start at each key change and
+ * fold repeated loops like the live timeline (`| C G Am F | ×4`).
  */
 export function buildChart(
   chords: readonly ChordRecord[],
@@ -71,7 +78,7 @@ export function buildChart(
     const end = i + 1 < sorted.length ? sorted[i + 1].t : Math.max(durationSec, rec.t);
     if (!rec.chord) continue;
     const last = items[items.length - 1];
-    if (last && sameChord(last.chord, rec.chord)) {
+    if (last && sameCell(last.chord, rec.chord)) {
       last.end = end;
     } else {
       items.push({ chord: rec.chord, t: rec.t, end, index: items.length });
@@ -90,7 +97,7 @@ export function buildChart(
     let to = from;
     while (to < items.length && items[to].t < until) to++;
     const segments = compressRepeats(items.slice(from, to), (x, y) =>
-      sameChord(x.chord, y.chord),
+      sameCell(x.chord, y.chord),
     ).map((s) => ({ items: s.items, repeat: s.repeat, start: from + s.start }));
     blocks.push({ key: b.key, t: b.t, segments });
     from = to;

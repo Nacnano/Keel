@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router';
 import {
   Bookmark,
   ChevronLeft,
-  Download,
   Ellipsis,
   FileQuestion,
   Keyboard,
@@ -31,9 +30,11 @@ import { toast } from '../components/toastStore';
 import { keyLabel, pretty } from '../lib/chordLabel';
 import { MARKER_LABEL } from '../lib/markers';
 import { useSync } from '@/sync/store';
-import { ExportItems, ExportMenu } from './library/ExportMenu';
+import { DownloadItems, ShareLinkItem } from './library/ShareItems';
+import { runExport, shareChartWithToast } from './library/exportActions';
 import { GRAY_LINK, PLAIN_LINK } from './library/linkStyles';
 import { Menu, MenuItem, MenuSeparator } from './library/Menu';
+import { ChartCard } from './review/ChartCard';
 import { chordText, keyAtTime } from './review/chordText';
 import { NameField } from './review/NameField';
 import { ShareDialog } from './review/ShareDialog';
@@ -114,8 +115,8 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
   const syncUser = useSync((s) => s.user);
   const [shareOpen, setShareOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  // Phones: Share and Export move into the overflow menu so the title has room.
-  const roomy = useMediaQuery('(min-width: 640px)', true);
+  // Keyboard shortcut hints are noise on a touch screen.
+  const touch = useMediaQuery('(pointer: coarse)');
   const settings = useSettings(
     useShallow((s) => ({
       spellingFollowsKey: s.spellingFollowsKey,
@@ -281,14 +282,12 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
     return { chords: picked, key: { tonic: k.tonic, mode: k.mode } };
   }, [chords, keys, controller]);
 
-  const shareBlocked = !syncConfigured
-    ? 'Sharing needs cloud sync, which is not configured.'
-    : !syncUser
-      ? 'Sign in under Settings → Account & sync to share.'
-      : undefined;
-  const openShare = () => {
-    if (shareBlocked) toast(shareBlocked, { durationMs: 3500 });
-    else setShareOpen(true);
+  const getFull = useCallback(async () => full, [full]);
+  const share = () => void runExport(getFull, shareChartWithToast)();
+  const openShareLink = () => {
+    if (!syncUser) {
+      toast('Sign in under Settings → Account & sync to share a link.', { durationMs: 3500 });
+    } else setShareOpen(true);
   };
 
   return (
@@ -309,20 +308,15 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
         }
         trailing={
           <>
-            {roomy && (
-              <>
-                <Button
-                  icon
-                  variant="plain"
-                  aria-label="Share"
-                  title={shareBlocked ?? 'Share a read-only link'}
-                  onClick={openShare}
-                >
-                  <Share className="size-5" aria-hidden />
-                </Button>
-                <ExportMenu getFull={async () => full} icon={<Download className="size-5" />} />
-              </>
-            )}
+            <Button
+              icon
+              variant="plain"
+              aria-label="Share"
+              title="Share the chord chart"
+              onClick={share}
+            >
+              <Share className="size-5" aria-hidden />
+            </Button>
             <Menu
               align="end"
               width={260}
@@ -333,15 +327,9 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
                 </Button>
               )}
             >
-              {!roomy && (
-                <>
-                  <MenuItem icon={<Share />} onSelect={openShare}>
-                    Share link…
-                  </MenuItem>
-                  <ExportItems getFull={async () => full} />
-                  <MenuSeparator />
-                </>
-              )}
+              {syncConfigured && <ShareLinkItem onSelect={openShareLink} />}
+              <DownloadItems getFull={getFull} />
+              <MenuSeparator />
               <MenuItem
                 icon={<Pencil />}
                 disabled={!currentRec}
@@ -358,10 +346,14 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
               <MenuItem icon={<Maximize2 />} onSelect={fitAll}>
                 Show whole session
               </MenuItem>
-              <MenuSeparator />
-              <MenuItem icon={<Keyboard />} onSelect={() => setShortcutsOpen(true)}>
-                Keyboard shortcuts
-              </MenuItem>
+              {!touch && (
+                <>
+                  <MenuSeparator />
+                  <MenuItem icon={<Keyboard />} onSelect={() => setShortcutsOpen(true)}>
+                    Keyboard shortcuts
+                  </MenuItem>
+                </>
+              )}
             </Menu>
           </>
         }
@@ -391,11 +383,13 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
             {recording && <Badge className="ml-1">Audio</Badge>}
             {hasMidi && <Badge className={recording ? '' : 'ml-1'}>MIDI</Badge>}
           </p>
-          <TagEditor
-            tags={session.tags}
-            onChange={(tags) => run(api.setTags(tags), 'save the tags')}
-          />
         </header>
+
+        <ChartCard
+          full={full}
+          spellingFollowsKey={settings.spellingFollowsKey}
+          showSlash={settings.showSlashChords}
+        />
 
         <section aria-label="Playback" className="flex flex-col gap-4">
           {hasAudio && (
@@ -542,7 +536,7 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
             }
             onDeselect={() => setSelectedMarker(null)}
           />
-          <p className="hidden text-caption text-label-3 lg:block">
+          <p className="hidden text-caption text-label-3 lg:pointer-fine:block">
             Click a chord to jump there; right-click or long-press it to fix it. Space plays, B
             bookmarks.{' '}
             <button
@@ -554,6 +548,11 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
             </button>
           </p>
         </section>
+
+        <TagEditor
+          tags={session.tags}
+          onChange={(tags) => run(api.setTags(tags), 'save the tags')}
+        />
 
         <div className="grid items-start gap-6 lg:grid-cols-2">
           <SummaryCard

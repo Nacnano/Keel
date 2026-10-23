@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
 import { SlidersHorizontal } from 'lucide-react';
-import type { JamMode, MarkerKind, VocabLevel } from '@/core';
+import type { JamMode, VocabLevel } from '@/core';
 import { Button, Group, Row, Segmented, Sheet, Slider, Switch } from '../../kit';
-import { MARKER_LABEL, SECTION_KINDS } from '../../lib/markers';
+import { MODE_OPTIONS, VOCAB_OPTIONS } from './labels';
 
 export interface JamOptionsProps {
   vocabLevel: VocabLevel;
@@ -17,45 +16,44 @@ export interface JamOptionsProps {
   onRecordAudio(on: boolean): void;
   pianoVisible: boolean;
   onPianoVisible(on: boolean): void;
-  onReset(): void;
-  canReset: boolean;
-  listening: boolean;
-  onSection(kind: MarkerKind): void;
-  inputLabel: string;
+  /** The keyboard is unreadable on phones, so the switch is only offered on wider screens. */
+  canShowPiano: boolean;
+  /** Icon-only trigger (the idle screen keeps its copy short). */
+  compact?: boolean;
 }
 
-/** Input help and less frequent choices, in a sheet with room for readable controls. */
+/** How Keel listens and what it shows. Actions live on the screen, not in here. */
 export function JamOptions(p: JamOptionsProps) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button
-        variant="plain"
-        leading={<SlidersHorizontal className="size-4" aria-hidden />}
-        onClick={() => setOpen(true)}
-        aria-haspopup="dialog"
-      >
-        Listening options
-      </Button>
+      {p.compact ? (
+        <Button
+          variant="plain"
+          icon
+          round
+          aria-label="Listening options"
+          title="Listening options"
+          aria-haspopup="dialog"
+          onClick={() => setOpen(true)}
+        >
+          <SlidersHorizontal className="size-5" aria-hidden />
+        </Button>
+      ) : (
+        <Button
+          variant="plain"
+          leading={<SlidersHorizontal className="size-4" aria-hidden />}
+          aria-haspopup="dialog"
+          onClick={() => setOpen(true)}
+        >
+          Listening options
+        </Button>
+      )}
       <Sheet open={open} onClose={() => setOpen(false)} title="Listening options">
         <div className="flex flex-col gap-6 py-4">
-          <div className="px-1">
-            <p className="text-headline font-semibold">{p.inputLabel}</p>
-            <p className="mt-1 text-subhead text-label-2">
-              Place your device near the instrument. Play a full chord and hold it briefly.
-            </p>
-            <Link
-              to="/settings"
-              onClick={() => setOpen(false)}
-              className="mt-2 inline-flex min-h-11 items-center text-subhead font-medium text-accent"
-            >
-              Choose an input device
-            </Link>
-          </div>
-          <Group title="Listening">
+          <Group>
             <Row
               label="Microphone sensitivity"
-              detail="Raise it for soft playing; lower it if room noise becomes chords."
               stacked
               accessory={
                 <Slider
@@ -66,8 +64,8 @@ export function JamOptions(p: JamOptionsProps) {
                   aria-valuetext={`${Math.round(p.sensitivity * 100)}%`}
                   value={p.sensitivity}
                   onChange={p.onSensitivity}
-                  minLabel="Less sensitive"
-                  maxLabel="More sensitive"
+                  minLabel="Quieter room"
+                  maxLabel="Soft playing"
                 />
               }
             />
@@ -77,24 +75,17 @@ export function JamOptions(p: JamOptionsProps) {
               accessory={
                 <Segmented
                   fill
-                  aria-label="Listening mode"
+                  aria-label="Listen to"
                   value={p.mode}
                   onChange={p.onMode}
-                  options={[
-                    { value: 'solo', label: 'Just me' },
-                    { value: 'room', label: 'The room' },
-                  ]}
+                  options={MODE_OPTIONS}
                 />
               }
-              detail="The room follows a band or a song playing nearby."
+              detail="Steadier, simpler chords when others are playing."
             />
             <Row
               label="Record audio"
-              detail={
-                p.recordingLocked
-                  ? 'Choose before starting a session.'
-                  : 'Keep audio with your chord chart, on this device.'
-              }
+              detail={p.recordingLocked ? 'Choose before you start.' : undefined}
               accessory={
                 <Switch
                   checked={p.recordAudio}
@@ -105,7 +96,7 @@ export function JamOptions(p: JamOptionsProps) {
               }
             />
           </Group>
-          <Group title="Display">
+          <Group>
             <Row
               label="Chord detail"
               stacked
@@ -115,51 +106,23 @@ export function JamOptions(p: JamOptionsProps) {
                   aria-label="Chord detail"
                   value={p.vocabLevel}
                   onChange={p.onVocabLevel}
-                  options={[
-                    { value: 1, label: 'Triads' },
-                    { value: 2, label: '7ths' },
-                    { value: 3, label: 'Jazz' },
-                  ]}
+                  options={VOCAB_OPTIONS}
                 />
               }
             />
-            <Row
-              label="Show keyboard"
-              accessory={
-                <Switch
-                  checked={p.pianoVisible}
-                  onChange={p.onPianoVisible}
-                  aria-label="Show keyboard"
-                />
-              }
-            />
+            {p.canShowPiano && (
+              <Row
+                label="Show keyboard"
+                accessory={
+                  <Switch
+                    checked={p.pianoVisible}
+                    onChange={p.onPianoVisible}
+                    aria-label="Show keyboard"
+                  />
+                }
+              />
+            )}
           </Group>
-          {p.listening && (
-            <Group title="Mark a section">
-              {SECTION_KINDS.map((kind) => (
-                <Row
-                  key={kind}
-                  label={MARKER_LABEL[kind]}
-                  onClick={() => {
-                    p.onSection(kind);
-                    setOpen(false);
-                  }}
-                />
-              ))}
-            </Group>
-          )}
-          {p.canReset && (
-            <Button
-              variant="plain"
-              destructive
-              onClick={() => {
-                p.onReset();
-                setOpen(false);
-              }}
-            >
-              Clear timeline
-            </Button>
-          )}
         </div>
       </Sheet>
     </>

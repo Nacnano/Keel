@@ -24,9 +24,9 @@ export interface ChordPickerProps {
 }
 
 const LEVEL_OPTIONS: Array<{ value: VocabLevel; label: string; title: string }> = [
-  { value: 1, label: 'Triads', title: 'Triads and sus chords' },
-  { value: 2, label: '7ths', title: 'Sevenths, 6 and add9' },
-  { value: 3, label: 'Jazz', title: 'Extensions and alterations' },
+  { value: 1, label: 'Simple', title: 'Simple: triads and sus chords' },
+  { value: 2, label: 'With 7ths', title: 'With 7ths: sevenths, 6 and add9' },
+  { value: 3, label: 'Everything', title: 'Everything: extensions and alterations' },
 ];
 
 /**

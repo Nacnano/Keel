@@ -11,6 +11,9 @@
  *   next flush (or `stop()`) retries them.
  * - The MIDI performance is one `MidiTrack` row per session, checkpointed every
  *   30 s while dirty and written in full on `stop()`.
+ * - `stop({ discardIfEmpty: true })` deletes a session in which nothing was heard
+ *   (no chord, no MIDI, no audio) and resolves with `null`, so silent runs never
+ *   reach the library.
  */
 import { v4 as uuid } from 'uuid';
 import type {
@@ -20,9 +23,11 @@ import type {
   Marker,
   MarkerKind,
   Session,
+  SessionSummary,
 } from '@/core/session';
 import type { AnalysisEvent, Instrument, JamMode, MidiEvent, VocabLevel } from '@/core/types';
-import { db as defaultDb, type KeelDB } from './db';
+import { db as defaultDb, sessionRange, type KeelDB } from './db';
+import { keyName, prettyAccidentals } from '@/theory';
 import { chordKey } from './chordSymbol';
 import { computeSummary } from './summary';
 
@@ -72,17 +77,37 @@ export interface SessionHandle {
    * Flush everything, compute the summary and finalise the session row.
    * `endT` (event clock) overrides the end time. Idempotent while pending or
    * after success; after a failed write it may be called again to retry.
+   *
+   * With `discardIfEmpty`, a session with no chord, no MIDI and no audio is
+   * deleted instead and the promise resolves with `null`.
    */
-  stop(opts?: { endT?: number }): Promise<Session>;
+  stop(opts: StopOptions & { discardIfEmpty: true }): Promise<Session | null>;
+  stop(opts?: StopOptions): Promise<Session>;
 }
 
-function defaultName(epochMs: number): string {
-  const d = new Date(epochMs);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `Jam ${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+export interface StopOptions {
+  endT?: number;
+  discardIfEmpty?: boolean;
+}
+
+/** Placeholder name while the session runs; the date is shown next to the name, not in it. */
+export const DEFAULT_SESSION_NAME = 'Jam';
+
+/** "Jam in C major" from the key heard longest, or "Jam" when no key was found. */
+export function sessionName(summary: SessionSummary | null): string {
+  const key = summary?.keys[0]?.key;
+  return key ? `Jam in ${prettyAccidentals(keyName(key))}` : DEFAULT_SESSION_NAME;
 }
 
 const round3 = (x: number) => Math.round(x * 1000) / 1000;
+
+/** Sessions started in this tab and not stopped yet. */
+const recording = new Set<string>();
+
+/** True while `id` is being recorded in this tab (the library hides it until it is saved). */
+export function isRecordingSession(id: string): boolean {
+  return recording.has(id);
+}
 
 export function startSession(meta: SessionMeta): SessionHandle {
   const database = meta.database ?? defaultDb;
@@ -90,15 +115,17 @@ export function startSession(meta: SessionMeta): SessionHandle {
   const clock = meta.clock;
   const id = uuid();
   const startedAt = now();
+  recording.add(id);
 
   let t0: number | null = meta.t0 ?? (clock ? clock() : null);
   let lastT = 0;
   let stopped = false;
-  let stopPromise: Promise<Session> | null = null;
+  let discarded = false;
+  let stopPromise: Promise<Session | null> | null = null;
 
   const session: Session = {
     id,
-    name: meta.name?.trim() || defaultName(startedAt),
+    name: meta.name?.trim() || DEFAULT_SESSION_NAME,
     createdAt: startedAt,
     endedAt: null,
     durationSec: 0,
@@ -261,6 +288,7 @@ export function startSession(meta: SessionMeta): SessionHandle {
     },
 
     setAudioBlob(blob, mimeType, durationSec) {
+      if (discarded) return Promise.resolve();
       audio = { sessionId: id, blob, mimeType, durationSec };
       session.hasAudio = true;
       const rec = audio;
@@ -278,9 +306,11 @@ export function startSession(meta: SessionMeta): SessionHandle {
       return writePending(false);
     },
 
-    stop(opts) {
+    // The overloads only narrow the result type; one implementation serves both.
+    stop: ((opts?: StopOptions): Promise<Session | null> => {
       if (stopPromise) return stopPromise;
       stopped = true;
+      recording.delete(id);
       clearInterval(timer);
       const endRel =
         opts?.endT !== undefined && t0 !== null
@@ -290,18 +320,43 @@ export function startSession(meta: SessionMeta): SessionHandle {
       const flushed = writePending(true);
       stopPromise = (async () => {
         await flushed;
+        const heard = allChords.some((c) => c.chord !== null) || midiEvents.length > 0 || audio;
+        if (opts?.discardIfEmpty && !heard) {
+          await enqueue(async () => {
+            const [lo, hi] = sessionRange(id);
+            await database.transaction(
+              'rw',
+              [database.sessions, database.chords, database.keys, database.markers],
+              async () => {
+                await Promise.all([
+                  database.chords.where('[sessionId+t]').between(lo, hi, true, true).delete(),
+                  database.keys.where('[sessionId+t]').between(lo, hi, true, true).delete(),
+                  database.markers.where('[sessionId+t]').between(lo, hi, true, true).delete(),
+                  database.sessions.delete(id),
+                ]);
+              },
+            );
+          });
+          discarded = true;
+          return null;
+        }
+        const summary = computeSummary(allChords, allKeys, allMarkers, durationSec);
         const final: Partial<Session> = {
           endedAt: now(),
           durationSec,
           hasAudio: audio !== null,
           hasMidi: midiEvents.length > 0,
-          summary: computeSummary(allChords, allKeys, allMarkers, durationSec),
+          summary,
           updatedAt: now(),
         };
-        Object.assign(session, final);
         await enqueue(async () => {
+          // Name it after the key unless it was named up front or renamed while running.
+          const current = (await database.sessions.get(id))?.name ?? session.name;
+          final.name =
+            !meta.name?.trim() && current === DEFAULT_SESSION_NAME ? sessionName(summary) : current;
           await database.sessions.update(id, final);
         });
+        Object.assign(session, final);
         return { ...session };
       })().catch((err: unknown) => {
         // Rows were put back in the buffer; allow the caller to retry stop().
@@ -309,7 +364,7 @@ export function startSession(meta: SessionMeta): SessionHandle {
         throw err;
       });
       return stopPromise;
-    },
+    }) as SessionHandle['stop'],
   };
   return handle;
 }

@@ -12,7 +12,7 @@ import {
 import { ChevronDown, Copy, Play, Square } from 'lucide-react';
 import { Button, Group, Segmented } from '../kit';
 import { cx } from '../lib/cx';
-import { playProgression, progressionText } from './ReharmPanel.logic';
+import { playProgression, prettyProse, progressionText } from './ReharmPanel.logic';
 import { toast } from './toastStore';
 
 /** A captured progression to reharmonize. */
@@ -79,7 +79,7 @@ function ChordRow({
   );
 }
 
-/** Review-screen "Reharmonize": alternative harmonisations of a captured progression. */
+/** Review-screen "Reharmonize": alternative harmonizations of a captured progression. */
 export function ReharmPanel({
   sources,
   capture,
@@ -176,7 +176,7 @@ export function ReharmPanel({
             <span className="min-w-0 flex-1">
               <span className="block text-headline text-label">Reharmonize</span>
               <span className="block text-footnote text-label-2">
-                Other ways to harmonise a progression
+                Other ways to harmonize a progression
               </span>
             </span>
             <ChevronDown
@@ -309,7 +309,7 @@ export function ReharmPanel({
                     </Button>
                   </span>
                 </div>
-                <p className="text-footnote text-label-2">{prettyAccidentals(alt.reason)}</p>
+                <p className="text-footnote text-label-2">{prettyProse(alt.reason)}</p>
               </div>
             );
           })}

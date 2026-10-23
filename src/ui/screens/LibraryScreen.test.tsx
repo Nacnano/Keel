@@ -58,6 +58,7 @@ describe('LibraryScreen', () => {
   it('shows the first-run empty state', async () => {
     renderAt();
     expect(await screen.findByText('Your jams, ready to revisit')).toBeInTheDocument();
+    expect(screen.getByText('Finish a jam to see it here.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Start listening' })).toHaveAttribute('href', '/');
     // Dev seed tools stay hidden without ?seed=1.
     expect(screen.queryByRole('button', { name: 'Seed demo session' })).toBeNull();
@@ -78,7 +79,8 @@ describe('LibraryScreen', () => {
       'href',
       '/review/s2',
     );
-    expect(screen.getByTestId('storage-line')).toHaveTextContent(/stored on this device|used/);
+    // The storage readout moved to Settings.
+    expect(screen.queryByTestId('storage-line')).toBeNull();
   });
 
   it('searches by name and key, and filters by tag chips', async () => {
@@ -141,7 +143,7 @@ describe('LibraryScreen', () => {
     expect((await db.sessions.get('s3'))?.name).toBe('Ballad in E');
   });
 
-  it('row menu offers the export actions, and share only when sync is signed in', async () => {
+  it('row menu offers Share and the downloads; no share link without sync', async () => {
     await seed();
     renderAt();
     await screen.findAllByTestId('session-card');
@@ -149,8 +151,8 @@ describe('LibraryScreen', () => {
     const menu = within(screen.getByRole('menu', { name: 'Actions for Evening idea in C' }));
     expect(menu.getAllByRole('menuitem').map((m) => m.textContent)).toEqual([
       'Rename',
-      'Copy chord chart',
-      'Download chart (.txt)',
+      'Share…',
+      'Download .txt',
       'Download JSON',
       'Delete',
     ]);

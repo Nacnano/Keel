@@ -19,6 +19,7 @@ import { db, sessionRange } from './db';
 import { keyName } from './chordSymbol';
 import { computeSummary } from './summary';
 import { computeStats, rangeStart, type Stats, type StatsRange } from './stats';
+import { isRecordingSession } from './sessionRecorder';
 
 export type SessionSort = 'newest' | 'oldest' | 'updated' | 'name' | 'longest';
 
@@ -59,12 +60,34 @@ const SORTERS: Record<SessionSort, (a: Session, b: Session) => number> = {
   longest: (a, b) => b.durationSec - a.durationSec,
 };
 
+/**
+ * Sessions that are not finished yet: the one being recorded in this tab, and stubs left
+ * without an end time and without a single chord (a tab closed while it was silent).
+ * A tab that closed mid-jam with chords keeps its session visible.
+ */
+async function unfinishedIds(rows: readonly Session[]): Promise<Set<string>> {
+  const hidden = new Set<string>();
+  for (const s of rows) {
+    if (s.endedAt !== null) continue;
+    if (isRecordingSession(s.id)) {
+      hidden.add(s.id);
+      continue;
+    }
+    const [lo, hi] = sessionRange(s.id);
+    const chords = await db.chords.where('[sessionId+t]').between(lo, hi, true, true).count();
+    if (chords === 0) hidden.add(s.id);
+  }
+  return hidden;
+}
+
 export async function listSessions(opts: ListSessionsOptions = {}): Promise<Session[]> {
   const rows = opts.tag
     ? await db.sessions.where('tags').equals(opts.tag).toArray()
     : await db.sessions.toArray();
   const terms = (opts.query ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+  const unfinished = await unfinishedIds(rows);
   return rows
+    .filter((s) => !unfinished.has(s.id))
     .filter((s) => opts.includeDeleted || !s.deleted)
     .filter((s) => {
       if (!terms.length) return true;

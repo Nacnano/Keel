@@ -79,7 +79,9 @@ export function Segmented<T extends string | number>({
             onClick={() => onChange(o.value)}
             className={cx(
               'relative z-10 inline-flex items-center justify-center rounded-[7px] font-medium whitespace-nowrap transition-colors duration-150',
-              size === 'md' ? 'h-9 min-w-11 px-3 text-subhead' : 'h-7 min-w-9 px-2.5 text-footnote',
+              // Track = segment + 4 px: 36 px (sm) / 40 px (md) with a mouse, 44 px on touch.
+              size === 'md' ? 'h-9 min-w-11 px-3 text-subhead' : 'h-8 min-w-9 px-2.5 text-footnote',
+              'pointer-coarse:h-10',
               fill && 'flex-1',
               active ? 'text-label' : 'text-label-2 hover:text-label',
             )}

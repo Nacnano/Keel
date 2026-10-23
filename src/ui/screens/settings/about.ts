@@ -5,8 +5,7 @@ export const APP_VERSION = '0.1.0';
 export const JAM_SHORTCUTS: ReadonlyArray<{ keys: readonly string[]; action: string }> = [
   { keys: ['Space'], action: 'Start or stop listening' },
   { keys: ['B'], action: 'Bookmark this moment' },
-  { keys: ['R'], action: 'Clear the timeline' },
-  { keys: ['1', '2', '3'], action: 'Chord detail: triads, 7ths, jazz' },
+  { keys: ['1', '2', '3'], action: 'Chord detail: simple, with 7ths, everything' },
   { keys: ['P'], action: 'Show or hide the keyboard' },
   { keys: ['M'], action: 'Switch listening mode' },
   { keys: ['I'], action: 'Open or close ideas' },

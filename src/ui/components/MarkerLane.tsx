@@ -185,7 +185,7 @@ export function MarkerToolbar({
         title="Bookmark at the playhead (B)"
       >
         Bookmark
-        <kbd className="ml-0.5 rounded-[4px] bg-fill-3 px-1 font-sans text-[10px] text-label-2">
+        <kbd className="ml-0.5 rounded-[4px] bg-fill-3 px-1 font-sans text-[10px] text-label-2 pointer-coarse:hidden">
           B
         </kbd>
       </Button>

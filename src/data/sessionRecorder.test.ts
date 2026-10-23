@@ -113,7 +113,31 @@ describe('sessionRecorder', () => {
     expect(s.durationSec).toBe(10);
     expect((await db.chords.toArray()).map((c) => c.t)).toEqual([2.5]);
     expect((await db.midiTracks.get(h.id))?.events[0].t).toBe(1);
-    expect(s.name).toMatch(/^Jam \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
+    expect(s.name).toBe('Jam'); // no key heard
+  });
+
+  it('names an unnamed session after the key heard longest', async () => {
+    const h = startSession({ ...META, t0: 100, now: () => WALL });
+    await h.ready;
+    expect((await db.sessions.get(h.id))?.name).toBe('Jam');
+    h.onAnalysisEvent({ type: 'key', t: 100, key: A_MINOR_KEY });
+    h.onAnalysisEvent({
+      type: 'key',
+      t: 102,
+      key: { ...C_MAJOR_KEY, tonic: 10, relative: { tonic: 7, mode: 'minor' } },
+    });
+    const s = await h.stop({ endT: 120 });
+    expect(s.name).toBe('Jam in B♭ major');
+    expect((await db.sessions.get(h.id))?.name).toBe('Jam in B♭ major');
+  });
+
+  it('keeps a name the user gave while the session was running', async () => {
+    const h = startSession({ ...META, t0: 100, now: () => WALL });
+    await h.ready;
+    await db.sessions.update(h.id, { name: 'Sunday set' });
+    h.onAnalysisEvent({ type: 'key', t: 100, key: C_MAJOR_KEY });
+    expect((await h.stop({ endT: 110 })).name).toBe('Sunday set');
+    expect((await db.sessions.get(h.id))?.name).toBe('Sunday set');
   });
 
   it('is robust to stop() racing periodic flushes (no loss, no duplicates)', async () => {
@@ -145,6 +169,28 @@ describe('sessionRecorder', () => {
     spy.mockRestore();
     errors.mockRestore();
     expect((await db.chords.toArray()).map((c) => c.t).sort()).toEqual([0, 1]);
+  });
+
+  it('discards a session in which nothing was heard when asked to', async () => {
+    const h = startSession({ ...META, t0: 0, now: () => WALL });
+    await h.ready;
+    h.onAnalysisEvent({ type: 'key', t: 1, key: C_MAJOR_KEY });
+    h.onAnalysisEvent(chordEvent(1, null));
+    h.addMarker('bookmark', undefined, 2);
+    await h.flush();
+    expect(await h.stop({ endT: 10, discardIfEmpty: true })).toBeNull();
+    expect(await db.sessions.count()).toBe(0);
+    expect(await db.keys.count()).toBe(0);
+    expect(await db.chords.count()).toBe(0);
+    expect(await db.markers.count()).toBe(0);
+  });
+
+  it('keeps a session with chords even when discardIfEmpty is set', async () => {
+    const h = startSession({ ...META, t0: 0, now: () => WALL });
+    h.onAnalysisEvent(chordEvent(1, POP_PROGRESSION[0]));
+    const s = await h.stop({ endT: 10, discardIfEmpty: true });
+    expect(s?.summary?.chordCount).toBe(1);
+    expect(await db.sessions.count()).toBe(1);
   });
 
   it('stores the audio take and sets hasAudio', async () => {
