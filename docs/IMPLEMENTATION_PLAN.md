@@ -603,4 +603,4 @@ Report back: what landed, what deviated from the plan and why, open questions fo
 - Confirm `main` as the GitHub default branch (remote currently has no branches; PR 1 will push it).
 - Vercel: connect the GitHub repo to a Vercel project so preview deploys appear on PRs (user action).
 - Supabase project + Google OAuth are needed only in wave 4.
-- App name: "JamKey" was the placeholder; renamed to "Keel" on 2026-10-23 (PR 27). Persisted storage ids (IndexedDB `jamkey`, `jamkey.*` localStorage keys, `jamkey-auth`) keep the old name on purpose.
+- App name: "JamKey" was the placeholder; renamed to "Keel" on 2026-10-23 (PR 29). Persisted storage ids (IndexedDB `jamkey`, `jamkey.*` localStorage keys, `jamkey-auth`) keep the old name on purpose.
