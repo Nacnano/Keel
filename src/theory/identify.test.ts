@@ -46,12 +46,12 @@ describe('identifyChord: ambiguity and slash rules', () => {
   const C6 = [0, 4, 7, 9] as PitchClass[];
 
   it('C6 vs Am7 follows the bass', () => {
-    expect(identifyChord(C6, 0, 2)[0].chord).toEqual({ root: 0, quality: '6' });
+    expect(identifyChord(C6, 0, 3)[0].chord).toEqual({ root: 0, quality: '6' });
     expect(identifyChord(C6, 9, 2)[0].chord).toEqual({ root: 9, quality: 'min7' });
-    // no bass: simpler quality order wins (min7 before 6)
-    expect(identifyChord(C6, null, 2)[0].chord).toEqual({ root: 9, quality: 'min7' });
+    // no bass: lower level and simpler quality order win (min7 before 6)
+    expect(identifyChord(C6, null, 3)[0].chord).toEqual({ root: 9, quality: 'min7' });
     // bass on a tone that roots neither reading: slash chord
-    const e = identifyChord(C6, 4, 2)[0].chord;
+    const e = identifyChord(C6, 4, 3)[0].chord;
     expect(e.bass).toBe(4);
   });
 
@@ -74,8 +74,8 @@ describe('identifyChord: ambiguity and slash rules', () => {
   });
 
   it('a bass outside the chord is not reported as a slash', () => {
-    // C E G over D -> Cadd9/D (exact) at level 2: the 9 is a chord tone
-    expect(identifyChord([0, 4, 7], 2, 2)[0].chord).toEqual({ root: 0, quality: 'add9', bass: 2 });
+    // C E G over D -> Cadd9/D (exact) at level 3: the 9 is a chord tone
+    expect(identifyChord([0, 4, 7], 2, 3)[0].chord).toEqual({ root: 0, quality: 'add9', bass: 2 });
     // at level 1 the best partial match keeps no bogus slash
     const top = identifyChord([0, 4, 7], 2, 1)[0];
     expect(top.score).toBeLessThan(1);
@@ -85,11 +85,14 @@ describe('identifyChord: ambiguity and slash rules', () => {
 
 describe('identifyChord: dyads and single notes', () => {
   it('perfect fifth -> power chord; other dyads and single notes -> empty', () => {
-    expect(identifyChord([0, 7], 0, 1)).toEqual([{ chord: { root: 0, quality: '5' }, score: 1 }]);
+    expect(identifyChord([0, 7], 0, 3)).toEqual([{ chord: { root: 0, quality: '5' }, score: 1 }]);
+    // '5' is a level-3 name: below it a bare fifth is no chord
+    expect(identifyChord([0, 7], 0, 1)).toEqual([]);
+    expect(identifyChord([0, 7], 0, 2)).toEqual([]);
     expect(identifyChord([0, 7], 7, 3)).toEqual([
       { chord: { root: 0, quality: '5', bass: 7 }, score: 1 },
     ]);
-    expect(identifyChord([2, 9], null, 2)).toEqual([
+    expect(identifyChord([2, 9], null, 3)).toEqual([
       { chord: { root: 2, quality: '5' }, score: 1 },
     ]);
     expect(identifyChord([0, 4], 0, 3)).toEqual([]);
@@ -98,7 +101,7 @@ describe('identifyChord: dyads and single notes', () => {
     expect(identifyChord([5], 5, 3)).toEqual([]);
     expect(identifyChord([], null, 3)).toEqual([]);
     // duplicates collapse
-    expect(identifyChord([0, 0, 7, 7], 0, 1)[0].chord).toEqual({ root: 0, quality: '5' });
+    expect(identifyChord([0, 0, 7, 7], 0, 3)[0].chord).toEqual({ root: 0, quality: '5' });
   });
 });
 

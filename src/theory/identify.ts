@@ -33,7 +33,8 @@ interface Ranked extends ChordCandidate {
  *   earlier quality in `QUALITY_ORDER`, lower root;
  * - a bass that is a chord tone but not the root makes a slash chord (C/E);
  * - a single note, or a dyad other than a perfect fifth / fourth, gives `[]`;
- *   a perfect-fifth dyad gives only the power chord ('5').
+ *   a perfect-fifth dyad gives only the power chord ('5'), at level 3 (where '5' is in the
+ *   vocabulary; below it a bare fifth names no chord).
  */
 export function identifyChord(
   pcs: readonly PitchClass[],
@@ -51,7 +52,7 @@ export function identifyChord(
   if (count === 2) {
     const [a, b] = set;
     const up = mod12(b - a);
-    if (up !== 7 && up !== 5) return [];
+    if ((up !== 7 && up !== 5) || CHORD_TEMPLATES['5'].level > level) return [];
     const root = up === 7 ? a : b;
     const chord: Chord = { root, quality: '5' };
     if (bass !== null && bass !== root) chord.bass = bass;

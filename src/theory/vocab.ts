@@ -68,26 +68,26 @@ function tpl(level: VocabLevel, symbol: string, ...tones: Tone[]): ChordTemplate
  * exactly, so swapping analysis over to this table does not change its templates.
  */
 export const CHORD_TEMPLATES: Readonly<Record<ChordQuality, ChordTemplate>> = {
-  // level 1
-  '5': tpl(1, '5', R, P5),
+  // level 1: major, minor and diminished triads
   maj: tpl(1, '', R, M3, P5),
   min: tpl(1, 'm', R, m3, P5),
   dim: tpl(1, 'dim', R, m3, d5),
-  aug: tpl(1, 'aug', R, M3, A5),
-  sus2: tpl(1, 'sus2', R, s2, P5),
-  sus4: tpl(1, 'sus4', R, s4, P5),
-  // level 2
+  // level 2: + the five seventh chords and sus4
   maj7: tpl(2, 'maj7', R, M3, P5, M7),
   min7: tpl(2, 'm7', R, m3, P5, m7),
   '7': tpl(2, '7', R, M3, P5, m7),
   dim7: tpl(2, 'dim7', R, m3, d5, M6),
   m7b5: tpl(2, 'm7b5', R, m3, d5, m7),
-  mMaj7: tpl(2, 'm(maj7)', R, m3, P5, M7),
-  '6': tpl(2, '6', R, M3, P5, M6),
-  m6: tpl(2, 'm6', R, m3, P5, M6),
-  add9: tpl(2, 'add9', R, M3, P5, e9),
-  madd9: tpl(2, 'm(add9)', R, m3, P5, e9),
-  // level 3
+  sus4: tpl(2, 'sus4', R, s4, P5),
+  // level 3: everything else
+  '5': tpl(3, '5', R, P5),
+  aug: tpl(3, 'aug', R, M3, A5),
+  sus2: tpl(3, 'sus2', R, s2, P5),
+  mMaj7: tpl(3, 'm(maj7)', R, m3, P5, M7),
+  '6': tpl(3, '6', R, M3, P5, M6),
+  m6: tpl(3, 'm6', R, m3, P5, M6),
+  add9: tpl(3, 'add9', R, M3, P5, e9),
+  madd9: tpl(3, 'm(add9)', R, m3, P5, e9),
   '9': tpl(3, '9', R, M3, P5, m7, e9),
   maj9: tpl(3, 'maj9', R, M3, P5, M7, e9),
   min9: tpl(3, 'm9', R, m3, P5, m7, e9),
@@ -113,18 +113,18 @@ export const CHORD_TEMPLATES: Readonly<Record<ChordQuality, ChordTemplate>> = {
  * Spelled out because `Object.keys` would hoist integer-like keys ('5', '7', '9', ...).
  */
 export const QUALITY_ORDER: readonly ChordQuality[] = [
-  '5',
   'maj',
   'min',
   'dim',
-  'aug',
-  'sus2',
-  'sus4',
   'maj7',
   'min7',
   '7',
   'dim7',
   'm7b5',
+  'sus4',
+  '5',
+  'aug',
+  'sus2',
   'mMaj7',
   '6',
   'm6',

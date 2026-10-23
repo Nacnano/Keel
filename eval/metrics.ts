@@ -63,20 +63,24 @@ const LEVEL2_FALLBACK: Partial<Record<ChordQuality, ChordQuality>> = {
   min9: 'min7',
   min11: 'min7',
   min13: 'min7',
-  '6/9': '6',
+  '6/9': 'maj',
+  '6': 'maj',
+  add9: 'maj',
+  m6: 'min',
+  madd9: 'min',
+  mMaj7: 'min',
+  aug: 'maj',
+  sus2: 'maj',
+  '5': 'maj',
 };
 
 const LEVEL1_FALLBACK: Partial<Record<ChordQuality, ChordQuality>> = {
   maj7: 'maj',
   '7': 'maj',
-  '6': 'maj',
-  add9: 'maj',
   min7: 'min',
-  m6: 'min',
-  madd9: 'min',
-  mMaj7: 'min',
   m7b5: 'dim',
   dim7: 'dim',
+  sus4: 'maj',
 };
 
 /** The written quality as it can be named at `level` (Gm9 → Gm7 at level 2). */
