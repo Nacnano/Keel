@@ -1,4 +1,4 @@
-# JamKey — technical implementation plan
+# Keel — technical implementation plan
 
 Status: **executed** (2026-10-22). All waves landed as PRs 2–18; see `PR_LOG.md`. Kept as the record of contracts and ownership. Companion to [`../DESIGN.md`](../DESIGN.md).
 This plan is written so that several coding agents can work in parallel. Every
@@ -554,7 +554,7 @@ workstream adds a dependency — list it in the PR description).
 ## 6. Subagent briefing template
 
 ```
-You are the <WS-X> agent on the JamKey repo (branch feat/<x> from main).
+You are the <WS-X> agent on the Keel repo (branch feat/<x> from main).
 Read first: DESIGN.md, docs/IMPLEMENTATION_PLAN.md §2 (contracts) and §3 <WS-X>, docs/ARCHITECTURE.md, src/core/*.
 You own ONLY: <folders>. Do not edit src/core (propose changes in your PR description instead) or other workstreams' folders.
 Build against the contracts verbatim. Use src/core/mocks.ts and src/core/testing/* for tests and demos.
@@ -603,4 +603,4 @@ Report back: what landed, what deviated from the plan and why, open questions fo
 - Confirm `main` as the GitHub default branch (remote currently has no branches; PR 1 will push it).
 - Vercel: connect the GitHub repo to a Vercel project so preview deploys appear on PRs (user action).
 - Supabase project + Google OAuth are needed only in wave 4.
-- App name "JamKey" is a placeholder; rename any time before PR 1.
+- App name: "JamKey" was the placeholder; renamed to "Keel" on 2026-10-23 (PR 27). Persisted storage ids (IndexedDB `jamkey`, `jamkey.*` localStorage keys, `jamkey-auth`) keep the old name on purpose.

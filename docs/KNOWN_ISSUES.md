@@ -46,4 +46,4 @@ See the first-run checklist in `README.md`.
 
 ## Custom domain
 
-Resolved 2026-10-23: the DNS-only CNAME `music` → `f207e94ba4b78857.vercel-dns-017.com` was added in Cloudflare and `music.nacnano.dev` serves production. `keel.vercel.app` remains as a fallback. Wrangler is not logged in on the dev machine; DNS changes go through the Cloudflare dashboard.
+Resolved 2026-10-23: the DNS-only CNAME `music` → `f207e94ba4b78857.vercel-dns-017.com` was added in Cloudflare and `music.nacnano.dev` serves production. `keel-music.vercel.app` remains as a fallback (`keel.vercel.app` is taken by another Vercel account); the old `jamkey.vercel.app` now redirects to production. Wrangler is not logged in on the dev machine; DNS changes go through the Cloudflare dashboard.

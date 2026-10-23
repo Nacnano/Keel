@@ -1,5 +1,5 @@
 ---
-name: JamKey
+name: Keel
 description: A calm listening utility for live chord and key recognition.
 colors:
   bg: '#fbfbfd'
@@ -286,13 +286,13 @@ latency-free. The mic pipeline stays as fallback for acoustic piano and guitar.
 
 Detailed engineering plan, contracts, and PR breakdown: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
 
-# Design System: JamKey
+# Design System: Keel
 
 ## Overview
 
 **Creative North Star: "Apple recording utility"**
 
-JamKey follows the user-pinned Voice Memos / GarageBand utility direction: modern, calm and uncomplicated. Native system typography, semantic light/dark surfaces, grouped controls and restrained blue actions support use at a piano bench. These are interface references, with no Apple affiliation implied.
+Keel follows the user-pinned Voice Memos / GarageBand utility direction: modern, calm and uncomplicated. Native system typography, semantic light/dark surfaces, grouped controls and restrained blue actions support use at a piano bench. These are interface references, with no Apple affiliation implied.
 
 The shipped system gives the current task room, uses readable secondary labels, and moves infrequent controls into deliberate sheets. Chord recognition is presented as an estimate with explicit strength labels; screenshots and the demo establish interface behavior, not real-instrument accuracy.
 
