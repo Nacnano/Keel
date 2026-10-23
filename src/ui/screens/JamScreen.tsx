@@ -297,7 +297,7 @@ export function JamScreen() {
                     ? 'Your jam couldn’t be saved.'
                     : input.saved
                       ? 'Your jam is saved.'
-                      : 'Session finished.'}
+                      : 'Nothing was heard.'}
             </h2>
             {!input.saving && (
               <p
@@ -309,7 +309,7 @@ export function JamScreen() {
                   : (input.saveError ??
                     (input.saved
                       ? `“${input.saved.name}” is in your Library.`
-                      : 'Start a new jam whenever you’re ready.'))}
+                      : 'Nothing was saved. Move closer to your instrument and try again.'))}
               </p>
             )}
             {!input.saving && (
