@@ -114,6 +114,46 @@ export function sameChord(a: Chord | null | undefined, b: Chord | null | undefin
   return a.root === b.root && a.quality === b.quality && (a.bass ?? a.root) === (b.bass ?? b.root);
 }
 
+/**
+ * The quality with its added tones dropped (add9, 6, 9, 11, 13 and altered tones): the triad or
+ * seventh chord a player would name. Cadd9 / C6 / C6/9 → maj, Fm9 → min7, G13 / G7♭9 → 7.
+ */
+const FAMILY: Partial<Record<ChordQuality, ChordQuality>> = {
+  add9: 'maj',
+  '6': 'maj',
+  '6/9': 'maj',
+  madd9: 'min',
+  m6: 'min',
+  maj9: 'maj7',
+  maj13: 'maj7',
+  'maj7#11': 'maj7',
+  min9: 'min7',
+  min11: 'min7',
+  min13: 'min7',
+  '9': '7',
+  '11': '7',
+  '13': '7',
+  '7b9': '7',
+  '7#9': '7',
+  '7#11': '7',
+  '7b13': '7',
+  '7alt': '7',
+  '9sus4': '7sus4',
+};
+
+export function chordFamily(quality: ChordQuality): ChordQuality {
+  return FAMILY[quality] ?? quality;
+}
+
+/**
+ * Same root and quality family; the bass and added tones are ignored, so C, Cadd9, C6 and
+ * Cadd9/G are one chord. Use this to decide whether the harmony actually changed.
+ */
+export function sameChordFamily(a: Chord | null | undefined, b: Chord | null | undefined): boolean {
+  if (!a || !b) return !a && !b;
+  return a.root === b.root && chordFamily(a.quality) === chordFamily(b.quality);
+}
+
 /** Extra spellings accepted by `parseChord` on top of each template's own symbol. */
 const SUFFIX_ALIASES: Record<string, ChordQuality> = {
   M: 'maj',

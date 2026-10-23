@@ -5,6 +5,7 @@ export {
   keyName as keyLabel,
   prettyAccidentals as pretty,
   sameChord,
+  sameChordFamily,
   sameKey,
   spell as noteName,
 } from '@/theory';

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { Key } from '@/core';
-import { chordSymbol, chordTones, keyLabel, pretty } from './chordLabel';
+import type { Chord } from '@/core';
+import {
+  chordSymbol,
+  chordTones,
+  keyLabel,
+  pretty,
+  sameChord,
+  sameChordFamily,
+} from './chordLabel';
 import { compressRepeats } from './compress';
 import { romanNumeral } from './numeral';
 import { suggestNext } from './suggest';
@@ -50,6 +58,25 @@ describe('compressRepeats', () => {
       ['G D Em C', 3, 1],
       ['G', 1, 13],
     ]);
+  });
+  it('folds bass and added-tone changes into one chord with the family equality', () => {
+    const C: Chord = { root: 0, quality: 'maj' };
+    const Cadd9: Chord = { root: 0, quality: 'add9' };
+    const CG: Chord = { root: 0, quality: 'add9', bass: 7 };
+    const G: Chord = { root: 7, quality: '7' };
+    const G13: Chord = { root: 7, quality: '13' };
+    expect(compressRepeats([Cadd9, C, Cadd9, C], sameChordFamily)).toEqual([
+      { items: [Cadd9], repeat: 1, start: 0 },
+    ]);
+    expect(compressRepeats([C, CG, G, G13, Cadd9, G], sameChordFamily)).toEqual([
+      { items: [C, G], repeat: 2, start: 0 },
+    ]);
+    expect(sameChord(C, Cadd9)).toBe(false);
+    expect(sameChordFamily(C, { root: 0, quality: '7' })).toBe(false);
+    expect(sameChordFamily(C, { root: 0, quality: 'maj7' })).toBe(false);
+    expect(sameChordFamily({ root: 2, quality: 'min9' }, { root: 2, quality: 'min7' })).toBe(true);
+    expect(sameChordFamily(null, null)).toBe(true);
+    expect(sameChordFamily(C, null)).toBe(false);
   });
   it('C F G C F G -> [C F G] x2', () => {
     expect(compressRepeats('C F G C F G'.split(' '), eq)).toEqual([

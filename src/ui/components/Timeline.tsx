@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import type { Chord, ChordRecord, Key, Marker } from '@/core';
-import { chordSymbol, keyLabel, pretty, sameChord } from '../lib/chordLabel';
+import { chordSymbol, keyLabel, pretty, sameChordFamily } from '../lib/chordLabel';
 import { compressRepeats } from '../lib/compress';
 import type { Segment } from '../lib/compress';
 import { romanNumeral } from '../lib/numeral';
@@ -28,7 +28,8 @@ type Entry =
   | { type: 'marker'; t: number; marker: Marker }
   | { type: 'chords'; key: Key | null; segments: Segment<ChordRecord>[]; last: boolean };
 
-const eqRecord = (a: ChordRecord, b: ChordRecord) => sameChord(a.chord, b.chord);
+/** Same root and quality family: a bass or added-tone change is not a new chord. */
+const eqRecord = (a: ChordRecord, b: ChordRecord) => sameChordFamily(a.chord, b.chord);
 
 /** Split the chord list at key changes and markers, then compress repeats inside each run. */
 function buildEntries(
