@@ -8,7 +8,6 @@ import { ExportMenu } from '../library/ExportMenu';
 import { SettingsScreen } from '../SettingsScreen';
 import { SyncPill } from '../../components/SyncPill';
 import { formatAgo, syncLabel } from '../../lib/syncLabel';
-import { SUPABASE_SETUP_URL } from './AccountSync';
 
 vi.mock('@supabase/supabase-js', () => import('@/sync/testing/mockSupabase'));
 
@@ -30,16 +29,12 @@ afterEach(() => {
 });
 
 describe('Settings → Account & sync', () => {
-  it('explains the unconfigured state when the env vars are missing', () => {
+  it('hides the group, and any developer setup text, when sync is not configured', () => {
     disableSyncEnv();
     syncStore.setState(initialSyncState());
     renderSettings();
-    expect(screen.getByRole('heading', { name: 'Account & sync' })).toBeInTheDocument();
-    expect(screen.getByTestId('sync-unconfigured')).toHaveTextContent('Sync is not configured');
-    expect(screen.getByRole('link', { name: 'supabase/README.md' })).toHaveAttribute(
-      'href',
-      SUPABASE_SETUP_URL,
-    );
+    expect(screen.queryByRole('heading', { name: 'Account & sync' })).toBeNull();
+    expect(screen.queryByText(/supabase/i)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Sign in with Google' })).toBeNull();
   });
 
@@ -97,7 +92,7 @@ describe('sync status pill', () => {
     expect(formatAgo(now - 3 * 3_600_000, now)).toBe('3 h ago');
   });
 
-  it('renders as a link to settings', () => {
+  it('renders nothing when sync is not configured', () => {
     disableSyncEnv();
     syncStore.setState(initialSyncState());
     render(
@@ -105,8 +100,19 @@ describe('sync status pill', () => {
         <SyncPill />
       </MemoryRouter>,
     );
+    expect(screen.queryByTestId('sync-pill')).toBeNull();
+  });
+
+  it('renders as a link to settings when configured', () => {
+    enableSyncEnv();
+    syncStore.setState(initialSyncState());
+    render(
+      <MemoryRouter>
+        <SyncPill />
+      </MemoryRouter>,
+    );
     const pill = screen.getByTestId('sync-pill');
-    expect(pill).toHaveTextContent('Local only');
+    expect(pill).toHaveTextContent('Sync off');
     expect(pill).toHaveAttribute('href', '/settings');
   });
 });

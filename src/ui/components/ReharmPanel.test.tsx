@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import type { Chord, Key } from '@/core';
 import { parseChord } from '@/theory';
 import { ReharmPanel, type ReharmSource } from './ReharmPanel';
-import { playProgression, progressionText } from './ReharmPanel.logic';
+import { playProgression, prettyProse, progressionText } from './ReharmPanel.logic';
 
 afterEach(() => {
   cleanup();
@@ -115,5 +115,19 @@ describe('helpers', () => {
     expect(done).not.toHaveBeenCalled();
     vi.advanceTimersByTime(100);
     expect(done).toHaveBeenCalled();
+  });
+});
+
+describe('prettyProse', () => {
+  it('only converts accidentals inside notes, chord symbols and numerals', () => {
+    expect(prettyProse('iv: borrowed from C minor, bittersweet')).toBe(
+      'iv: borrowed from C minor, bittersweet',
+    );
+    expect(prettyProse('bVII: from the parallel minor, an obvious lift')).toBe(
+      '♭VII: from the parallel minor, an obvious lift',
+    );
+    expect(prettyProse('Bb major (Db7 as V7/IV), F#m7b5 is about tension')).toBe(
+      'B♭ major (D♭7 as V7/IV), F♯m7♭5 is about tension',
+    );
   });
 });

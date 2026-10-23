@@ -8,8 +8,6 @@ import { cx } from '../../lib/cx';
 import { formatAgo, syncLabel, useNow } from '../../lib/syncLabel';
 import { toast } from '../../components/toastStore';
 
-export const SUPABASE_SETUP_URL = 'https://github.com/Nacnano/music/blob/main/supabase/README.md';
-
 const TITLE = 'Account & sync';
 
 const errMsg = (err: unknown) => (err instanceof Error ? err.message : String(err));
@@ -29,30 +27,8 @@ export function AccountSync() {
   const now = useNow();
   const [busy, setBusy] = useState(false);
 
-  if (!s.configured) {
-    return (
-      <Group
-        title={TITLE}
-        footer={
-          <span data-testid="sync-unconfigured">
-            Sync is not configured. Sessions are saved on this device only; cloud sync, Google
-            sign-in and share links need a Supabase project, set up as described in{' '}
-            <a
-              href={SUPABASE_SETUP_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="text-accent hover:underline"
-            >
-              supabase/README.md
-            </a>
-            .
-          </span>
-        }
-      >
-        <Row label="Cloud sync" accessory="Not set up" />
-      </Group>
-    );
-  }
+  // Settings hides the group when sync is not configured; nothing to show here either.
+  if (!s.configured) return null;
 
   if (!s.user) {
     return (

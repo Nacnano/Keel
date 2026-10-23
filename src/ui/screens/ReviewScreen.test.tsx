@@ -112,7 +112,7 @@ describe('ReviewScreen', () => {
     // Session vocab level 2: sevenths yes, extensions no (until the level is raised).
     expect(d.queryByRole('radio', { name: 'maj7' })).not.toBeNull();
     expect(d.queryByRole('radio', { name: '13' })).toBeNull();
-    fireEvent.click(d.getByRole('radio', { name: 'Extensions and alterations' }));
+    fireEvent.click(d.getByRole('radio', { name: 'Everything: extensions and alterations' }));
     expect(d.getByRole('radio', { name: '13' })).toBeInTheDocument();
     fireEvent.click(d.getByRole('button', { name: 'No chord' }));
     fireEvent.click(d.getByRole('button', { name: 'Save chord' }));

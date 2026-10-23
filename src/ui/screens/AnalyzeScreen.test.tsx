@@ -123,11 +123,11 @@ describe('AnalyzeScreen', () => {
     expect(screen.getByTestId('analyze-now')).toHaveTextContent('G');
   });
 
-  it('re-analyses (without decoding again) when the vocabulary level changes', async () => {
+  it('analyzes again (without decoding again) when the vocabulary level changes', async () => {
     renderScreen();
     drop(song());
     await screen.findByTestId('analyze-result');
-    fireEvent.click(screen.getByRole('radio', { name: 'Jazz' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Everything' }));
     await waitFor(() =>
       expect(analyse).toHaveBeenLastCalledWith(
         expect.any(Float32Array),
@@ -154,8 +154,8 @@ describe('AnalyzeScreen', () => {
       const title = kind === 'unsupported' ? 'That is not an audio file' : 'Live set.wav is 80 MB';
       expect(await screen.findByRole('alert')).toHaveTextContent(title);
 
-      fireEvent.click(screen.getByRole('radio', { name: 'Jazz' }));
-      fireEvent.click(screen.getByRole('radio', { name: 'Solo' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Everything' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'Just me' }));
       expect(screen.getByRole('alert')).toHaveTextContent(title);
       expect(screen.queryByTestId('analyze-result')).not.toBeInTheDocument();
       expect(analyse).toHaveBeenCalledTimes(1);
@@ -176,8 +176,8 @@ describe('AnalyzeScreen', () => {
     expect(
       await screen.findByRole('progressbar', { name: 'Decoding progress' }),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('radio', { name: 'Jazz' }));
-    fireEvent.click(screen.getByRole('radio', { name: 'Solo' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Everything' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Just me' }));
     await act(async () => {
       finishDecode({ samples: new Float32Array(16), sampleRate: 44100, durationSec: 17 });
     });
@@ -200,11 +200,11 @@ describe('AnalyzeScreen', () => {
     );
     renderScreen();
     drop(song());
-    expect(await screen.findByRole('progressbar', { name: 'Analysing progress' })).toHaveAttribute(
+    expect(await screen.findByRole('progressbar', { name: 'Analyzing progress' })).toHaveAttribute(
       'aria-valuenow',
       '40',
     );
-    expect(screen.getByRole('status')).toHaveTextContent('Analysing Let It Be.mp3 · 40%');
+    expect(screen.getByRole('status')).toHaveTextContent('Analyzing Let It Be.mp3 · 40%');
     await act(async () => finish());
     expect(await screen.findByTestId('analyze-result')).toBeInTheDocument();
   });

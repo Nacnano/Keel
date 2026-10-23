@@ -13,6 +13,7 @@ import type { Playback, Tempo } from './train/playback';
 import { useTrainStorage } from './train/stats';
 import type { DrillId, TrainPrefs } from './train/stats';
 import type { DrillProps } from './train/parts';
+import { LEVEL_OPTIONS } from './settings/labels';
 
 const DRILL_OPTIONS = [
   { value: 'quality' as const, label: 'Chords', title: 'Chord quality' },
@@ -40,12 +41,6 @@ const TEMPO_OPTIONS = [
   { value: 'slow' as const, label: 'Slow', title: `${TEMPO_BPM.slow} bpm` },
   { value: 'medium' as const, label: 'Medium', title: `${TEMPO_BPM.medium} bpm` },
   { value: 'fast' as const, label: 'Fast', title: `${TEMPO_BPM.fast} bpm` },
-];
-
-const LEVEL_OPTIONS = [
-  { value: 1 as const, label: 'Triads' },
-  { value: 2 as const, label: '7ths' },
-  { value: 3 as const, label: 'Jazz' },
 ];
 
 interface TrainOptionsProps {

@@ -1,13 +1,22 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Instrument, JamMode, Settings, VocabLevel } from '@/core';
 import { liveInput } from '@/app/live/liveInput';
+import { storageEstimate, type StorageInfo } from '@/data';
 import { useInputStore } from '@/state/inputStore';
 import { selectSettings, useSettings } from '@/state/settingsStore';
+import { useSync } from '@/sync/store';
 import { toast } from '../components/toastStore';
+import { useMediaQuery } from '../lib/useMediaQuery';
 import { Button, Group, PageHeader, Row, Segmented, Select, Sheet, Slider, Switch } from '../kit';
 import { APP_VERSION, JAM_SHORTCUTS } from './settings/about';
 import { AccountSync } from './settings/AccountSync';
+import {
+  LEVEL_OPTIONS,
+  MODE_OPTIONS,
+  SENSITIVITY_MAX_LABEL,
+  SENSITIVITY_MIN_LABEL,
+} from './settings/labels';
 
 export const A4_MIN = 415;
 export const A4_MAX = 466;
@@ -17,16 +26,40 @@ const INSTRUMENTS = [
   { value: 'guitar' as const, label: 'Guitar' },
 ];
 
-const MODES = [
-  { value: 'solo' as const, label: 'Just me' },
-  { value: 'room' as const, label: 'Room' },
-];
+export function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let v = n / 1024;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${units[i]}`;
+}
 
-const LEVELS = [
-  { value: 1 as const, label: 'Triads' },
-  { value: 2 as const, label: '7ths' },
-  { value: 3 as const, label: 'Jazz' },
-];
+/** "402 KB used of 10 GB on this device". */
+export function storageLine(info: StorageInfo): string {
+  if (!info.exact) return `About ${formatBytes(info.usage)} of audio on this device`;
+  return info.quota
+    ? `${formatBytes(info.usage)} used of ${formatBytes(info.quota)} on this device`
+    : `${formatBytes(info.usage)} used on this device`;
+}
+
+function useStorageInfo(): StorageInfo | null {
+  const [info, setInfo] = useState<StorageInfo | null>(null);
+  useEffect(() => {
+    let alive = true;
+    storageEstimate().then(
+      (i) => alive && setInfo(i),
+      () => alive && setInfo(null),
+    );
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return info;
+}
 
 const THEMES = [
   { value: 'system' as const, label: 'System' },
@@ -137,6 +170,9 @@ export function SettingsScreen() {
   const [shortcuts, setShortcuts] = useState(false);
   const [findingDevices, setFindingDevices] = useState(false);
   const [deviceMessage, setDeviceMessage] = useState<string | null>(null);
+  const syncConfigured = useSync((s) => s.configured);
+  const touch = useMediaQuery('(pointer: coarse)');
+  const storage = useStorageInfo();
 
   const findDevices = async () => {
     setFindingDevices(true);
@@ -197,8 +233,6 @@ export function SettingsScreen() {
           : 'Exact and instant; the microphone stays as a fallback.';
   const sensitivityWord =
     settings.sensitivity < 0.34 ? 'Low' : settings.sensitivity > 0.66 ? 'High' : 'Medium';
-  const stabilityWord =
-    settings.stability < 0.34 ? 'Snappy' : settings.stability > 0.66 ? 'Very stable' : 'Balanced';
 
   return (
     <div className="h-full overflow-y-auto">
@@ -274,14 +308,17 @@ export function SettingsScreen() {
                   step={0.05}
                   value={settings.sensitivity}
                   onChange={(v) => set('sensitivity', v)}
-                  minLabel="Ignores room noise"
-                  maxLabel="Hears soft playing"
+                  minLabel={SENSITIVITY_MIN_LABEL}
+                  maxLabel={SENSITIVITY_MAX_LABEL}
                 />
               }
             />
           </Group>
 
-          <Group title="Listening" footer="Room follows a band or a song playing nearby.">
+          <Group
+            title="Listening"
+            footer="Choose With a band when other instruments or a recording are playing."
+          >
             <Row
               label="Instrument"
               accessory={
@@ -295,12 +332,12 @@ export function SettingsScreen() {
               }
             />
             <Row
-              label="Mode"
+              label="Listening mode"
               accessory={
                 <Segmented<JamMode>
                   size="sm"
                   aria-label="Listening mode"
-                  options={MODES}
+                  options={MODE_OPTIONS}
                   value={settings.mode}
                   onChange={(v) => set('mode', v)}
                 />
@@ -326,20 +363,9 @@ export function SettingsScreen() {
                 <Segmented<VocabLevel>
                   size="sm"
                   aria-label="Chord detail"
-                  options={LEVELS}
+                  options={LEVEL_OPTIONS}
                   value={settings.vocabLevel}
                   onChange={(v) => set('vocabLevel', v)}
-                />
-              }
-            />
-            <Row
-              label="Show slash chords"
-              detail="C/E instead of C when E is in the bass."
-              accessory={
-                <Switch
-                  aria-label="Show slash chords"
-                  checked={settings.showSlashChords}
-                  onChange={(v) => set('showSlashChords', v)}
                 />
               }
             />
@@ -351,28 +377,6 @@ export function SettingsScreen() {
                   aria-label="Spell notes for the key"
                   checked={settings.spellingFollowsKey}
                   onChange={(v) => set('spellingFollowsKey', v)}
-                />
-              }
-            />
-            <Row
-              stacked
-              label={
-                <span className="flex items-baseline justify-between gap-3">
-                  <span>Stability</span>
-                  <span className="text-subhead text-label-2">{stabilityWord}</span>
-                </span>
-              }
-              accessory={
-                <Slider
-                  aria-label="Chord stability"
-                  aria-valuetext={`${stabilityWord} (${Math.round(settings.stability * 100)}%)`}
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={settings.stability}
-                  onChange={(v) => set('stability', v)}
-                  minLabel="Follows every change"
-                  maxLabel="Ignores passing notes"
                 />
               }
             />
@@ -396,11 +400,13 @@ export function SettingsScreen() {
             />
           </Group>
 
-          <AccountSync />
+          {syncConfigured && <AccountSync />}
 
           <Group title="About">
             <Row label="Version" accessory={<span className="tabular">{APP_VERSION}</span>} />
-            <Row label="Keyboard shortcuts" chevron onClick={() => setShortcuts(true)} />
+            {!touch && (
+              <Row label="Keyboard shortcuts" chevron onClick={() => setShortcuts(true)} />
+            )}
           </Group>
 
           <Group footer="Saved sessions are not affected.">
@@ -409,6 +415,10 @@ export function SettingsScreen() {
               onClick={() => setConfirmReset(true)}
             />
           </Group>
+
+          <p data-testid="storage-line" className="px-4 text-center text-footnote text-label-3">
+            {storage ? storageLine(storage) : '\u00a0'}
+          </p>
         </div>
       </div>
 

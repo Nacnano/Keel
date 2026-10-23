@@ -18,8 +18,8 @@ const tools = [
   },
   {
     to: '/stats',
-    title: 'Practice history',
-    description: 'Look back at your playing time and the keys you explore.',
+    title: 'Stats',
+    description: 'Your playing time, streaks and the keys you play most.',
     icon: ChartNoAxesColumn,
   },
 ];

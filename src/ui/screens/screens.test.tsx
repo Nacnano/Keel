@@ -245,8 +245,11 @@ describe('SettingsScreen', () => {
 
   it('edits settings and validates A4', () => {
     render(<SettingsScreen />);
-    fireEvent.click(screen.getByRole('switch', { name: 'Show slash chords' }));
-    expect(settingsStore.getState().showSlashChords).toBe(false);
+    // Slash chords and stability follow the listening mode; Settings does not expose them.
+    expect(screen.queryByRole('switch', { name: 'Show slash chords' })).toBeNull();
+    expect(screen.queryByRole('slider', { name: 'Chord stability' })).toBeNull();
+    fireEvent.click(screen.getByRole('radio', { name: 'With 7ths' }));
+    expect(settingsStore.getState().vocabLevel).toBe(2);
 
     const a4 = screen.getByLabelText('Reference pitch (A4)');
     fireEvent.change(a4, { target: { value: '500' } });
@@ -257,7 +260,7 @@ describe('SettingsScreen', () => {
     fireEvent.blur(a4);
     expect(settingsStore.getState().a4).toBe(442);
 
-    fireEvent.click(screen.getByRole('radio', { name: /Room/ }));
+    fireEvent.click(screen.getByRole('radio', { name: 'With a band' }));
     expect(settingsStore.getState().mode).toBe('room');
     expect(screen.getByLabelText('MIDI device')).toBeDisabled();
 
@@ -276,7 +279,7 @@ describe('SettingsScreen', () => {
     expect(screen.getByText(APP_VERSION)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Keyboard shortcuts' }));
     const sheet = screen.getByRole('dialog', { name: 'Keyboard shortcuts' });
-    expect(within(sheet).getAllByRole('listitem')).toHaveLength(11);
+    expect(within(sheet).getAllByRole('listitem')).toHaveLength(10);
     expect(sheet).toHaveTextContent('Space');
   });
 

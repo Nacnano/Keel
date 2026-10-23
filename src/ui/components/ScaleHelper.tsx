@@ -15,6 +15,7 @@ import type { ScaleId, ScaleSuggestion } from '@/theory';
 import { Badge } from '../kit';
 import { cx } from '../lib/cx';
 import { Piano } from './Piano';
+import { prettyProse } from './ReharmPanel.logic';
 
 /** Scales listed before "more…". */
 export const SCALE_CHIPS_COLLAPSED = 4;
@@ -59,7 +60,7 @@ function ScaleRow({
   active: boolean;
   onPick(id: ScaleId): void;
 }) {
-  const reason = prettyAccidentals(s.reason);
+  const reason = prettyProse(s.reason);
   return (
     <button
       type="button"

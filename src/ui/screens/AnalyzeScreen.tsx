@@ -27,6 +27,7 @@ import { audioMimeType, formatBytes, isSupportedAudio, LARGE_FILE_BYTES } from '
 import { useAudioTime } from './analyze/useAudioTime';
 import { copyChart } from './library/exportActions';
 import { clockLabel } from './review/timeline';
+import { LEVEL_OPTIONS, MODE_OPTIONS } from './settings/labels';
 
 type Phase =
   | { kind: 'idle' }
@@ -229,17 +230,6 @@ export function AnalyzeScreen() {
   );
 }
 
-const LEVELS = [
-  { value: 1 as const, label: 'Triads' },
-  { value: 2 as const, label: '7ths' },
-  { value: 3 as const, label: 'Jazz' },
-];
-
-const MODES = [
-  { value: 'solo' as const, label: 'Solo' },
-  { value: 'room' as const, label: 'Room' },
-];
-
 function AnalyzeOptions({
   level,
   mode,
@@ -254,7 +244,7 @@ function AnalyzeOptions({
   return (
     <Group
       title="Options"
-      footer="Room suits a full mix with vocals; Solo suits a single instrument. Changing either re-analyses the file."
+      footer="With a band suits a full mix with vocals; Just me suits a single instrument. Changing either analyzes the file again."
     >
       <Row
         label="Chord detail"
@@ -262,19 +252,19 @@ function AnalyzeOptions({
           <Segmented<VocabLevel>
             size="sm"
             aria-label="Chord detail"
-            options={LEVELS}
+            options={LEVEL_OPTIONS}
             value={level}
             onChange={onLevel}
           />
         }
       />
       <Row
-        label="Recording"
+        label="Listening mode"
         accessory={
           <Segmented<JamMode>
             size="sm"
             aria-label="Listening mode"
-            options={MODES}
+            options={MODE_OPTIONS}
             value={mode}
             onChange={onMode}
           />
@@ -296,7 +286,7 @@ function Progress({
   onCancel(): void;
 }) {
   const pct = Math.round(Math.max(0, Math.min(1, fraction)) * 100);
-  const label = stage === 'decoding' ? 'Decoding' : 'Analysing';
+  const label = stage === 'decoding' ? 'Decoding' : 'Analyzing';
   return (
     <section aria-label="Progress" className="flex flex-col gap-2 px-1">
       <div className="flex items-center justify-between gap-4">

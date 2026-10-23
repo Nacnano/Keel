@@ -25,6 +25,8 @@ export function SyncPill({ className }: { className?: string }) {
   );
   const now = useNow();
   const { text, tone } = syncLabel(state, now);
+  // Without cloud sync there is nothing to report or set up.
+  if (!state.configured) return null;
   return (
     <Link
       to="/settings"
