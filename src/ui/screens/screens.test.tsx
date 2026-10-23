@@ -246,7 +246,7 @@ describe('SettingsScreen', () => {
   it('edits settings and validates A4', () => {
     render(<SettingsScreen />);
     fireEvent.click(screen.getByRole('switch', { name: 'Show slash chords' }));
-    expect(settingsStore.getState().showSlashChords).toBe(false);
+    expect(settingsStore.getState().showSlashChords).toBe(!DEFAULT_SETTINGS.showSlashChords);
 
     const a4 = screen.getByLabelText('Reference pitch (A4)');
     fireEvent.change(a4, { target: { value: '500' } });
