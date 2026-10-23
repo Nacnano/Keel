@@ -106,7 +106,7 @@ export function AppShell() {
           <span className="flex size-8 items-center justify-center rounded-control bg-action text-accent-fg">
             <AudioLines className="size-5" aria-hidden />
           </span>
-          <span className="text-headline font-semibold tracking-tight">JamKey</span>
+          <span className="text-headline font-semibold tracking-tight">Keel</span>
         </div>
         <nav className="flex flex-col gap-0.5" aria-label="Sections">
           {items.map(({ to, label, Icon, active }) => (

@@ -181,7 +181,7 @@ describe('toJSON / fromJSON', () => {
       /unsupported export version 2.*reads version 1/,
     );
     await expect(fromJSON('{nope')).rejects.toThrow(/not valid JSON/);
-    await expect(fromJSON({ hello: 1 })).rejects.toThrow(/not a JamKey session export/);
+    await expect(fromJSON({ hello: 1 })).rejects.toThrow(/not a Keel session export/);
     await expect(fromJSON({ ...good, chords: 'x' })).rejects.toThrow(/"chords" must be an array/);
     await expect(fromJSON({ ...good, session: null })).rejects.toBeInstanceOf(ImportError);
     expect(await db.sessions.count()).toBe(0);

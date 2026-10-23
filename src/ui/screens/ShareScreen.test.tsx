@@ -65,9 +65,9 @@ describe('ShareScreen', () => {
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 
-  it('imports the chart with "Open in JamKey"', async () => {
+  it('imports the chart with "Open in Keel"', async () => {
     renderAt(`/s/${CODE}`);
-    fireEvent.click(await screen.findByRole('button', { name: 'Open in JamKey' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open in Keel' }));
     const id = (await screen.findByTestId('review-stub')).textContent!;
     expect(id).not.toBe(SID);
     const full = await getSessionFull(id);
@@ -80,7 +80,7 @@ describe('ShareScreen', () => {
     renderAt('/s/nothingHere');
     expect(await screen.findByRole('heading', { name: 'Chart not found' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Chart not found' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Open JamKey' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Open Keel' })).toHaveAttribute('href', '/');
   });
 
   it('shows a loading state, then the chart', async () => {
@@ -104,7 +104,7 @@ describe('ShareScreen', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Silent take' })).toBeVisible();
     expect(screen.getByText('This chart has no chords.')).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Chord chart' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Open in JamKey' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Open in Keel' })).toBeEnabled();
   });
 
   it('explains when sharing is not configured', async () => {
