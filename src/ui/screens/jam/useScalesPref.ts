@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export const SCALES_PREF_KEY = 'jamkey.ui.scales';
+export const SCALES_PREF_KEY = 'jamkey.ui.scales'; // legacy prefix, kept for existing browsers
 
 function readPref(): boolean | null {
   try {

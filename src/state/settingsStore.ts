@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { DEFAULT_SETTINGS } from '@/core';
 import type { Settings } from '@/core';
 
+// Legacy key from before the rename to Keel; kept so existing settings survive.
 export const SETTINGS_STORAGE_KEY = 'jamkey.settings';
 
 export interface SettingsActions {

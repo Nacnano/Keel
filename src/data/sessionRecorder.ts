@@ -22,7 +22,7 @@ import type {
   Session,
 } from '@/core/session';
 import type { AnalysisEvent, Instrument, JamMode, MidiEvent, VocabLevel } from '@/core/types';
-import { db as defaultDb, type JamKeyDB } from './db';
+import { db as defaultDb, type KeelDB } from './db';
 import { chordKey } from './chordSymbol';
 import { computeSummary } from './summary';
 
@@ -48,7 +48,7 @@ export interface SessionMeta {
   flushIntervalMs?: number;
   midiCheckpointMs?: number;
   /** Database to write to (tests). Defaults to the app `db`. */
-  database?: JamKeyDB;
+  database?: KeelDB;
 }
 
 export interface SessionHandle {

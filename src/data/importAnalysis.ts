@@ -9,7 +9,7 @@
 import type { ChordRecord, KeyRecord, Session } from '@/core/session';
 import type { AnalysisEvent, Instrument, JamMode, VocabLevel } from '@/core/types';
 import { chordKey } from './chordSymbol';
-import type { JamKeyDB } from './db';
+import type { KeelDB } from './db';
 import type { SessionFull } from './repo';
 import { normalizeTags } from './repo';
 import { startSession } from './sessionRecorder';
@@ -32,7 +32,7 @@ export interface AnalysedSessionInput {
   /** Wall clock in epoch ms (tests). */
   now?: () => number;
   /** Database (tests). Defaults to the app `db`. */
-  database?: JamKeyDB;
+  database?: KeelDB;
 }
 
 const byT = (a: AnalysisEvent, b: AnalysisEvent) => a.t - b.t;

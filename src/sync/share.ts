@@ -4,7 +4,7 @@
  * code. Editing the session later does not change an existing link.
  */
 import { getSessionFull } from '@/data/repo';
-import { toJSON, toText, type JamKeyExportV1 } from '@/data/export';
+import { toJSON, toText, type KeelExportV1 } from '@/data/export';
 import { getSupabase, SyncError } from './client';
 
 export const SHARE_PAYLOAD_VERSION = 1;
@@ -14,7 +14,7 @@ const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789
 export interface SharePayloadV1 {
   version: 1;
   /** `toJSON` export without MIDI events; import it with `fromJSON`. */
-  chart: JamKeyExportV1;
+  chart: KeelExportV1;
   /** `toText` chord chart. */
   text: string;
   sharedAt: number;

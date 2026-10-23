@@ -4,7 +4,7 @@
  * with the key in force at its time (for the Roman numeral).
  */
 import type { Chord, Key, Marker } from '@/core';
-import type { JamKeyExportV1 } from '@/data/export';
+import type { KeelExportV1 } from '@/data/export';
 import { collapseRuns, compressRepeats, sameChord, sameKey } from '@/theory';
 
 export interface ChartChord {
@@ -32,7 +32,7 @@ export interface ShareChartModel {
 
 const eq = (a: ChartChord, b: ChartChord) => sameChord(a.chord, b.chord) && sameKey(a.key, b.key);
 
-export function buildShareChart(chart: JamKeyExportV1): ShareChartModel {
+export function buildShareChart(chart: KeelExportV1): ShareChartModel {
   const keys: ShareChartModel['keys'] = [];
   for (const k of [...chart.keys].sort((a, b) => a.t - b.t)) {
     const key: Key = { tonic: k.key.tonic, mode: k.key.mode };
