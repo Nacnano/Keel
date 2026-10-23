@@ -20,7 +20,7 @@
  */
 import { createAnalysisEngine, lagForStability, RELEASE_HOLD_SEC, sameChord } from '@/analysis';
 import { DEFAULT_ANALYSIS_CONFIG } from '@/core/constants';
-import type { AnalysisConfig, AnalysisEvent } from '@/core/types';
+import type { AnalysisConfig, AnalysisEvent, KeyEstimate } from '@/core/types';
 import { decodeAudio, mixToMono } from './fileInput';
 import { createChromaPipeline } from './pipeline';
 
@@ -81,6 +81,42 @@ export function dropShortChords(
     last = e;
   });
   return events.filter((e) => e.type !== 'chord' || keep.has(e));
+}
+
+/**
+ * Headline key of a whole file: the key that sounds for the most time, not the first one
+ * detected (a song often opens on the relative minor or the dominant). The first key also
+ * covers the seconds before it was found. Of equal totals the earlier key wins. Returns the
+ * last estimate of the winning key, so its confidence reflects the most evidence.
+ */
+export function headlineKey(
+  events: readonly AnalysisEvent[],
+  durationSec: number,
+): KeyEstimate | null {
+  const keys = events
+    .filter((e): e is Extract<AnalysisEvent, { type: 'key' }> => e.type === 'key')
+    .sort((a, b) => a.t - b.t);
+  const totals = new Map<string, { seconds: number; first: number; key: KeyEstimate }>();
+  keys.forEach((e, i) => {
+    const start = i === 0 ? 0 : e.t;
+    const end = i + 1 < keys.length ? keys[i + 1].t : Math.max(durationSec, e.t);
+    const id = `${e.key.tonic}:${e.key.mode}`;
+    const entry = totals.get(id) ?? { seconds: 0, first: i, key: e.key };
+    entry.seconds += Math.max(0, end - start);
+    entry.key = e.key;
+    totals.set(id, entry);
+  });
+  let best: { seconds: number; first: number; key: KeyEstimate } | null = null;
+  for (const entry of totals.values()) {
+    if (
+      !best ||
+      entry.seconds > best.seconds ||
+      (entry.seconds === best.seconds && entry.first < best.first)
+    ) {
+      best = entry;
+    }
+  }
+  return best?.key ?? null;
 }
 
 const yieldToEventLoop = () => new Promise<void>((r) => setTimeout(r, 0));

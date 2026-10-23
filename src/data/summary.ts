@@ -1,10 +1,12 @@
 /**
  * Pure session summary: seconds per key, top repeating progressions, chord
  * count, bookmark count. No IndexedDB access.
+ *
+ * Progressions compare chords by root + quality: a bass note does not make a
+ * different chord (Am7/G is Am7), so bass flicker cannot split a loop.
  */
 import type { ChordRecord, KeyRecord, Marker, SessionSummary } from '@/core/session';
 import type { Chord, Key } from '@/core/types';
-import { chordKey } from './chordSymbol';
 import { canonicalRotation, collapseRuns, findCycles } from './cycles';
 
 export const TOP_PROGRESSIONS = 5;
@@ -34,13 +36,22 @@ export function keySeconds(
     .sort((a, b) => b.seconds - a.seconds);
 }
 
-/** The non-null chord sequence in time order with consecutive repeats removed. */
+/** Root + quality identity ("9:min7"); the bass is ignored. */
+export function chordFamilyKey(chord: Chord): string {
+  return `${chord.root}:${chord.quality}`;
+}
+
+/**
+ * The non-null chord sequence in time order, slash basses dropped and consecutive
+ * repeats (same root + quality) removed.
+ */
 export function chordSequence(chords: readonly ChordRecord[]): Chord[] {
   const seq = [...chords]
     .sort(byT)
     .map((c) => c.chord)
-    .filter((c): c is Chord => c !== null);
-  return collapseRuns(seq, chordKey);
+    .filter((c): c is Chord => c !== null)
+    .map((c): Chord => ({ root: c.root, quality: c.quality }));
+  return collapseRuns(seq, chordFamilyKey);
 }
 
 /**
@@ -52,7 +63,7 @@ export function topProgressions(
   limit = TOP_PROGRESSIONS,
 ): Array<{ chords: Chord[]; count: number }> {
   const seq = chordSequence(chords);
-  const keys = seq.map(chordKey);
+  const keys = seq.map(chordFamilyKey);
   const found = new Map<string, { chords: Chord[]; count: number; first: number }>();
   for (const c of findCycles(keys)) {
     const pattern = keys.slice(c.start, c.start + c.period);

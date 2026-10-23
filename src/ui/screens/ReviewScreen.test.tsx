@@ -6,6 +6,7 @@ import { mockChordRecords, mockKeyRecords, mockMarkers, mockSession } from '@/co
 import type { MidiEvent } from '@/core';
 import { db } from '@/data';
 import { settingsStore } from '@/state/settingsStore';
+import { useToastStore } from '../components/toastStore';
 import { ReviewScreen } from './ReviewScreen';
 
 const ID = 'review-test-1';
@@ -69,6 +70,28 @@ describe('ReviewScreen', () => {
     expect(screen.getAllByTestId('summary-progression')[0]).toHaveTextContent('vi');
   });
 
+  it('leads with the chord chart and shares it as text (copy without a share sheet)', async () => {
+    await seed();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    renderAt(`/review/${ID}`);
+    const chart = await screen.findByTestId('review-chart');
+    expect(within(chart).getAllByTestId('chart-line')[0]).toHaveTextContent('Intro');
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    expect(writeText.mock.calls[0][0]).toMatch(/^Evening idea in C — .*\nKey: C major\n/);
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.map((t) => t.message)).toContain('Chord chart copied'),
+    );
+
+    // No cloud sync: More holds the downloads but no share link.
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
+    const items = screen.getAllByRole('menuitem').map((m) => m.textContent);
+    expect(items).toContain('Download .txt');
+    expect(items).toContain('Download JSON');
+    expect(items).not.toContain('Share link…');
+  });
+
   it('clicking a chord seeks the playhead', async () => {
     await seed();
     renderAt(`/review/${ID}`);
@@ -112,7 +135,7 @@ describe('ReviewScreen', () => {
     // Session vocab level 2: sevenths yes, extensions no (until the level is raised).
     expect(d.queryByRole('radio', { name: 'maj7' })).not.toBeNull();
     expect(d.queryByRole('radio', { name: '13' })).toBeNull();
-    fireEvent.click(d.getByRole('radio', { name: 'Extensions and alterations' }));
+    fireEvent.click(d.getByRole('radio', { name: 'Everything: extensions and alterations' }));
     expect(d.getByRole('radio', { name: '13' })).toBeInTheDocument();
     fireEvent.click(d.getByRole('button', { name: 'No chord' }));
     fireEvent.click(d.getByRole('button', { name: 'Save chord' }));

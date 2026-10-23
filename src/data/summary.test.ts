@@ -129,3 +129,18 @@ describe('computeSummary', () => {
     expect(performance.now() - t).toBeLessThan(perfBudget(200));
   });
 });
+
+describe('topProgressions: root + quality', () => {
+  const ch = (root: Chord['root'], quality: Chord['quality'], bass?: Chord['root']): Chord =>
+    bass === undefined ? { root, quality } : { root, quality, bass };
+
+  it('treats slash variants as the same chord', () => {
+    // Am7 Am7/G F C, three times, with the bass flickering on the Am7.
+    const seq: Chord[] = [];
+    for (let i = 0; i < 3; i++)
+      seq.push(ch(9, 'min7'), ch(9, 'min7', 7), ch(5, 'maj'), ch(0, 'maj'));
+    const [top] = topProgressions(records(seq));
+    expect(names(top.chords)).toBe('Am7 F C');
+    expect(top.count).toBe(3);
+  });
+});

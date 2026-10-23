@@ -7,6 +7,7 @@ import { AlertCircle, Pause, Play } from 'lucide-react';
 import {
   analyseSamplesToEvents,
   decodeFileToMono,
+  headlineKey,
   type DecodedAudio,
   type OfflineAnalysisResult,
   type OfflineStage,
@@ -20,6 +21,7 @@ import { Button, Group, PageHeader, Row, Segmented, Slider, Switch } from '../ki
 import { chordSymbol, keyLabel, pretty } from '../lib/chordLabel';
 import { cx } from '../lib/cx';
 import { romanNumeral } from '../lib/numeral';
+import { useMediaQuery } from '../lib/useMediaQuery';
 import { buildChart, keyAt, keySpans, locate } from './analyze/chart';
 import { ChordChart } from './analyze/ChordChart';
 import { DropZone } from './analyze/DropZone';
@@ -27,6 +29,7 @@ import { audioMimeType, formatBytes, isSupportedAudio, LARGE_FILE_BYTES } from '
 import { useAudioTime } from './analyze/useAudioTime';
 import { copyChart } from './library/exportActions';
 import { clockLabel } from './review/timeline';
+import { LEVEL_OPTIONS, MODE_OPTIONS } from './settings/labels';
 
 type Phase =
   | { kind: 'idle' }
@@ -229,17 +232,6 @@ export function AnalyzeScreen() {
   );
 }
 
-const LEVELS = [
-  { value: 1 as const, label: 'Triads' },
-  { value: 2 as const, label: '7ths' },
-  { value: 3 as const, label: 'Jazz' },
-];
-
-const MODES = [
-  { value: 'solo' as const, label: 'Solo' },
-  { value: 'room' as const, label: 'Room' },
-];
-
 function AnalyzeOptions({
   level,
   mode,
@@ -251,30 +243,36 @@ function AnalyzeOptions({
   onLevel(l: VocabLevel): void;
   onMode(m: JamMode): void;
 }) {
+  // On a phone the two segmented controls need the full row width.
+  const narrow = useMediaQuery('(max-width: 479px)');
   return (
     <Group
       title="Options"
-      footer="Room suits a full mix with vocals; Solo suits a single instrument. Changing either re-analyses the file."
+      footer="With a band suits a full mix with vocals; Just me suits a single instrument. Changing either analyzes the file again."
     >
       <Row
+        stacked={narrow}
         label="Chord detail"
         accessory={
           <Segmented<VocabLevel>
             size="sm"
+            fill={narrow}
             aria-label="Chord detail"
-            options={LEVELS}
+            options={LEVEL_OPTIONS}
             value={level}
             onChange={onLevel}
           />
         }
       />
       <Row
-        label="Recording"
+        stacked={narrow}
+        label="Listening mode"
         accessory={
           <Segmented<JamMode>
             size="sm"
+            fill={narrow}
             aria-label="Listening mode"
-            options={MODES}
+            options={MODE_OPTIONS}
             value={mode}
             onChange={onMode}
           />
@@ -296,7 +294,7 @@ function Progress({
   onCancel(): void;
 }) {
   const pct = Math.round(Math.max(0, Math.min(1, fraction)) * 100);
-  const label = stage === 'decoding' ? 'Decoding' : 'Analysing';
+  const label = stage === 'decoding' ? 'Decoding' : 'Analyzing';
   return (
     <section aria-label="Progress" className="flex flex-col gap-2 px-1">
       <div className="flex items-center justify-between gap-4">
@@ -430,6 +428,11 @@ function AnalyzeResult({
     [draft.keys, result.durationSec],
   );
 
+  // The headline is the key of the song (most time), not of the first seconds.
+  const mainKey = useMemo(
+    () => headlineKey(result.events, result.durationSec),
+    [result.events, result.durationSec],
+  );
   const position = locate(chart, time);
   const keyRec = keyAt(draft.keys, time);
   const key = keyRec?.key ?? null;
@@ -471,7 +474,11 @@ function AnalyzeResult({
     <div data-testid="analyze-result" className="flex flex-col gap-6">
       <section aria-label="Player" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-          <KeyBadge keyEstimate={key} spellingFollowsKey={spellingFollowsKey} className="-ml-2.5" />
+          <KeyBadge
+            keyEstimate={mainKey}
+            spellingFollowsKey={spellingFollowsKey}
+            className="-ml-2.5"
+          />
           <div className="flex min-h-11 items-baseline gap-2.5" aria-live="off">
             <span className="text-footnote font-medium tracking-wide text-label-3 uppercase">
               Now

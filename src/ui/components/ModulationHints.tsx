@@ -9,6 +9,7 @@ import {
   type ModulationHint,
 } from '@/theory';
 import { cx } from '../lib/cx';
+import { prettyProse } from './ReharmPanel.logic';
 
 export interface ModulationHintsProps {
   keyContext: Key | null;
@@ -33,7 +34,7 @@ function HintRow({
   const to = prettyAccidentals(keyName(hint.to, { spellingFollowsKey }));
   const pivot = prettyAccidentals(chordSymbol(hint.pivot, from, { spellingFollowsKey }));
   const numerals = prettyAccidentals(`${hint.pivotNumeralFrom} → ${hint.pivotNumeralTo}`);
-  const reason = prettyAccidentals(hint.reason);
+  const reason = prettyProse(hint.reason);
   return (
     <li>
       <button

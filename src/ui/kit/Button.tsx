@@ -38,14 +38,21 @@ const DESTRUCTIVE: Record<ButtonVariant, string> = {
   plain: 'text-live hover:bg-live/10 font-medium',
 };
 
+/**
+ * Small buttons stay 32 px to the eye; on touch screens an invisible pseudo-element pads the
+ * hit area to 44 px (HIG minimum) without changing the layout.
+ */
+const COARSE_HIT_Y = 'relative pointer-coarse:before:absolute pointer-coarse:before:-inset-y-1.5';
+const COARSE_HIT = 'relative pointer-coarse:before:absolute pointer-coarse:before:-inset-1.5';
+
 const SIZE: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-footnote gap-1.5 rounded-[8px]',
+  sm: `h-8 px-3 text-footnote gap-1.5 rounded-[8px] ${COARSE_HIT_Y} pointer-coarse:before:inset-x-0`,
   md: 'h-11 px-4 text-subhead gap-2 rounded-control',
   lg: 'h-13 px-6 text-body gap-2.5 rounded-cell',
 };
 
 const ICON_SIZE: Record<ButtonSize, string> = {
-  sm: 'size-8 rounded-[8px]',
+  sm: `size-8 rounded-[8px] ${COARSE_HIT}`,
   md: 'size-11 rounded-control',
   lg: 'size-13 rounded-cell',
 };

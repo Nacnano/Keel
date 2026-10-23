@@ -50,7 +50,7 @@ export function ChordChart({
                   data-testid="chart-segment"
                   className="flex items-start gap-2 rounded-card bg-surface p-2"
                 >
-                  <div className="grid min-w-0 flex-1 grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-1.5">
+                  <div className="grid min-w-0 flex-1 grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5">
                     {seg.items.map((item, c) => (
                       <Cell
                         key={c}
@@ -111,21 +111,31 @@ const Cell = memo(function Cell({
 }: CellProps) {
   const symbol = pretty(chordSymbol(chord, keyContext, { spellingFollowsKey, showSlash }));
   const numeral = keyContext ? pretty(romanNumeral(chord, keyContext)) : '';
+  // Long names ("Cm(add9)", "D♭maj7♯11/F") step down in size, then truncate; the title and
+  // the accessible name keep the full symbol.
+  const size =
+    symbol.length <= 5 ? 'text-headline' : symbol.length <= 7 ? 'text-subhead' : 'text-footnote';
   return (
     <button
       type="button"
       data-testid="chart-chord"
       aria-current={active ? 'true' : undefined}
       aria-label={`${symbol}${numeral ? `, ${numeral}` : ''} at ${clockLabel(at)}`}
+      title={numeral ? `${symbol} · ${numeral}` : symbol}
       onClick={() => onSeek(at)}
       className={cx(
-        'flex min-h-14 flex-col items-center justify-center rounded-cell px-2 py-1.5 transition-colors duration-100',
+        'flex min-h-14 min-w-0 flex-col items-center justify-center rounded-cell px-1 py-1.5 transition-colors duration-100',
         active ? 'bg-accent/15 text-accent' : 'bg-fill-4 text-label hover:bg-fill-3',
       )}
     >
-      <span className="text-headline leading-tight font-semibold">{symbol}</span>
+      <span className={cx('max-w-full truncate leading-tight font-semibold', size)}>{symbol}</span>
       {numeral && (
-        <span className={cx('text-caption', active ? 'text-accent' : 'text-label-2')}>
+        <span
+          className={cx(
+            'max-w-full truncate text-caption',
+            active ? 'text-accent' : 'text-label-2',
+          )}
+        >
           {numeral}
         </span>
       )}

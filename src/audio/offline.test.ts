@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AnalysisEvent, Chord } from '@/core/types';
 import { noteNumber, synthProgression } from '@/core/testing/synth';
-import { analyseSamplesToEvents, dropShortChords, type OfflineStage } from './offline';
+import { analyseSamplesToEvents, dropShortChords, headlineKey, type OfflineStage } from './offline';
 
 const SR = 44100;
 const STEP = 2;
@@ -149,5 +149,31 @@ describe('dropShortChords', () => {
   it('is a copy when disabled', () => {
     const input = [ev(0, C), ev(0.05, G)];
     expect(dropShortChords(input, 0, 1)).toEqual(input);
+  });
+});
+
+describe('headlineKey', () => {
+  const key = (
+    t: number,
+    tonic: number,
+    mode: 'major' | 'minor',
+    confidence = 0.6,
+  ): AnalysisEvent =>
+    ({
+      type: 'key',
+      t,
+      key: { tonic, mode, confidence, relative: { tonic, mode }, alternatives: [] },
+    }) as AnalysisEvent;
+
+  it('picks the key that covers the most time, not the first one', () => {
+    // B♭ minor for the first 7 s, A♭ major for the remaining 92 s.
+    const events = [key(2, 10, 'minor'), key(7, 8, 'major', 0.5), key(40, 8, 'major', 0.9)];
+    expect(headlineKey(events, 99)).toMatchObject({ tonic: 8, mode: 'major', confidence: 0.9 });
+  });
+
+  it('sums separate stretches of the same key and handles no keys', () => {
+    const events = [key(0, 0, 'major'), key(10, 7, 'major'), key(25, 0, 'major')];
+    expect(headlineKey(events, 30)).toMatchObject({ tonic: 0, mode: 'major' });
+    expect(headlineKey([], 30)).toBeNull();
   });
 });

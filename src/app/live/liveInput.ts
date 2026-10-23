@@ -383,7 +383,8 @@ export function createLiveInput(): LiveInputController {
           await handle.setAudioBlob(take.blob, take.mimeType, take.durationSec);
         }
       }
-      const saved = await handle.stop({ endT });
+      const saved = await handle.stop({ endT, discardIfEmpty: true });
+      if (!saved) return; // nothing was heard: no session to keep
       notifySessionSaved(); // nudge cloud sync (no-op when sync is off)
       opts.onSaved?.({ id: saved.id, name: saved.name });
       if (!opts.onSaved && (saved.durationSec >= 2 || saved.summary?.chordCount)) {

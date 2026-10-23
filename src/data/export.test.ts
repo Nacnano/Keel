@@ -81,8 +81,8 @@ describe('toText', () => {
     expect(toText(fixture())).toMatchInlineSnapshot(`
       "Evening idea in C — 2026-10-22 — 5:00
       Key: C major
-      [intro] | C G Am F | ×4
-      [verse] | Dm7 G7 Cmaj7 | ×2
+      [Intro] | C G Am F | ×4
+      [Verse] | Dm7 G7 Cmaj7 | ×2
       → A minor at 2:35
       | Am Dm E7 Am |
       Bookmarks: 1:00 nice
@@ -112,6 +112,24 @@ describe('toText', () => {
       markers: [],
     };
     expect(toText(empty).split('\n')).toHaveLength(2);
+  });
+
+  it('folds a lone chord after a loop onto the line before and keeps user labels', () => {
+    const full = fixture();
+    full.keys = [full.keys[0]];
+    full.markers = [
+      { id: 'm0', sessionId: SID, t: 0, kind: 'chorus' },
+      { id: 'm1', sessionId: SID, t: 30, kind: 'custom', label: 'tag ending' },
+    ];
+    full.chords = [
+      ...chordRows([...repeat(POP_PROGRESSION, 3), { root: 2, quality: 'min' }], 0, 2),
+      ...chordRows([{ root: 7, quality: 'maj' }], 30, 2, 100),
+    ];
+    expect(toText(full).split('\n').slice(1, 4)).toEqual([
+      'Key: C major',
+      '[Chorus] | C G Am F | ×3 | Dm |',
+      '[Tag ending] | G |',
+    ]);
   });
 
   it('formats times', () => {

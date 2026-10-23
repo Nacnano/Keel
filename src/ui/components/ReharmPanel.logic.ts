@@ -1,6 +1,20 @@
 /** Framework-free helpers for ReharmPanel: sequenced audition and clipboard text. */
 import type { Chord, Key } from '@/core';
-import { chordSymbol, romanNumeral } from '@/theory';
+import { chordSymbol, prettyAccidentals, romanNumeral } from '@/theory';
+
+/** A word that is a note, chord symbol or Roman numeral ("Bb", "F#m7b5", "bVII", "V7/IV"). */
+const MUSIC_WORD =
+  /^(?:[A-G][#b]?|[#b]?(?:VII|VI|IV|V|III|II|I|vii|vi|iv|v|iii|ii|i))(?:[0-9#b°ø+/]|maj|min|dim|aug|sus|add|alt|m|M|[A-G])*$/;
+
+/**
+ * `prettyAccidentals` for sentences: only notes, chord symbols and numerals get ♭ / ♯, so
+ * ordinary words keep their b ("iv: borrowed from C minor, bittersweet").
+ */
+export function prettyProse(text: string): string {
+  return text.replace(/[^\s,;:.()]+/g, (word) =>
+    MUSIC_WORD.test(word) ? prettyAccidentals(word) : word,
+  );
+}
 
 /**
  * Plays `chords` one after another through `audition`, `stepMs` apart. Returns a cancel
