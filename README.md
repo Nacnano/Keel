@@ -54,7 +54,7 @@ Node 22, pnpm 11.
 ## Deploy
 
 Production: **https://music.nacnano.dev** (Vercel project `keel`, connected to this
-repo; **https://keel-music.vercel.app** is the fallback URL; the old `jamkey.vercel.app` redirects to production). Every PR gets a preview deployment; every merge to `main` deploys to production.
+repo; **https://keel-music.vercel.app** is the fallback URL; the pre-rename `*.vercel.app` address redirects to production). Every PR gets a preview deployment; every merge to `main` deploys to production.
 `vercel.json` has the SPA rewrite. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
 in the Vercel project settings only if you set up sync.
 

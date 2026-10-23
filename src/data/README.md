@@ -4,19 +4,19 @@ IndexedDB storage (Dexie 4), the live session recorder, audio recording, and
 text/JSON export and import. Row shapes are the frozen contracts in
 `src/core/session.ts`. Import from `@/data`.
 
-| Module               | What it does                                                                |
-| -------------------- | --------------------------------------------------------------------------- |
-| `db.ts`              | `jamkey` database v1, `db` (lazy, safe to import) and `openDb()`            |
-| `sessionRecorder.ts` | `startSession(meta)`: dedupes and buffers events, flushes every 2 s         |
-| `summary.ts`         | Pure `computeSummary(chords, keys, markers, durationSec)`                   |
-| `audioRecorder.ts`   | `createAudioRecorder(stream, opts)`: MediaRecorder, 30 min cap, 25 min warn |
-| `stats.ts`           | Pure `computeStats(sessions, { since, now })`: time, days, streaks, keys    |
-| `repo.ts`            | List/search, rename, tags, soft delete, chord/marker edits, settings, stats |
-| `export.ts`          | `toText`, `toJSON`, `fromJSON`                                              |
-| `importAnalysis.ts`  | `saveAnalysedSession`, `draftFromAnalysis`: file analysis → session         |
-| `cycles.ts`          | Repeat detector (2–8 chords) for summary and text chart (`@/theory`)        |
-| `chordSymbol.ts`     | Chord/key names for export (`@/theory`)                                     |
-| `migrations.md`      | How to bump the Dexie version safely                                        |
+| Module               | What it does                                                                  |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `db.ts`              | `keel` database v1, `db` (lazy, safe to import), `openDb()`, legacy migration |
+| `sessionRecorder.ts` | `startSession(meta)`: dedupes and buffers events, flushes every 2 s           |
+| `summary.ts`         | Pure `computeSummary(chords, keys, markers, durationSec)`                     |
+| `audioRecorder.ts`   | `createAudioRecorder(stream, opts)`: MediaRecorder, 30 min cap, 25 min warn   |
+| `stats.ts`           | Pure `computeStats(sessions, { since, now })`: time, days, streaks, keys      |
+| `repo.ts`            | List/search, rename, tags, soft delete, chord/marker edits, settings, stats   |
+| `export.ts`          | `toText`, `toJSON`, `fromJSON`                                                |
+| `importAnalysis.ts`  | `saveAnalysedSession`, `draftFromAnalysis`: file analysis → session           |
+| `cycles.ts`          | Repeat detector (2–8 chords) for summary and text chart (`@/theory`)          |
+| `chordSymbol.ts`     | Chord/key names for export (`@/theory`)                                       |
+| `migrations.md`      | How to bump the Dexie version safely                                          |
 
 ## Tables (v1)
 
