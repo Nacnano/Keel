@@ -9,7 +9,8 @@ import { settingsStore } from '@/state/settingsStore';
 import { analyseSamplesToEvents, decodeFileToMono } from '@/audio/offline';
 import { AnalyzeScreen } from './AnalyzeScreen';
 
-vi.mock('@/audio/offline', () => ({
+vi.mock('@/audio/offline', async (importOriginal) => ({
+  headlineKey: (await importOriginal<typeof import('@/audio/offline')>()).headlineKey,
   decodeFileToMono: vi.fn(),
   analyseSamplesToEvents: vi.fn(),
 }));

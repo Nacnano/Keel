@@ -111,21 +111,36 @@ const Cell = memo(function Cell({
 }: CellProps) {
   const symbol = pretty(chordSymbol(chord, keyContext, { spellingFollowsKey, showSlash }));
   const numeral = keyContext ? pretty(romanNumeral(chord, keyContext)) : '';
+  // Long names ("D♭maj7♯11/F") step down a size, then truncate; the title has the full name.
+  const long = symbol.length > 6;
   return (
     <button
       type="button"
       data-testid="chart-chord"
       aria-current={active ? 'true' : undefined}
       aria-label={`${symbol}${numeral ? `, ${numeral}` : ''} at ${clockLabel(at)}`}
+      title={numeral ? `${symbol} · ${numeral}` : symbol}
       onClick={() => onSeek(at)}
       className={cx(
-        'flex min-h-14 flex-col items-center justify-center rounded-cell px-2 py-1.5 transition-colors duration-100',
+        'flex min-h-14 min-w-0 flex-col items-center justify-center rounded-cell px-1.5 py-1.5 transition-colors duration-100',
         active ? 'bg-accent/15 text-accent' : 'bg-fill-4 text-label hover:bg-fill-3',
       )}
     >
-      <span className="text-headline leading-tight font-semibold">{symbol}</span>
+      <span
+        className={cx(
+          'max-w-full truncate leading-tight font-semibold',
+          long ? 'text-subhead' : 'text-headline',
+        )}
+      >
+        {symbol}
+      </span>
       {numeral && (
-        <span className={cx('text-caption', active ? 'text-accent' : 'text-label-2')}>
+        <span
+          className={cx(
+            'max-w-full truncate text-caption',
+            active ? 'text-accent' : 'text-label-2',
+          )}
+        >
           {numeral}
         </span>
       )}

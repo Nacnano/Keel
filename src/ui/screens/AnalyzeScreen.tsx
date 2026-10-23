@@ -7,6 +7,7 @@ import { AlertCircle, Pause, Play } from 'lucide-react';
 import {
   analyseSamplesToEvents,
   decodeFileToMono,
+  headlineKey,
   type DecodedAudio,
   type OfflineAnalysisResult,
   type OfflineStage,
@@ -420,6 +421,11 @@ function AnalyzeResult({
     [draft.keys, result.durationSec],
   );
 
+  // The headline is the key of the song (most time), not of the first seconds.
+  const mainKey = useMemo(
+    () => headlineKey(result.events, result.durationSec),
+    [result.events, result.durationSec],
+  );
   const position = locate(chart, time);
   const keyRec = keyAt(draft.keys, time);
   const key = keyRec?.key ?? null;
@@ -461,7 +467,11 @@ function AnalyzeResult({
     <div data-testid="analyze-result" className="flex flex-col gap-6">
       <section aria-label="Player" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-          <KeyBadge keyEstimate={key} spellingFollowsKey={spellingFollowsKey} className="-ml-2.5" />
+          <KeyBadge
+            keyEstimate={mainKey}
+            spellingFollowsKey={spellingFollowsKey}
+            className="-ml-2.5"
+          />
           <div className="flex min-h-11 items-baseline gap-2.5" aria-live="off">
             <span className="text-footnote font-medium tracking-wide text-label-3 uppercase">
               Now

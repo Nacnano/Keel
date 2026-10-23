@@ -41,6 +41,22 @@ describe('analyze chart', () => {
     expect(chart.blocks[1].segments[0]).toMatchObject({ repeat: 1, start: 8 });
   });
 
+  it('treats a bass change as the same chord, so loops still fold', () => {
+    // Am Am/G F C, three times: one cell per chord and a ×3 loop.
+    const seq: Chord[] = [
+      { root: 9, quality: 'min' },
+      { root: 9, quality: 'min', bass: 7 },
+      { root: 5, quality: 'maj' },
+      { root: 0, quality: 'maj' },
+    ];
+    const rows = [0, 1, 2].flatMap((pass) => seq.map((c, i) => rec(pass * 8 + i * 2, c)));
+    const chart = buildChart(rows, [keyRec(0)], 24);
+    expect(chart.items).toHaveLength(9);
+    expect(chart.blocks[0].segments).toHaveLength(1);
+    expect(chart.blocks[0].segments[0]).toMatchObject({ repeat: 3 });
+    expect(chart.blocks[0].segments[0].items).toHaveLength(3);
+  });
+
   it('merges identical chords across a no-chord gap', () => {
     const c = POP_PROGRESSION[0];
     const chart = buildChart([rec(0, c), rec(1, null), rec(1.2, c), rec(3, null)], [], 4);
