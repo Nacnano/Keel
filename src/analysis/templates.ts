@@ -10,7 +10,14 @@ import type { ChordQuality, VocabLevel } from '@/core';
 import { CHORD_TEMPLATES, qualitiesForLevel } from '@/theory';
 import type { ChordTemplate } from '@/theory';
 
-export { CHORD_TEMPLATES, QUALITY_ORDER, chordTones, qualitiesForLevel, sameChord } from '@/theory';
+export {
+  CHORD_TEMPLATES,
+  QUALITY_ORDER,
+  chordTones,
+  qualitiesForLevel,
+  sameChord,
+  sameChordFamily,
+} from '@/theory';
 
 /** Alias of `CHORD_TEMPLATES` from `@/theory` (kept for existing `@/analysis` imports). */
 export const CHORD_VOCAB = CHORD_TEMPLATES;
@@ -38,6 +45,8 @@ export interface TemplateBank {
   kind: Uint8Array;
   /** 1 when the fifth is diminished or augmented (the perfect fifth must be absent). */
   alteredFifth: Uint8Array;
+  /** 1 for dominant chords: major third and minor seventh (C7, C9, C13, ...). */
+  dominant: Uint8Array;
 }
 
 export function buildTemplates(level: VocabLevel): TemplateBank {
@@ -50,6 +59,7 @@ export function buildTemplates(level: VocabLevel): TemplateBank {
   const core = new Int8Array(size * 3).fill(-1);
   const kind = new Uint8Array(size);
   const alteredFifth = new Uint8Array(size);
+  const dominant = new Uint8Array(size);
   let k = 0;
   for (const q of qs) {
     const { intervals, weights, roles } = CHORD_TEMPLATES[q];
@@ -65,6 +75,7 @@ export function buildTemplates(level: VocabLevel): TemplateBank {
         if (roles[i] === 'fifth' && intervals[i] !== 7) alteredFifth[k] = 1;
       }
       kind[k] = roles.includes('third') ? 0 : roles.includes('sus') ? 2 : 1;
+      dominant[k] = intervals.includes(4) && intervals.includes(10) ? 1 : 0;
       for (let i = 0; i < intervals.length; i++) {
         const pc = (root + intervals[i]) % 12;
         data[row + pc] += weights[i];
@@ -79,5 +90,5 @@ export function buildTemplates(level: VocabLevel): TemplateBank {
       k++;
     }
   }
-  return { level, size, roots, qualities, data, ext, core, kind, alteredFifth };
+  return { level, size, roots, qualities, data, ext, core, kind, alteredFifth, dominant };
 }
