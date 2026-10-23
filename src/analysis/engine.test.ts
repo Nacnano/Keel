@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { NOTE_NAMES_SHARP } from '@/core';
 import type { AnalysisConfig, AnalysisEvent, Chord, ChromaFrame, PitchClass } from '@/core';
 import { frameFromNotes, midiChord } from '@/core/testing/midi';
-import { createAnalysisEngine } from './engine';
+import { createAnalysisEngine, dwellSeconds } from './engine';
 import { CHORD_VOCAB, chordTones, qualitiesForLevel } from './templates';
 import { FPS, chromaFromNotes, progressionFrames } from './testing/chromaFromNotes';
 import type { Step } from './testing/chromaFromNotes';
@@ -83,6 +83,29 @@ describe('mic path', () => {
     expect(latency[1]).toBeLessThan(latency[2]);
   });
 
+  it('vocab level 2 names only triads, the five sevenths and sus4 (mic and MIDI)', () => {
+    const coloured = [
+      ['C3', 'C4', 'D4', 'E4', 'G4'], // Cadd9
+      ['F2', 'F3', 'A3', 'C4', 'D4'], // F6
+      ['G2', 'G3', 'A3', 'D4'], // Gsus2
+      ['A2', 'A3', 'C4', 'E4', 'G#4'], // Am(maj7)
+      ['D2', 'D3', 'A3', 'D4'], // D5
+      ['E2', 'E3', 'G#3', 'C4'], // Eaug
+    ];
+    const l2 = new Set(qualitiesForLevel(2));
+    const { chords } = runFrames(progressionFrames(steps(coloured)));
+    expect(chords.length).toBeGreaterThan(0);
+    for (const c of chords) if (c.chord) expect(l2.has(c.chord.quality), label(c.chord)).toBe(true);
+    const exact = runFrames(coloured.map((n, i) => frameFromNotes(midiChord(n), i)));
+    for (const c of exact.chords)
+      if (c.chord) expect(l2.has(c.chord.quality), label(c.chord)).toBe(true);
+  });
+
+  it('prefers the dominant seventh when the flat seventh clearly sounds', () => {
+    const c7 = ['C3', 'C4', 'E4', 'G4', 'Bb4'];
+    expect(runFrames(progressionFrames(steps([c7]))).labels).toEqual(['C7']);
+  });
+
   it('vocab level 1 never emits a 7th chord', () => {
     const sevenths = [
       ['G2', 'G3', 'B3', 'D4', 'F4'],
@@ -120,10 +143,69 @@ describe('mic path', () => {
     expect(labels).toEqual(['Cmaj', 'Cmaj7']);
   });
 
-  it('shows slash chords from a stable bass, collapses them when disabled', () => {
+  it('shows slash chords from a stable bass when enabled (off by default)', () => {
+    const frames = progressionFrames(
+      steps([
+        ['E2', 'G3', 'C4', 'E4'],
+        ['B2', 'G3', 'D4'],
+      ]),
+    );
+    expect(runFrames(frames, { showSlashChords: true }).labels).toEqual(['Cmaj/E', 'Gmaj/B']);
+    expect(runFrames(frames).labels).toEqual(['Cmaj', 'Gmaj']);
+  });
+
+  it('a new bass note under the same chord is not a chord change', () => {
     const frames = progressionFrames(steps([C, ['E2', 'G3', 'C4', 'E4'], G, ['B2', 'G3', 'D4']]));
-    expect(runFrames(frames).labels).toEqual(['Cmaj', 'Cmaj/E', 'Gmaj', 'Gmaj/B']);
-    expect(runFrames(frames, { showSlashChords: false }).labels).toEqual(['Cmaj', 'Gmaj']);
+    expect(runFrames(frames, { showSlashChords: true }).labels).toEqual(['Cmaj', 'Gmaj']);
+  });
+
+  it('an added tone over the same chord is not a chord change (level 3)', () => {
+    const add9 = ['C3', 'C4', 'D4', 'E4', 'G4'];
+    const { labels } = runFrames(progressionFrames(steps([C, add9, C, add9, G])), {
+      vocabLevel: 3,
+    });
+    expect(labels).toEqual(['Cmaj', 'Gmaj']);
+  });
+
+  it('holds a chord for the minimum dwell: a short passing chord is not shown', () => {
+    const frames = progressionFrames([
+      { notes: C, seconds: 1.5 },
+      { notes: F, seconds: 0.2 },
+      { notes: C, seconds: 1.5 },
+      { notes: G, seconds: 1.5 },
+    ]);
+    expect(runFrames(frames).labels).toEqual(['Cmaj', 'Gmaj']);
+  });
+
+  it('a genuine change still shows within about half a second (solo), later in room mode', () => {
+    const frames = progressionFrames(steps([C, Am], 2.6));
+    const change = Math.round(2.6 * FPS);
+    const delay = (mode: 'solo' | 'room') => {
+      const am = runFrames(frames, { mode }).chords.find((c) => label(c.chord) === 'Amin');
+      expect(am).toBeDefined();
+      return (am!.frame - change) / FPS;
+    };
+    expect(delay('solo')).toBeLessThanOrEqual(0.55);
+    expect(delay('room')).toBeGreaterThan(delay('solo'));
+    expect(dwellSeconds(0.5, 'solo')).toBeCloseTo(0.45);
+    expect(dwellSeconds(0.5, 'room')).toBeCloseTo(0.6);
+    expect(dwellSeconds(1, 'room')).toBeCloseTo(0.8);
+  });
+
+  it('keeps the chord through a short stretch it cannot name while there is sound', () => {
+    const noise = (t: number, seed: number): ChromaFrame => {
+      const chroma = new Float32Array(12).fill(1 / 12);
+      chroma[seed % 12] += 0.01;
+      return { t, chroma, energy: 0.6, bass: null, onset: false, exact: false };
+    };
+    const frames = progressionFrames(steps([C], 1.5));
+    const t0 = frames.length;
+    for (let i = 0; i < Math.round(1.2 * FPS); i++) frames.push(noise((t0 + i) / FPS, i));
+    frames.push(...progressionFrames(steps([C], 1.5), { t0: frames.length / FPS }));
+    expect(runFrames(frames).labels).toEqual(['Cmaj']);
+    const t1 = frames.length;
+    for (let i = 0; i < Math.round(3 * FPS); i++) frames.push(noise((t1 + i) / FPS, i));
+    expect(runFrames(frames).labels).toEqual(['Cmaj', '-']);
   });
 
   it('ignores a bass note that lasts fewer than 3 frames', () => {
@@ -135,7 +217,10 @@ describe('mic path', () => {
   });
 
   it('emits no-chord after the music stops', () => {
-    const frames = progressionFrames(steps([C, []]));
+    const frames = progressionFrames([
+      { notes: C, seconds: 1.5 },
+      { notes: [], seconds: 3 },
+    ]);
     const { chords } = runFrames(frames);
     expect(chords.map((c) => label(c.chord))).toEqual(['Cmaj', '-']);
   });
@@ -202,7 +287,7 @@ describe('exact (MIDI) path', () => {
   const sig = (pcs: PitchClass[]) => [...new Set(pcs)].sort((x, y) => x - y).join(',');
 
   it('identifies every level-2 quality in all inversions instantly', () => {
-    const engine = createAnalysisEngine({ vocabLevel: 2 });
+    const engine = createAnalysisEngine({ vocabLevel: 2, showSlashChords: true });
     let last: ChordEvent | null = null;
     engine.subscribe((e) => {
       if (e.type === 'chord') last = e;
@@ -255,7 +340,9 @@ describe('exact (MIDI) path', () => {
       showSlashChords: false,
     });
     expect(labels).toEqual(['Cmaj']);
-    expect(runFrames([frameFromNotes(midiChord(['E3', 'G3', 'C4']))]).labels).toEqual(['Cmaj/E']);
+    expect(
+      runFrames([frameFromNotes(midiChord(['E3', 'G3', 'C4']))], { showSlashChords: true }).labels,
+    ).toEqual(['Cmaj/E']);
   });
 
   it('emits all held pitch classes and null on release', () => {

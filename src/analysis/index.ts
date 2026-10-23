@@ -1,4 +1,10 @@
-export { createAnalysisEngine, NOTE_THRESHOLD, RELEASE_HOLD_SEC } from './engine';
+export {
+  createAnalysisEngine,
+  dwellSeconds,
+  GAP_HOLD_SEC,
+  NOTE_THRESHOLD,
+  RELEASE_HOLD_SEC,
+} from './engine';
 export {
   CHORD_VOCAB,
   QUALITY_ORDER,
@@ -6,6 +12,7 @@ export {
   chordTones,
   qualitiesForLevel,
   sameChord,
+  sameChordFamily,
 } from './templates';
 export type { ChordShape, TemplateBank } from './templates';
 export { identifyExact, scoreChroma } from './chordScorer';
