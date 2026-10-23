@@ -91,9 +91,8 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
   const quiet = new Uint8Array(TIME_RING);
   /** A confidently decoded chord waiting for its dwell before it replaces `lastChord`. */
   let pending: { chord: Chord; t0: number; confidence: number } | null = null;
-  /** Decoded-frame time of the last confident chord, and start of the current released silence. */
+  /** Decoded-frame time of the last confident chord. */
   let lastSureT = -Infinity;
-  let quietT0 = -Infinity;
 
   function rebuild() {
     bank = buildTemplates(cfg.vocabLevel);
@@ -115,14 +114,13 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
    * Dwell gate for one decoded mic frame at time `t`, whose state the best path keeps until
    * `tEnd` (look-ahead included). A confident new chord replaces the shown one once it has held
    * for `dwellSeconds`; frames that cannot be named confidently are no evidence either way. The
-   * display only goes blank after GAP_HOLD_SEC without a confident chord, or after the dwell
-   * once the input has been silent for longer than the release hold.
+   * display only goes blank after GAP_HOLD_SEC without a confident chord, or once the input
+   * has been silent for longer than the release hold.
    */
   function gate(t: number, tEnd: number, chord: Chord | null, confidence: number, silent: boolean) {
     const dwell = dwellSeconds(cfg.stability, cfg.mode);
     if (chord && confidence >= MIN_DISPLAY_CONFIDENCE) {
       lastSureT = t;
-      quietT0 = -Infinity;
       if (sameChordFamily(chord, lastChord)) {
         pending = null;
         return;
@@ -138,10 +136,9 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
       return;
     }
     if (!lastChord) return;
-    if (silent && quietT0 === -Infinity) quietT0 = t;
-    const gapStart = silent ? quietT0 : lastSureT;
-    if (tEnd - gapStart + 1e-6 >= (silent ? dwell : GAP_HOLD_SEC)) {
-      emitChord(gapStart, null, confidence, 'mic');
+    // Released silence has already waited RELEASE_HOLD_SEC; a gap with sound waits GAP_HOLD_SEC.
+    if (silent || tEnd - lastSureT + 1e-6 >= GAP_HOLD_SEC) {
+      emitChord(silent ? t : lastSureT, null, confidence, 'mic');
       pending = null;
     }
   }
@@ -223,7 +220,6 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
       rebuild();
       lastChord = null;
       lastSureT = -Infinity;
-      quietT0 = -Infinity;
       lastNotes = '';
       lastSoundT = -Infinity;
       prevBass = null;
