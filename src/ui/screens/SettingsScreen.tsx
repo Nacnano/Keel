@@ -26,7 +26,7 @@ const INSTRUMENTS = [
   { value: 'guitar' as const, label: 'Guitar' },
 ];
 
-export function formatBytes(n: number): string {
+function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   const units = ['KB', 'MB', 'GB', 'TB'];
   let v = n / 1024;
@@ -39,7 +39,7 @@ export function formatBytes(n: number): string {
 }
 
 /** "402 KB used of 10 GB on this device". */
-export function storageLine(info: StorageInfo): string {
+function storageLine(info: StorageInfo): string {
   if (!info.exact) return `About ${formatBytes(info.usage)} of audio on this device`;
   return info.quota
     ? `${formatBytes(info.usage)} used of ${formatBytes(info.quota)} on this device`

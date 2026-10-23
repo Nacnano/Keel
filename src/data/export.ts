@@ -57,7 +57,7 @@ const SECTION_TITLE: Record<MarkerKind, string> = {
   custom: 'Section',
 };
 
-/** Title-case heading for a section marker: "Chorus", or the user's label capitalised. */
+/** Title-case heading for a section marker: "Chorus", or the user's label capitalized. */
 export function sectionTitle(m: Pick<Marker, 'kind' | 'label'>): string {
   const label = m.label?.trim();
   return label ? label[0].toUpperCase() + label.slice(1) : SECTION_TITLE[m.kind];
