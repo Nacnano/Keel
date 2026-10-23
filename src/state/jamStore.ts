@@ -41,12 +41,14 @@ export interface JamData {
   lastT: number;
   markers: Marker[];
   recordAudio: boolean;
+  /** The session is the scripted demo (nothing is saved). */
+  demo: boolean;
 }
 
 export interface JamActions {
   applyEvent(e: AnalysisEvent): void;
   /** Clears the session data and starts a new session at `t0` (clock seconds, default now). */
-  startSession(t0?: number): void;
+  startSession(t0?: number, opts?: { demo?: boolean }): void;
   stopSession(): void;
   /** Clears timeline, key history and markers. Keeps status, source and current key. */
   reset(): void;
@@ -88,6 +90,7 @@ export const initialJamData = (): JamData => ({
   sessionStart: null,
   sessionId: null,
   recordAudio: false,
+  demo: false,
 });
 
 /** Live jam state. Pure: no audio here; inputs are wired by the integrator via `applyEvent`. */
@@ -141,10 +144,11 @@ export const useJamStore = create<JamState>()((set, get) => ({
     });
   },
 
-  startSession(t0) {
+  startSession(t0, opts) {
     set({
       ...EMPTY_SESSION,
       key: null,
+      demo: opts?.demo ?? false,
       status: 'listening',
       error: undefined,
       sessionStart: t0 ?? clock.now(),

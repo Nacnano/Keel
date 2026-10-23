@@ -3,7 +3,6 @@ import type { VocabLevel } from '@/core';
 
 export interface JamShortcutHandlers {
   toggleListening(): void;
-  reset(): void;
   bookmark(): void;
   setLevel(level: VocabLevel): void;
   togglePiano(): void;
@@ -23,7 +22,7 @@ function isTypingTarget(t: EventTarget | null): boolean {
 }
 
 /**
- * Space start/stop · R clear · B bookmark · 1/2/3 chord detail · P keyboard · M listening mode ·
+ * Space start/stop · B bookmark · 1/2/3 chord detail · P keyboard · M listening mode ·
  * I ideas · N next · S scales · V voicings · K modulate.
  */
 export function useJamShortcuts(handlers: JamShortcutHandlers) {
@@ -44,9 +43,6 @@ export function useJamShortcuts(handlers: JamShortcutHandlers) {
           e.preventDefault();
           if (e.target instanceof HTMLButtonElement) e.target.blur();
           h.toggleListening();
-          break;
-        case 'r':
-          h.reset();
           break;
         case 'b':
           h.bookmark();
