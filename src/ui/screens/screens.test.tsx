@@ -192,10 +192,15 @@ describe('JamScreen', () => {
       previewKey: { ...C_MAJOR_KEY, tonic: 7 },
     });
     const { container } = renderJam();
-    expect(screen.getByText('Tentative chord')).toBeInTheDocument();
-    expect(screen.getByTestId('chord-symbol')).toHaveTextContent('D');
-    expect(screen.queryByTestId('chord-numeral')).toBeNull();
-    expect(screen.getByRole('button', { name: /Tentative key G major/ })).toBeInTheDocument();
+    expect(screen.queryByText('Tentative chord')).toBeNull();
+    expect(screen.getByTestId('chord-symbol')).toHaveTextContent('C');
+    expect(screen.getByTestId('chord-numeral')).toHaveTextContent('I');
+    const candidate = screen.getByTestId('live-candidate');
+    expect(candidate).toHaveTextContent('Tentative: D');
+    expect(candidate).toHaveClass('h-6');
+    expect(candidate).toHaveAttribute('aria-live', 'off');
+    expect(screen.getByRole('button', { name: /^Key C major/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Tentative key G major/ })).toBeNull();
     const state = (n: number) =>
       container.querySelector(`[data-note="${n}"]`)?.getAttribute('data-state');
     expect(state(60)).toBe('exact');
@@ -215,12 +220,65 @@ describe('JamScreen', () => {
     expect(screen.queryByText('Tentative chord')).toBeNull();
     expect(screen.getByTestId('chord-symbol')).toHaveTextContent('C');
     expect(screen.getByTestId('chord-numeral')).toHaveTextContent('I');
+    expect(screen.getByTestId('live-candidate')).toBe(candidate);
+    expect(candidate.textContent).toBe('');
+    expect(candidate).toHaveAttribute('aria-hidden', 'true');
     expect(jamStore.getState().key).toEqual(C_MAJOR_KEY);
     expect(jamStore.getState().timeline).toHaveLength(0);
     act(() => jamStore.setState({ status: 'error', error: 'Microphone interrupted.' }));
     expect(screen.queryByTestId('chord-symbol')).toBeNull();
     expect(screen.queryByRole('img', { name: /Piano/ })).toBeNull();
     expect(screen.getByRole('alert')).toHaveTextContent('Microphone interrupted.');
+  });
+
+  it('keeps uncertainty distinct before confirmation and uses one candidate row afterward', () => {
+    jamStore.setState({
+      status: 'listening',
+      source: 'mic',
+      sessionStart: clock.now(),
+      previewChord: { root: 2, quality: 'maj' },
+      previewConfidence: 0.8,
+      previewKey: { ...C_MAJOR_KEY, tonic: 7 },
+    });
+    renderJam();
+    expect(screen.getByTestId('chord-symbol')).toHaveTextContent('D');
+    expect(screen.getByTestId('chord-symbol')).toHaveAttribute('data-tentative', 'true');
+    expect(screen.getByText('Tentative chord')).toBeInTheDocument();
+    expect(screen.queryByTestId('chord-numeral')).toBeNull();
+    expect(screen.getByRole('button', { name: /Tentative key G major/ })).toBeInTheDocument();
+    const slot = screen.getByTestId('live-candidate');
+    expect(slot).toHaveAttribute('aria-hidden', 'true');
+    act(() =>
+      jamStore.setState({
+        currentChord: { root: 0, quality: 'maj' },
+        confidence: 0.9,
+        key: C_MAJOR_KEY,
+      }),
+    );
+    expect(screen.getByTestId('chord-symbol')).toHaveTextContent('C');
+    expect(screen.getByTestId('chord-symbol')).not.toHaveAttribute('data-tentative');
+    expect(slot).toHaveTextContent('Tentative: D');
+    expect(screen.getByRole('button', { name: /^Key C major/ })).toBeInTheDocument();
+    act(() => jamStore.setState({ previewChord: null }));
+    expect(slot).toHaveTextContent('Tentative key: G major');
+    expect(screen.getByTestId('live-candidate')).toBe(slot);
+    act(() => jamStore.setState({ quiet: true }));
+    expect(screen.queryByTestId('chord-symbol')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Key C major/ })).toBeNull();
+    expect(slot.textContent).toBe('');
+    expect(slot).toHaveAttribute('aria-hidden', 'true');
+    act(() =>
+      jamStore.setState({
+        quiet: false,
+        currentChord: null,
+        confidence: 0,
+        key: null,
+        previewKey: null,
+      }),
+    );
+    expect(screen.queryByTestId('chord-symbol')).toBeNull();
+    expect(screen.getByText('Play a chord.')).toBeInTheDocument();
+    expect(slot.textContent).toBe('');
   });
 
   it('renders the idle layout', () => {

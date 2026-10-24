@@ -18,14 +18,15 @@ export function useFadeOnChange<T extends HTMLElement>(dep: unknown, durationMs 
       return;
     }
     const el = ref.current;
-    if (!el || typeof el.animate !== 'function' || reducedMotion()) return;
-    el.animate(
+    if (durationMs <= 0 || !el || typeof el.animate !== 'function' || reducedMotion()) return;
+    const animation = el.animate(
       [
         { opacity: 0.25, transform: 'translateY(6px)' },
         { opacity: 1, transform: 'none' },
       ],
       { duration: durationMs, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)' },
     );
+    return () => animation.cancel();
   }, [dep, durationMs]);
   return ref;
 }

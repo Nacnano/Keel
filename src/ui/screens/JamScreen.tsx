@@ -25,6 +25,7 @@ import { Piano } from '../components/Piano';
 import { Timeline } from '../components/Timeline';
 import { Badge, Button, Meter, Segmented } from '../kit';
 import { cx } from '../lib/cx';
+import { chordSymbol, keyLabel, pretty, sameChord, sameKey } from '../lib/chordLabel';
 import { MARK_ITEMS, type MarkItem } from '../lib/markers';
 import { playNotes } from '../lib/playNotes';
 import { useMediaQuery } from '../lib/useMediaQuery';
@@ -142,9 +143,35 @@ export function JamScreen() {
     !quiet && jam.previewChord && jam.previewConfidence >= MIN_DISPLAY_CONFIDENCE
       ? jam.previewChord
       : null;
-  const shownChord = previewChord ?? jam.currentChord;
-  const shownConfidence = previewChord ? jam.previewConfidence : jam.confidence;
-  const hasChord = shownChord && shownConfidence >= MIN_DISPLAY_CONFIDENCE && !quiet;
+  const committedChord =
+    !quiet && jam.confidence >= MIN_DISPLAY_CONFIDENCE ? jam.currentChord : null;
+  const tentativeHero = !committedChord && !!previewChord;
+  const shownChord = committedChord ?? previewChord;
+  const shownConfidence = committedChord ? jam.confidence : jam.previewConfidence;
+  const hasChord = !!shownChord;
+  const primaryKey = jam.keyEstimate ?? jam.previewKey;
+  // Candidates get one quiet, reserved line; they never displace an established result.
+  const candidateChord =
+    committedChord && previewChord && !sameChord(committedChord, previewChord)
+      ? previewChord
+      : null;
+  const candidateKey =
+    jam.keyEstimate && jam.previewKey && !sameKey(jam.keyEstimate, jam.previewKey)
+      ? jam.previewKey
+      : null;
+  const candidateLabel =
+    !quiet && !starting
+      ? candidateChord
+        ? `Tentative: ${pretty(
+            chordSymbol(candidateChord, jam.keyEstimate, {
+              showSlash: settings.showSlashChords,
+              spellingFollowsKey: settings.spellingFollowsKey,
+            }),
+          )}`
+        : candidateKey
+          ? `Tentative key: ${pretty(keyLabel(candidateKey, { spellingFollowsKey: settings.spellingFollowsKey }))}`
+          : ''
+      : '';
   // Compact widths: Ideas is a sheet under the Finish row; chord, key and timeline stay above.
   const halfIdeas = inspector.open && !sideIdeas;
   const sideOpen = inspector.open && sideIdeas;
@@ -439,7 +466,7 @@ export function JamScreen() {
                     compact={halfIdeas}
                     chord={shownChord}
                     confidence={shownConfidence}
-                    tentative={!!previewChord}
+                    tentative={tentativeHero}
                     keyContext={jam.keyEstimate}
                     showSlash={settings.showSlashChords}
                     spellingFollowsKey={settings.spellingFollowsKey}
@@ -466,12 +493,20 @@ export function JamScreen() {
               {!quiet && !starting && (hasChord || jam.previewKey || jam.keyEstimate) && (
                 <KeyBadge
                   primaryOnly
-                  keyEstimate={jam.previewKey ?? jam.keyEstimate}
-                  tentative={!!jam.previewKey}
+                  keyEstimate={primaryKey}
+                  tentative={!jam.keyEstimate && !!jam.previewKey}
                   spellingFollowsKey={settings.spellingFollowsKey}
                   className="mt-3"
                 />
               )}
+              <div
+                data-testid="live-candidate"
+                aria-live="off"
+                aria-hidden={!candidateLabel ? true : undefined}
+                className="mt-2 flex h-6 max-w-full shrink-0 items-center justify-center px-4 text-callout text-label-2"
+              >
+                <span className="truncate">{candidateLabel}</span>
+              </div>
               {pianoVisible && listening && !phone && !halfIdeas && (
                 <div className="mt-8 w-full">
                   <Piano
@@ -553,7 +588,7 @@ export function JamScreen() {
         onClose={() => inspector.setOpen(false)}
         tab={inspector.tab}
         onTab={inspector.setTab}
-        chord={hasChord ? jam.currentChord : null}
+        chord={committedChord}
         confidence={jam.confidence}
         keyContext={jam.keyEstimate}
         // With a band always shows simple chords, so Ideas stays at that level too.

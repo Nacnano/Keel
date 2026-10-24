@@ -46,6 +46,73 @@ describe('ChordDisplay', () => {
     expect(screen.queryByText('bass')).toBeNull();
   });
 
+  it('updates focused symbols immediately and retains cancellable detailed animation', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'animate');
+    const cancel = vi.fn();
+    const animate = vi.fn(() => ({ cancel }));
+    Object.defineProperty(HTMLElement.prototype, 'animate', { configurable: true, value: animate });
+    try {
+      const { rerender } = render(
+        <ChordDisplay details={false} chord={{ root: 0, quality: 'maj' }} confidence={0.9} />,
+      );
+      rerender(
+        <ChordDisplay details={false} chord={{ root: 7, quality: 'maj' }} confidence={0.9} />,
+      );
+      expect(screen.getByTestId('chord-symbol')).toHaveTextContent('G');
+      expect(animate).not.toHaveBeenCalled();
+      rerender(<ChordDisplay chord={{ root: 2, quality: 'min' }} confidence={0.9} />);
+      expect(animate).toHaveBeenCalledWith(
+        expect.any(Array),
+        expect.objectContaining({ duration: 180 }),
+      );
+      rerender(
+        <ChordDisplay details={false} chord={{ root: 5, quality: 'maj' }} confidence={0.9} />,
+      );
+      expect(cancel).toHaveBeenCalledOnce();
+      expect(animate).toHaveBeenCalledOnce();
+      expect(screen.getByTestId('chord-symbol')).toHaveTextContent('F');
+    } finally {
+      if (descriptor) Object.defineProperty(HTMLElement.prototype, 'animate', descriptor);
+      else Reflect.deleteProperty(HTMLElement.prototype, 'animate');
+    }
+  });
+
+  it('reserves the same focused context slot for tentative, numeral and unknown key states', () => {
+    const { rerender } = render(
+      <ChordDisplay details={false} chord={{ root: 0, quality: 'maj' }} confidence={0.9} />,
+    );
+    const slot = screen.getByTestId('chord-context-slot');
+    expect(slot).toHaveClass('h-7');
+    expect(slot).toHaveAttribute('aria-hidden', 'true');
+    rerender(
+      <ChordDisplay
+        details={false}
+        chord={{ root: 0, quality: 'maj' }}
+        confidence={0.9}
+        tentative
+        keyContext={C_MAJOR}
+      />,
+    );
+    expect(screen.getByTestId('chord-context-slot')).toBe(slot);
+    expect(within(slot).getByText('Tentative chord')).toBeInTheDocument();
+    expect(screen.queryByTestId('chord-numeral')).toBeNull();
+    rerender(
+      <ChordDisplay
+        details={false}
+        chord={{ root: 0, quality: 'maj' }}
+        confidence={0.9}
+        keyContext={C_MAJOR}
+      />,
+    );
+    expect(screen.getByTestId('chord-context-slot')).toBe(slot);
+    expect(within(slot).getByTestId('chord-numeral')).toHaveTextContent('I');
+    expect(screen.queryByText('Tentative chord')).toBeNull();
+    expect(slot).toHaveClass('h-7');
+    rerender(<ChordDisplay details={false} chord={null} confidence={0} />);
+    expect(screen.getByTestId('chord-context-slot')).toBe(slot);
+    expect(slot).toHaveAttribute('aria-hidden', 'true');
+  });
+
   it('shows the symbol, numeral, tones and bass for a confident chord', () => {
     render(
       <ChordDisplay

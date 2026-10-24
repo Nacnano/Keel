@@ -59,7 +59,7 @@ export function ChordDisplay({
   const numeral = shown && !tentative && keyContext ? pretty(romanNumeral(shown, keyContext)) : '';
   const tones = shown ? chordTones(shown).map((pc) => pretty(noteName(pc, keyContext, spell))) : [];
   const bass = shown ? pretty(noteName(shown.bass ?? shown.root, keyContext, spell)) : '';
-  const symbolRef = useFadeOnChange<HTMLSpanElement>(symbol);
+  const symbolRef = useFadeOnChange<HTMLSpanElement>(symbol, details ? 180 : 0);
   // Long symbols ("Cmaj7#11/E") shrink so they never wrap or overflow the column.
   const len = [...symbol].length;
   const scale = len <= 5 ? 1 : len <= 7 ? 0.8 : len <= 9 ? 0.64 : 0.52;
@@ -106,22 +106,35 @@ export function ChordDisplay({
           )}
         </span>
       </div>
-      {tentative && <p className="mt-2 text-subhead font-medium text-label-2">Tentative chord</p>}
-      {/* No row before the key is known: an empty numeral slot read as "C ()". */}
-      {keyContext && !tentative && (
+      {!details && (
+        <div
+          data-testid="chord-context-slot"
+          aria-hidden={!tentative && !numeral ? true : undefined}
+          className="mt-3 flex h-7 shrink-0 items-center justify-center font-medium"
+        >
+          {tentative ? (
+            <span className="text-subhead text-label-2">Tentative chord</span>
+          ) : numeral ? (
+            <span data-testid="chord-numeral" className="text-headline text-accent sm:text-title-3">
+              {numeral}
+            </span>
+          ) : null}
+        </div>
+      )}
+      {details && tentative && (
+        <p className="mt-2 text-subhead font-medium text-label-2">Tentative chord</p>
+      )}
+      {/* Detailed callers retain their existing numeral and tone layout. */}
+      {details && keyContext && !tentative && (
         <div
           data-testid="chord-numeral"
-          className={cx(
-            'mt-3 font-medium text-accent',
-            // In the focused jam view the numeral stays below the key line in the hierarchy.
-            details ? 'h-12 text-4xl sm:text-5xl' : 'min-h-7 text-headline sm:text-title-3',
-          )}
+          className="mt-3 h-12 text-4xl font-medium text-accent sm:text-5xl"
         >
           {numeral}
         </div>
       )}
       {details && (
-        <div className="mt-3 flex h-7 items-center gap-5 text-body text-label-2">
+        <div className="mt-3 flex h-7 shrink-0 items-center gap-5 text-body text-label-2">
           {shown && !tentative ? (
             <>
               <span className="flex gap-3 font-medium tracking-wide text-label">
