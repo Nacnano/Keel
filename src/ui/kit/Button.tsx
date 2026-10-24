@@ -40,7 +40,7 @@ const DESTRUCTIVE: Record<ButtonVariant, string> = {
 
 /** Small buttons are 32 px with a mouse and 44 px (the HIG minimum) on touch screens. */
 const SIZE: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-footnote gap-1.5 rounded-[8px] pointer-coarse:h-11',
+  sm: 'h-8 px-3 text-footnote gap-1.5 rounded-[8px] pointer-coarse:h-11 pointer-coarse:min-w-11',
   md: 'h-11 px-4 text-subhead gap-2 rounded-control',
   lg: 'h-13 px-6 text-body gap-2.5 rounded-cell',
 };
