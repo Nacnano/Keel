@@ -1,6 +1,6 @@
 # Keel: parallel implementation plan
 
-Status: **implementation authorized by the user; in progress**.
+Status: **implemented; four improvement rounds completed and validated**.
 Prepared 2026-10-25 from the user's feature choices and the current repository.
 Sol 6.1 agents implement evaluation, acoustics, temporal confirmation and UI in parallel.
 The user additionally authorized PRs/merges and four simulated jam improvement rounds.
@@ -25,13 +25,13 @@ Instrument mode guides recognition. It does not promise to isolate a player's in
 from other music through a single microphone. Other musical sources must not be labeled
 as ordinary background noise in evaluation.
 
-### Decisions still open
+### Optional follow-up decisions
 
 These are design choices, not features the user has already selected:
 
 - Whether to add an explicit **Learn room noise** action. Evaluate automatic approaches
   first; a short, optional quiet calibration is a candidate, not a required startup step.
-- Exact tentative-note styling. Proposed default: outlined tentative notes and filled
+- Tentative-note styling is now implemented: outlined tentative notes and filled
   confirmed notes, with a text legend and accessible names.
 - Which individual recording, review, MIDI and practice features to implement afterward.
   Selecting all five areas does not settle every feature in the 60-item opportunity list.
@@ -460,7 +460,7 @@ visible false-note time. No physical-device or zero-false-positive claim is made
 
 The browser run verified live processing, quiet clearing, finishing/saving and tablet layout
 with the capture substitution above. Saved-session and settings surfaces were also exercised.
-Four subsequent rounds will address observed usability problems and verify the combined build.
+The four subsequent rounds below address observed usability problems and verify the combined build.
 
 ### Improvement round 1 — recoverable microphone startup
 
@@ -504,3 +504,38 @@ this measures visual churn, not musical accuracy. Browser traces verified candid
 confirmed chords, quiet-tail clearing, interruption behavior and saving. Focused UI tests cover
 candidate priority, published key stability, tentative-only onset, quiet/release clearing and
 reserved layout slots. Physical microphone and independent recorded-note accuracy limits remain.
+
+### Improvement round 4 — recover from input interruption without losing the jam
+
+Observed feedback: disconnecting the microphone left the app saying Listening and suggesting
+higher sensitivity after a temporary toast vanished. A persistent Input stopped message now
+explains Finish & save, then start again. Failed capture cannot repopulate stale notes. Valid
+MIDI continues with a nonblocking notice; recoverable DSP warnings remain distinct from fatal
+track, worker and processor failures. No automatic reconnect or extra dialog was added.
+
+Independent review caught two additional lifecycle gaps, both fixed before merge. A fatal
+mic interruption now writes a silence boundary at failure time and clears stale engine evidence;
+it cannot extend the last saved chord until Finish or revive it through New song. A generation-
+scoped error listener also catches failures during MIDI setup. Startup without any working
+input releases capture before presenting retry. Active MIDI retains its clock and analysis.
+
+Final combined validation on code revision `a4dd650`:
+
+- Lint/format, application TypeScript, production build and all **972 tests / 89 files** pass.
+- Full **461-case benchmark: zero regressions**, with **198 existing quality-target gaps**
+  still reported. No regression gates or accuracy targets were weakened.
+- Browser cancel and 20-second timeout release all granted tracks and show no false save claim.
+- Coherent piano/bass/drums playback exercises real DSP, exact keyboard notes, saving and restart.
+- The browser's interrupted session contains a null chord at **5.968s**, while Finish occurred
+  at **12.587s**; silence is no longer attributed to the last chord. The recovery message remains
+  visible and stale mic frames cannot restore live harmony. A real-recorder unit case also
+  verifies failure at 10s and Finish at 30s, including New song and active-MIDI protections.
+- Phone/tablet, light/dark, keyboard preference, setup order and immediate live symbol behavior
+  were checked across the rounds. Focused live changes no longer run a dimming animation.
+
+Evidence remains in `.context/final-combined/`, `.context/final-interruption-save.json` and
+round browser traces/screenshots. These are simulated performer checks, not real pianist user
+studies. Native AudioWorklet capture in the test browser, physical laptop/iPad microphones and
+Safari acceptance remain unverified. Quiet-note misses, complex guitar recognition and some
+post-music noise tails still need independently annotated recordings and device evaluation.
+The four rounds complete this implementation scope; they do not certify perfect detection.
