@@ -148,7 +148,22 @@ export interface KeyEvent {
 export type AnalysisEvent =
   | { type: 'chord'; t: Seconds; chord: Chord | null; confidence: number; source: InputSource }
   | KeyEvent
-  | { type: 'notes'; t: Seconds; pitchClasses: PitchClass[]; midiNotes?: MidiNote[] }
+  | {
+      type: 'notes';
+      t: Seconds;
+      pitchClasses: PitchClass[];
+      midiNotes?: MidiNote[];
+      /** Repeated microphone candidates awaiting confirmation. Disjoint from midiNotes. */
+      tentativeMidiNotes?: MidiNote[];
+    }
+  | {
+      /** Display-only estimates; never session history, recorded MIDI or confirmed theory. */
+      type: 'preview';
+      t: Seconds;
+      chord: Chord | null;
+      confidence: number;
+      key: KeyEstimate | null;
+    }
   | { type: 'level'; t: Seconds; energy: number };
 
 export interface AnalysisConfig {
