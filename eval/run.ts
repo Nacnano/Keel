@@ -292,7 +292,7 @@ async function main() {
   lines.push(
     'No real microphone, browser capture chain, device processing, guitar recordings, live singers, ' +
       'speech or percussion are represented in the primary matrix. The vocal distractor is a ' +
-      'simple synthesized voice. Room mode is a heuristic, not source separation. Sensitivity changes ' +
+      'simple synthesized voice. Room mode is a heuristic, not source separation; it names triads only and is scored against the written chords reduced to triads. Sensitivity changes ' +
       'gate opening, not chord vocabulary or input gain; the headline runs use its default 0.5. ' +
       'The adaptive gate learns the initial room floor, so a brief quiet lead-in helps quiet playing. ' +
       'Real-device and held-out musician recordings are still required before claiming field accuracy.',
