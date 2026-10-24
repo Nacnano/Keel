@@ -105,9 +105,37 @@ export type InputSource = 'mic' | 'midi';
 export type JamMode = 'solo' | 'room';
 export type Instrument = 'piano' | 'guitar';
 
+/**
+ * A published key. `t` is where the key's evidence starts, so the timeline draws (and numbers)
+ * the key from there: the first key of a song is dated from its first sound, a change from
+ * where the new key's lead began. The engine only publishes a key once it has held for a few
+ * seconds, and never publishes the parallel key (C major → C minor) as a change.
+ *
+ * A key that turns out short (replaced less than ~10 s after its evidence started) is
+ * withdrawn: its replacement carries `supersedes` = the withdrawn event's `id` and
+ * `replacesSince` = the withdrawn key's start, and its `t` is that start too, so a timeline
+ * drops the short key and draws the replacement from there (a consumer that ignores the fields
+ * sees the short key with zero length).
+ *
+ * All extra fields are optional: events from mocks, files and older sessions have none.
+ */
+export interface KeyEvent {
+  type: 'key';
+  t: Seconds;
+  key: KeyEstimate;
+  /** Set by the analysis engine: unique within a jam (counts up from 1 after `reset()`). */
+  id?: number;
+  /** Where the evidence for this key started (seconds, the clock of `t`). */
+  since?: Seconds;
+  /** `id` of the key event this one withdraws (drop it from the key history). */
+  supersedes?: number;
+  /** Start (`t`) of the withdrawn key: relabel from here. */
+  replacesSince?: Seconds;
+}
+
 export type AnalysisEvent =
   | { type: 'chord'; t: Seconds; chord: Chord | null; confidence: number; source: InputSource }
-  | { type: 'key'; t: Seconds; key: KeyEstimate }
+  | KeyEvent
   | { type: 'notes'; t: Seconds; pitchClasses: PitchClass[]; midiNotes?: MidiNote[] }
   | { type: 'level'; t: Seconds; energy: number };
 
