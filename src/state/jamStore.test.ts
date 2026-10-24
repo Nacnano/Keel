@@ -184,7 +184,7 @@ describe('jamStore key reveal', () => {
     s.applyEvent(level(5));
     s.applyEvent({ type: 'key', t: 1, key: B_MAJOR });
     s.applyEvent(level(40));
-    s.applyEvent({ type: 'key', t: 38, key: E_MAJOR, supersedes: true } as AnalysisEvent);
+    s.applyEvent({ type: 'key', t: 38, key: E_MAJOR, supersedes: 1 });
     expect(keys()).toEqual([[0, 4]]);
   });
 
