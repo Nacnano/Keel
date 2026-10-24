@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 import { Link } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 import { Check, ChevronRight, Lightbulb, Mic, Play, Square, Usb } from 'lucide-react';
 import { clock, MIN_DISPLAY_CONFIDENCE } from '@/core';
 import type { Chord, JamMode, VocabLevel } from '@/core';
-import { jamStore, useJamStore } from '@/state/jamStore';
+import { jamStore, snapToChordStart, useJamStore } from '@/state/jamStore';
 import { useInputStore } from '@/state/inputStore';
 import { useSettings } from '@/state/settingsStore';
 import { auditionChord } from '@/app/live/audition';
@@ -42,30 +43,34 @@ function useElapsed(listening: boolean, started: number | null) {
   return started === null ? 0 : Math.max(0, now - started);
 }
 
-/** Input below this level counts as "can't hear much". */
-const QUIET_LEVEL = 0.06;
-/** Quiet this long before the nudge shows: time to reach the keys. */
-const QUIET_ONSET_MS = 4000;
-/** Loud this long before the nudge goes away, so a single note does not make it blink. */
-const QUIET_RELEASE_MS = 2000;
+/** CSS variable the half-height Ideas sheet reads its height from. */
+const IDEAS_HEIGHT_VAR = '--keel-ideas-h';
+/** The sheet never gets shorter than this, even on a short landscape phone. */
+const IDEAS_MIN_HEIGHT = 240;
 
-/** True while the input has been too quiet to trust (with an onset and a release delay). */
-function useQuietInput(listening: boolean, level: number): boolean {
-  const [quiet, setQuiet] = useState(false);
-  const [wasListening, setWasListening] = useState(listening);
-  // A new session starts without the nudge (state reset during render, not in an effect).
-  if (wasListening !== listening) {
-    setWasListening(listening);
-    setQuiet(false);
-  }
-  const loud = level > QUIET_LEVEL;
-  useEffect(() => {
-    if (!listening) return;
-    // Each crossing restarts the wait; only a state held for the whole wait flips the flag.
-    const timer = setTimeout(() => setQuiet(!loud), loud ? QUIET_RELEASE_MS : QUIET_ONSET_MS);
-    return () => clearTimeout(timer);
-  }, [listening, loud]);
-  return listening && quiet;
+/**
+ * Sizes the half-height Ideas sheet to the room under `above` (the Finish row), so the chord,
+ * the key, the timeline and Finish all stay visible above it.
+ */
+function useIdeasSheetHeight(active: boolean, above: RefObject<HTMLElement | null>) {
+  useLayoutEffect(() => {
+    const el = above.current;
+    if (!active || !el) return;
+    const root = document.documentElement;
+    const measure = () => {
+      const room = window.innerHeight - el.getBoundingClientRect().bottom - 12;
+      root.style.setProperty(IDEAS_HEIGHT_VAR, `${Math.round(Math.max(IDEAS_MIN_HEIGHT, room))}px`);
+    };
+    measure();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    ro?.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', measure);
+      root.style.removeProperty(IDEAS_HEIGHT_VAR);
+    };
+  }, [active, above]);
 }
 
 /** Listen first. Input choices and musical helpers stay one deliberate step away. */
@@ -86,6 +91,7 @@ export function JamScreen() {
       level: s.level,
       recordAudio: s.recordAudio,
       sessionStart: s.sessionStart,
+      quiet: s.quiet,
     })),
   );
   const settings = useSettings(
@@ -104,20 +110,25 @@ export function JamScreen() {
   const input = useJamInput();
   const wide = useMediaQuery('(min-width: 1024px)', true);
   const phone = !useMediaQuery('(min-width: 640px)', true);
-  // From 1024 px Ideas is a side column and the listening column moves clear of it.
-  const sideIdeas = wide;
+  // Where a side panel fits beside the centred controls, Ideas floats over the right edge and
+  // nothing moves; narrower, it is a sheet under the Finish row.
+  const sideIdeas = useMediaQuery('(min-width: 1180px)', true);
   const [pianoVisible, togglePiano] = useStoredToggle('keel.ui.piano', false);
   const inspector = useInspectorPref();
   const listening = jam.status === 'listening';
   const starting = jam.status === 'starting';
   const elapsed = useElapsed(listening, jam.sessionStart);
-  const quiet = useQuietInput(listening && !input.mock && jam.source !== 'midi', jam.level);
+  // "Can't hear much" is decided by the live input, which also keeps those chords out.
+  const quiet = listening && !input.mock && jam.quiet;
   const stopped = input.finished && !listening && !starting;
   // While the input is too quiet a chord (and the key built from it) would be a guess.
   const hasChord = jam.currentChord && jam.confidence >= MIN_DISPLAY_CONFIDENCE && !quiet;
-  // Compact widths: Ideas is a half-height sheet and the screen keeps chord + Finish above it.
+  // Compact widths: Ideas is a sheet under the Finish row; chord, key and timeline stay above.
   const halfIdeas = inspector.open && !sideIdeas;
   const sideOpen = inspector.open && sideIdeas;
+  const live = listening || starting;
+  const finishRow = useRef<HTMLDivElement>(null);
+  useIdeasSheetHeight(halfIdeas && live, finishRow);
   // Red dot and "Recording" only while audio is really being kept.
   const recording = listening && !input.mock && jam.recordAudio && jam.source === 'mic';
   const inputLabel =
@@ -137,11 +148,15 @@ export function JamScreen() {
     if (status === 'listening') void stop();
     else if (status !== 'starting') void start();
   }, [start, stop, input.saving]);
-  // The flag in the timeline is the confirmation; no toast.
+  // The flag in the timeline is the confirmation; no toast. A mark tapped just after a chord
+  // change belongs to that chord, so it snaps back to where the chord began.
   const addMarker = useCallback(
     (item: MarkItem) => {
-      const marker = jamStore.getState().addMarker(item.kind, item.markerLabel);
-      if (marker && item.newSong) newSong();
+      const s = jamStore.getState();
+      const now = s.sessionStart !== null ? Math.max(0, clock.now() - s.sessionStart) : s.lastT;
+      const t = snapToChordStart(s.timeline, now);
+      const marker = s.addMarker(item.kind, item.markerLabel, t);
+      if (marker && item.newSong) newSong(t);
     },
     [newSong],
   );
@@ -204,48 +219,55 @@ export function JamScreen() {
   );
 
   return (
-    <div
-      className={cx(
-        'flex h-full flex-col overflow-y-auto',
-        // Room for the half-height Ideas sheet (it also covers the tab bar).
-        halfIdeas && 'pb-[calc(min(42dvh,420px)-3.75rem)]',
-        // Side Ideas (392 px from the right edge): the column recentres only as far as it must.
-        sideOpen && 'pr-[min(392px,max(0px,calc(1852px-100vw)))]',
-      )}
-    >
-      <header className="mx-auto flex w-full max-w-[900px] items-center justify-between gap-3 px-6 py-5 sm:px-10 sm:py-7">
-        <h1 className="text-title-2 font-semibold tracking-tight">Listen</h1>
-        {listening || starting ? (
-          <div className="flex items-center gap-2 text-subhead text-label-2">
+    <div className="flex h-full flex-col overflow-y-auto">
+      {/* The same 768 px column as every other page. No title row: the sidebar and tab bar
+          already say Listen; the top bar holds the state, the timer and the input. */}
+      <main
+        className={cx(
+          'mx-auto flex w-full max-w-3xl flex-1 flex-col px-4',
+          halfIdeas ? 'pb-3' : 'pb-8 sm:pb-10',
+        )}
+      >
+        <div
+          data-testid="listen-status"
+          className="flex h-13 shrink-0 items-center justify-between gap-3 text-subhead text-label-2"
+        >
+          <div className="flex shrink-0 items-center gap-2">
             {input.mock ? (
               <Badge>Demo</Badge>
             ) : (
-              <>
-                <span
-                  className={cx('size-2 rounded-full', recording ? 'bg-live' : 'bg-label-3')}
-                  aria-hidden
-                />
-                <span>{starting ? 'Connecting…' : recording ? 'Recording' : 'Listening'}</span>
-              </>
+              live && (
+                <>
+                  {/* The dot means one thing: audio is being kept. */}
+                  {recording && <span className="size-2 rounded-full bg-live" aria-hidden />}
+                  <span>{starting ? 'Connecting…' : recording ? 'Recording' : 'Listening'}</span>
+                </>
+              )
             )}
             {listening && (
-              <time className="ml-1 tabular" aria-label="Session duration">
+              <time className="tabular" aria-label="Session duration">
                 {formatTime(elapsed)}
               </time>
             )}
           </div>
-        ) : (
-          input.mock && <Badge>Demo</Badge>
-        )}
-      </header>
-
-      {/* One centred column for idle, listening and finished; Ideas overlays it, never shifts it. */}
-      <main
-        className={cx(
-          'mx-auto flex w-full max-w-[900px] flex-1 flex-col px-6 sm:px-10',
-          halfIdeas ? 'pb-3' : 'pb-8 sm:pb-10',
-        )}
-      >
+          {live && (
+            <div className="flex min-w-0 items-center gap-2">
+              {input.mock ? (
+                <span className="truncate">Example progression</span>
+              ) : (
+                <>
+                  {jam.source === 'midi' ? (
+                    <Usb className="size-4 shrink-0" aria-hidden />
+                  ) : (
+                    <Mic className="size-4 shrink-0" aria-hidden />
+                  )}
+                  <span className="min-w-0 truncate">{inputLabel}</span>
+                  <Meter level={jam.level} active={listening} bars={7} />
+                </>
+              )}
+            </div>
+          )}
+        </div>
         {!listening && !starting && !stopped && !input.saving ? (
           <div className="flex flex-1 flex-col items-center justify-center py-12 text-center sm:py-20">
             <h2 className="max-w-lg text-[clamp(2.25rem,5vw,3.5rem)] leading-[1.08] font-semibold tracking-[-0.035em] text-balance">
@@ -372,32 +394,18 @@ export function JamScreen() {
           </div>
         ) : (
           <>
-            <div className="flex min-h-10 items-center justify-center gap-2 text-subhead text-label-2">
-              {input.mock ? (
-                <span>Example progression · microphone off</span>
-              ) : (
-                <>
-                  {jam.source === 'midi' ? (
-                    <Usb className="size-4" aria-hidden />
-                  ) : (
-                    <Mic className="size-4" aria-hidden />
-                  )}
-                  <span className="max-w-48 truncate">{inputLabel}</span>
-                  <Meter level={jam.level} active={listening} bars={7} />
-                </>
-              )}
-            </div>
             <div
               className={cx(
-                'flex flex-1 flex-col items-center justify-center',
-                halfIdeas ? 'py-2' : 'min-h-[260px] py-8 sm:min-h-[340px] sm:py-10',
+                'flex flex-col items-center justify-center',
+                // With the Ideas sheet up the screen packs to the top, so the sheet gets the rest.
+                halfIdeas ? 'py-2' : 'min-h-[260px] flex-1 py-8 sm:min-h-[340px] sm:py-10',
               )}
             >
               {hasChord ? (
                 <>
                   <ChordDisplay
                     details={false}
-                    compact={inspector.open}
+                    compact={halfIdeas}
                     chord={jam.currentChord}
                     confidence={jam.confidence}
                     keyContext={jam.keyEstimate}
@@ -438,13 +446,25 @@ export function JamScreen() {
                 />
               )}
             </div>
-            {jam.timeline.length > 0 && !halfIdeas && (
-              <section aria-label="Your progression" className="hairline-t py-4">
+            {jam.timeline.length > 0 && (
+              <section
+                aria-label="Your progression"
+                className={cx(
+                  'hairline-t',
+                  halfIdeas ? 'py-2' : 'py-4',
+                  // The floating Ideas panel covers the column's right edge, where the newest
+                  // chord is: the strip ends at the panel (the chord above does not move).
+                  sideOpen && 'pr-[max(0px,calc(316px-(100vw-992px)/2))]',
+                )}
+              >
                 {timeline}
               </section>
             )}
             <div className={cx('flex flex-col items-center gap-4', halfIdeas ? 'pt-2' : 'pt-5')}>
-              <div className="flex w-full flex-wrap items-center justify-center gap-3">
+              <div
+                ref={finishRow}
+                className="flex w-full flex-wrap items-center justify-center gap-3"
+              >
                 <Button
                   variant="filled"
                   size="lg"

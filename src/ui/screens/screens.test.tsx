@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { DEFAULT_SETTINGS } from '@/core';
+import { clock, DEFAULT_SETTINGS } from '@/core';
+import { C_MAJOR_KEY } from '@/core/mocks';
 import { initialJamData, jamStore } from '@/state/jamStore';
 import { inputStore } from '@/state/inputStore';
 import { settingsStore } from '@/state/settingsStore';
@@ -52,7 +53,7 @@ describe('JamScreen', () => {
     renderJam();
     expect(screen.getByText('Demo')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Start demo' }));
-    expect(screen.getByText(/Example progression · microphone off/)).toBeInTheDocument();
+    expect(screen.getByTestId('listen-status')).toHaveTextContent(/Demo.*Example progression/);
     fireEvent.click(screen.getByRole('button', { name: 'Listening options' }));
     expect(screen.getByRole('switch', { name: 'Record audio' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Stop demo' }));
@@ -203,31 +204,61 @@ describe('JamScreen', () => {
   });
 
   it('hides the chord and key while the input is too quiet', () => {
-    vi.useFakeTimers();
-    try {
-      renderJam();
-      act(() => {
-        jamStore.getState().startSession(0);
-        jamStore.setState({
-          source: 'mic',
-          currentChord: { root: 0, quality: 'maj' },
-          confidence: 0.9,
-          level: 0.01,
-        });
+    renderJam();
+    act(() => {
+      jamStore.getState().startSession(0);
+      jamStore.setState({
+        source: 'mic',
+        currentChord: { root: 0, quality: 'maj' },
+        confidence: 0.9,
       });
-      expect(screen.getByTestId('chord-symbol')).toBeInTheDocument();
-      act(() => void vi.advanceTimersByTime(4100));
-      expect(screen.queryByTestId('chord-symbol')).toBeNull();
-      expect(screen.getByRole('status')).toHaveTextContent('Can’t hear much.');
-      // one loud moment does not bring the chord back; two seconds of sound do
-      act(() => jamStore.setState({ level: 0.5 }));
-      act(() => void vi.advanceTimersByTime(1000));
-      expect(screen.queryByTestId('chord-symbol')).toBeNull();
-      act(() => void vi.advanceTimersByTime(1100));
-      expect(screen.getByTestId('chord-symbol')).toBeInTheDocument();
-    } finally {
-      vi.useRealTimers();
-    }
+    });
+    expect(screen.getByTestId('chord-symbol')).toBeInTheDocument();
+    // the live input decides "too quiet" (and keeps those chords out of the timeline)
+    act(() => jamStore.getState().setQuiet(true));
+    expect(screen.queryByTestId('chord-symbol')).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent('Can’t hear much.');
+    act(() => jamStore.getState().setQuiet(false));
+    expect(screen.getByTestId('chord-symbol')).toBeInTheDocument();
+  });
+
+  it('shows "Finding the key…" and no numeral until a key arrives', () => {
+    renderJam();
+    act(() => {
+      jamStore.getState().startSession(0);
+      jamStore.getState().applyEvent({
+        type: 'chord',
+        t: 0.5,
+        chord: { root: 0, quality: 'maj' },
+        confidence: 0.9,
+        source: 'mic',
+      });
+    });
+    expect(screen.getByText('Finding the key…')).toBeInTheDocument();
+    expect(screen.queryByTestId('chord-numeral')).toBeNull();
+    act(() => jamStore.getState().applyEvent({ type: 'key', t: 3, key: C_MAJOR_KEY }));
+    expect(screen.queryByText('Finding the key…')).toBeNull();
+    expect(screen.getByTestId('chord-numeral')).toHaveTextContent('I');
+    // the chord heard before the key is labelled in it too
+    expect(screen.getByTestId('timeline-chord')).toHaveAccessibleName(/C, I\./);
+  });
+
+  it('snaps a mark to the start of the chord that is sounding', () => {
+    renderJam();
+    const now = clock.now();
+    act(() => {
+      jamStore.getState().startSession(now - 10);
+      jamStore.getState().applyEvent({
+        type: 'chord',
+        t: now - 1.5,
+        chord: { root: 7, quality: 'maj' },
+        confidence: 0.9,
+        source: 'mic',
+      });
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Mark' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Chorus' }));
+    expect(jamStore.getState().markers[0].t).toBeCloseTo(8.5, 1);
   });
 
   it('says Recording only while audio is kept', () => {
@@ -332,8 +363,6 @@ describe('JamScreen', () => {
       jamStore.setState({ currentChord: { root: 2, quality: 'min7' }, confidence: 0.9 });
       fireEvent.keyDown(window, { key: 's' });
     });
-    // Ideas follow a chord once it has held for a second
-    act(() => void vi.advanceTimersByTime(1100));
     vi.useRealTimers();
     expect(screen.getByRole('complementary', { name: 'Ideas' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'D dorian' })).toBeInTheDocument();
@@ -449,23 +478,19 @@ describe('JamScreen voicings', () => {
     expect(screen.queryByRole('img', { name: /Piano/ })).toBeNull();
   });
 
-  it('voices the chord that has held, in three rows', () => {
-    vi.useFakeTimers();
-    try {
-      jamStore.setState({ currentChord: { root: 0, quality: 'maj7' }, confidence: 1 });
-      renderJam();
-      act(() => {
-        fireEvent.keyDown(window, { key: 'v' });
-      });
-      expect(screen.queryAllByTestId('voicing-card')).toHaveLength(0);
-      act(() => void vi.advanceTimersByTime(1100));
-      expect(screen.getAllByTestId('voicing-card')).toHaveLength(3);
-      // a passing chord does not move the panel
-      act(() => jamStore.setState({ currentChord: { root: 7, quality: '7' } }));
-      act(() => void vi.advanceTimersByTime(500));
-      expect(screen.getByRole('region', { name: 'Voicings' })).toHaveTextContent('Cmaj7');
-    } finally {
-      vi.useRealTimers();
-    }
+  it('voices the chord on screen, in three rows, and follows it at once', () => {
+    jamStore.setState({ currentChord: { root: 0, quality: 'maj7' }, confidence: 1 });
+    renderJam();
+    act(() => {
+      fireEvent.keyDown(window, { key: 'v' });
+    });
+    expect(screen.getAllByTestId('voicing-card')).toHaveLength(3);
+    expect(screen.getByRole('region', { name: 'Voicings' })).toHaveTextContent('Cmaj7');
+    // the next chord on screen moves the panel straight away (no hold)
+    act(() => jamStore.setState({ currentChord: { root: 7, quality: '7' } }));
+    expect(screen.getByRole('region', { name: 'Voicings' })).toHaveTextContent('G7');
+    // a gap keeps the last chord
+    act(() => jamStore.setState({ currentChord: null }));
+    expect(screen.getByRole('region', { name: 'Voicings' })).toHaveTextContent('G7');
   });
 });
