@@ -9,20 +9,20 @@
 */
 :root {
   color-scheme: light;
-  --jk-bg: #fbfbfd;
+  --jk-bg: #f5f5f7;
   --jk-bg-2: #ffffff;
-  --jk-bg-3: #f2f2f7;
+  --jk-bg-3: #ededf0;
   --jk-surface: #ffffff;
   --jk-surface-2: #f2f2f7;
-  --jk-label: #000000;
+  --jk-label: #1d1d1f;
   --jk-label-2: #63636b;
-  --jk-label-3: rgba(60, 60, 67, 0.3);
+  --jk-label-3: #6e6e73;
   --jk-label-4: rgba(60, 60, 67, 0.18);
   --jk-fill: rgba(120, 120, 128, 0.2);
   --jk-fill-2: rgba(120, 120, 128, 0.16);
   --jk-fill-3: rgba(120, 120, 128, 0.12);
   --jk-fill-4: rgba(120, 120, 128, 0.08);
-  --jk-separator: rgba(60, 60, 67, 0.29);
+  --jk-separator: rgba(60, 60, 67, 0.18);
   --jk-separator-opaque: #c6c6c8;
   --jk-accent: #0059c7;
   --jk-action: #005ecb;
@@ -37,20 +37,20 @@
 
 .dark {
   color-scheme: dark;
-  --jk-bg: #171719;
-  --jk-bg-2: #1c1c1e;
-  --jk-bg-3: #202023;
-  --jk-surface: #1c1c1e;
+  --jk-bg: #1c1c1e;
+  --jk-bg-2: #202022;
+  --jk-bg-3: #252527;
+  --jk-surface: #2c2c2e;
   --jk-surface-2: #2c2c2e;
   --jk-label: #ffffff;
   --jk-label-2: #aaaab2;
-  --jk-label-3: rgba(235, 235, 245, 0.3);
+  --jk-label-3: #98989f;
   --jk-label-4: rgba(235, 235, 245, 0.18);
   --jk-fill: rgba(120, 120, 128, 0.36);
   --jk-fill-2: rgba(120, 120, 128, 0.32);
   --jk-fill-3: rgba(120, 120, 128, 0.24);
   --jk-fill-4: rgba(120, 120, 128, 0.18);
-  --jk-separator: rgba(84, 84, 88, 0.6);
+  --jk-separator: rgba(154, 154, 160, 0.22);
   --jk-separator-opaque: #38383a;
   --jk-accent: #70b1ff;
   --jk-accent-fg: #ffffff;
@@ -131,6 +131,10 @@ body,
 #root {
   height: 100%;
   margin: 0;
+}
+
+#root {
+  height: 100dvh;
 }
 
 body {

@@ -64,7 +64,7 @@ export function JamInspector(p: JamInspectorProps) {
       className={
         p.layout === 'half'
           ? // From 1024 px the sidebar stays uncovered.
-            'h-[var(--keel-ideas-h,min(42dvh,420px))] lg:left-56'
+            'h-[var(--keel-ideas-h,min(42dvh,420px))] lg:left-52'
           : 'w-[320px]!'
       }
     >
@@ -88,10 +88,7 @@ export function JamInspector(p: JamInspectorProps) {
           />
           {key && (
             <section aria-labelledby="ideas-change-key" className="flex flex-col gap-2">
-              <h3
-                id="ideas-change-key"
-                className="px-1 text-footnote font-medium tracking-wide text-label-2 uppercase"
-              >
+              <h3 id="ideas-change-key" className="px-1 text-footnote font-medium text-label-2">
                 Change key
               </h3>
               <ModulationHints

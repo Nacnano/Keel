@@ -45,9 +45,9 @@ export function DropZone({ onFile, compact, disabled }: DropZoneProps) {
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       className={cx(
-        'relative flex items-center rounded-card border-[1.5px] border-dashed transition-colors duration-150',
+        'relative flex items-center rounded-cell border transition-colors duration-150',
         compact ? 'gap-4 px-4 py-2.5' : 'flex-col justify-center gap-4 px-6 py-16 text-center',
-        over ? 'border-accent bg-accent/10' : 'border-label-4 bg-surface/60',
+        over ? 'border-accent bg-accent/10' : 'border-separator bg-surface',
         disabled && 'pointer-events-none opacity-50',
       )}
     >
@@ -69,15 +69,15 @@ export function DropZone({ onFile, compact, disabled }: DropZoneProps) {
           <p className="flex-1 text-subhead text-label-2">Drop another song here, or</p>
           <label
             htmlFor={id}
-            className="inline-flex h-8 cursor-pointer items-center rounded-[8px] bg-fill-3 px-3 text-footnote font-medium text-label transition-colors hover:bg-fill-2 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent"
+            className="inline-flex min-h-11 cursor-pointer items-center rounded-[8px] bg-fill-3 px-3 text-footnote font-medium text-label transition-colors hover:bg-fill-2 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent"
           >
             Choose another file
           </label>
         </>
       ) : (
         <>
-          <span className="flex size-16 items-center justify-center rounded-full bg-accent/15 text-accent">
-            <FileAudio aria-hidden className="size-8" />
+          <span className="mb-2 flex size-16 items-center justify-center text-label-3">
+            <FileAudio aria-hidden className="size-12" strokeWidth={1.25} />
           </span>
           <p className="max-w-sm text-body text-label">
             Drop an audio file here to find its key and chords without it leaving this device.

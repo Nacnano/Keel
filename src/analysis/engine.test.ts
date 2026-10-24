@@ -60,6 +60,33 @@ const steps = (chords: string[][], seconds = 1.5): Step[] =>
   chords.map((notes) => ({ notes, seconds }));
 
 describe('mic path', () => {
+  it('does not turn a short tonal noise followed by silence into a sustained chord', () => {
+    const frames = progressionFrames([
+      { notes: C, seconds: 0.13 },
+      { notes: [], seconds: 3 },
+    ]);
+    expect(runFrames(frames).labels).toEqual([]);
+  });
+
+  it('does not accumulate a new chord across separate short noises', () => {
+    const frames = progressionFrames(
+      Array.from({ length: 6 }, () => [
+        { notes: C, seconds: 0.13 },
+        { notes: [], seconds: 0.4 },
+      ]).flat(),
+    );
+    expect(runFrames(frames).labels).toEqual([]);
+  });
+
+  it('holds the confirmed chord, not a brief new candidate, during a pause', () => {
+    const frames = progressionFrames([
+      { notes: C, seconds: 2 },
+      { notes: F, seconds: 0.13 },
+      { notes: [], seconds: 3 },
+    ]);
+    expect(runFrames(frames).labels).toEqual(['Cmaj', '-']);
+  });
+
   it('decodes C Am F G and finds C major within 4 s', () => {
     for (const noise of [0.05, 0.2]) {
       const { events, labels } = runFrames(progressionFrames(steps([C, Am, F, G]), { noise }));

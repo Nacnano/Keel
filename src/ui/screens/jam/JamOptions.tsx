@@ -3,6 +3,7 @@ import { SlidersHorizontal } from 'lucide-react';
 import type { JamMode, VocabLevel } from '@/core';
 import { Button, Group, Row, Segmented, Sheet, Slider, Switch } from '../../kit';
 import { MODE_OPTIONS, VOCAB_OPTIONS } from './labels';
+import { useMediaQuery } from '../../lib/useMediaQuery';
 
 export interface JamOptionsProps {
   vocabLevel: VocabLevel;
@@ -25,6 +26,7 @@ export interface JamOptionsProps {
 /** How Keel listens and what it shows. Actions live on the screen, not in here. */
 export function JamOptions(p: JamOptionsProps) {
   const [open, setOpen] = useState(false);
+  const wide = useMediaQuery('(min-width: 640px)');
   return (
     <>
       {p.compact ? (
@@ -49,7 +51,12 @@ export function JamOptions(p: JamOptionsProps) {
           Listening options
         </Button>
       )}
-      <Sheet open={open} onClose={() => setOpen(false)} title="Listening options">
+      <Sheet
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Listening options"
+        placement={wide ? 'center' : 'bottom'}
+      >
         <div className="flex flex-col gap-6 py-4">
           <Group>
             <Row

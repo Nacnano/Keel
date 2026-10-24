@@ -17,38 +17,39 @@ export interface PageProps {
   className?: string;
 }
 
-/**
- * The one page shell: a scroll area with a centred column, a top bar row that holds the back
- * link and the actions, and the large title under it. The top bar row is always there, so the
- * title sits at the same place on every page.
- */
+/** Shared window toolbar and inset content column. The toolbar stays available while scrolling. */
 export function Page({ title, subtitle, back, leading, actions, children, className }: PageProps) {
   return (
-    <div className="h-full overflow-y-auto">
-      <div className={cx('mx-auto flex w-full max-w-3xl flex-col', className)}>
+    <div className="flex h-full flex-col overflow-y-auto">
+      <header className="material hairline-b sticky top-0 z-10 shrink-0">
         <div
           data-testid="page-top-bar"
-          className="flex h-13 items-center justify-between gap-2 px-2"
+          className="flex min-h-16 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 sm:px-6"
         >
-          <div className="flex min-w-0 items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             {back ? (
               <Link
                 to={back.to}
-                className="inline-flex h-11 shrink-0 items-center gap-0.5 rounded-control px-2 text-body text-accent transition-colors duration-150 hover:bg-fill-4 active:bg-fill-3"
+                aria-label={back.label}
+                title={back.label}
+                className="-ml-2 inline-flex size-11 shrink-0 items-center justify-center rounded-control text-accent transition-colors hover:bg-fill-4 active:bg-fill-3"
               >
                 <ChevronLeft className="size-6" aria-hidden />
-                {back.label}
               </Link>
             ) : (
               leading
             )}
+            <h1 className="min-w-0 text-title-3 font-semibold tracking-tight break-words text-label">
+              {title}
+            </h1>
           </div>
-          {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
+          {actions && (
+            <div className="ml-auto flex shrink-0 flex-wrap items-center gap-1">{actions}</div>
+          )}
         </div>
-        <header className="px-4 pb-4">
-          <h1 className="text-large-title font-bold break-words text-label">{title}</h1>
-          {subtitle && <div className="mt-1 text-subhead text-label-2">{subtitle}</div>}
-        </header>
+      </header>
+      <div className={cx('mx-auto flex w-full max-w-3xl flex-1 flex-col pt-7 sm:pt-9', className)}>
+        {subtitle && <div className="px-4 pb-6 text-subhead text-label-2">{subtitle}</div>}
         {children}
         <div aria-hidden className="h-[max(env(safe-area-inset-bottom),32px)] shrink-0" />
       </div>

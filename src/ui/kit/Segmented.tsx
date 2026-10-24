@@ -61,7 +61,7 @@ export function Segmented<T extends string | number>({
       <span
         aria-hidden
         className={cx(
-          'absolute top-0.5 bottom-0.5 rounded-[7px] bg-surface-2 shadow-[0_1px_3px_rgba(0,0,0,0.25),0_0_0_0.5px_rgba(0,0,0,0.06)] transition-[left,width] duration-200 ease-out-expo',
+          'absolute top-0.5 bottom-0.5 rounded-[7px] bg-bg-2 shadow-[0_1px_3px_rgba(0,0,0,0.12),0_0_0_0.5px_rgba(0,0,0,0.04)] transition-[left,width] duration-200 ease-out-expo',
           'dark:bg-[#636366]',
           pill ? 'opacity-100' : 'opacity-0',
         )}

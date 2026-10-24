@@ -3,9 +3,9 @@
   shared by Library, Review and the public Share page.
 */
 
-/** Like `Button variant="filled" round`: the one primary action. */
+/** Like `Button variant="filled"`: the one primary action. */
 export const FILLED_LINK =
-  'inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-action px-5 text-subhead font-semibold whitespace-nowrap text-accent-fg transition-[filter] duration-150 hover:brightness-110 active:brightness-95';
+  'inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-control bg-action px-5 text-subhead font-semibold whitespace-nowrap text-accent-fg transition-[filter] duration-150 hover:brightness-110 active:brightness-95';
 
 /** Like `Button variant="gray"`. */
 export const GRAY_LINK =

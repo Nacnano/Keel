@@ -7,7 +7,7 @@ recordings never leave the device.
 
 Time needed: about 15 minutes. Replace `<project-ref>` with your project's id
 (the subdomain of its URL) and `<your-domain>` with the production domain
-(for example `music.nacnano.dev`).
+(for example `keel.nacnano.dev`).
 
 ## 1. Create the project
 

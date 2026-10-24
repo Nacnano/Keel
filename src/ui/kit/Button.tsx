@@ -42,13 +42,13 @@ const DESTRUCTIVE: Record<ButtonVariant, string> = {
 const SIZE: Record<ButtonSize, string> = {
   sm: 'h-8 px-3 text-footnote gap-1.5 rounded-[8px] pointer-coarse:h-11 pointer-coarse:min-w-11',
   md: 'h-11 px-4 text-subhead gap-2 rounded-control',
-  lg: 'h-13 px-6 text-body gap-2.5 rounded-cell',
+  lg: 'h-12 px-6 text-body gap-2.5 rounded-control',
 };
 
 const ICON_SIZE: Record<ButtonSize, string> = {
   sm: 'size-8 rounded-[8px] pointer-coarse:size-11',
   md: 'size-11 rounded-control',
-  lg: 'size-13 rounded-cell',
+  lg: 'size-12 rounded-control',
 };
 
 export function Button({
@@ -76,7 +76,7 @@ export function Button({
       disabled={disabled || loading}
       className={cx(
         'inline-flex shrink-0 items-center justify-center whitespace-nowrap select-none',
-        'transition-[background-color,color,filter,transform] duration-150 ease-out active:scale-[0.98]',
+        'transition-[background-color,color,filter] duration-150 ease-out',
         'disabled:pointer-events-none disabled:opacity-40',
         pressed && variant !== 'filled' ? 'bg-accent/15 text-accent font-semibold' : look,
         icon ? ICON_SIZE[size] : SIZE[size],

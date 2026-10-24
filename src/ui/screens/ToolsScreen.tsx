@@ -27,7 +27,7 @@ const tools = [
 export function ToolsScreen() {
   return (
     <Page title="Tools" subtitle="A little help before or after you play.">
-      <div className="flex flex-col gap-8 px-4 pt-2">
+      <div className="flex flex-col gap-7 px-4">
         <Group aria-label="Music tools">
           {tools.map((tool) => (
             <ToolLink key={tool.to} {...tool} />
@@ -62,7 +62,7 @@ function ToolLink({
       to={to}
       className="flex min-h-20 items-center gap-4 px-4 py-4 transition-colors hover:bg-fill-4 active:bg-fill-3"
     >
-      <Icon className="size-5 shrink-0 text-accent" aria-hidden />
+      <Icon className="size-5 shrink-0 text-label-2" aria-hidden />
       <span className="min-w-0 flex-1">
         <span className="block text-body font-medium text-label">{title}</span>
         <span className="mt-1 block text-subhead text-label-2">{description}</span>

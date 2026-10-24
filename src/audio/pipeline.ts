@@ -28,6 +28,7 @@ import {
 import { findPeaks } from './peaks';
 import { INSTRUMENT_PROFILES } from './profiles';
 import { createRoomProcessor } from './room';
+import { isMainsHum, tonalEnergyRatio } from './tonality';
 import { amplitudeScale, hann } from './window';
 
 export interface PipelineConfig {
@@ -248,6 +249,21 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
       maxHz: PEAK_MAX_HZ,
       minProminenceDb: profile.peakProminenceDb,
     });
+    // Loud broadband room noise can open an energy gate, especially during startup or
+    // after a fan switches on. Require actual tonal energy before normalising its peaks.
+    if (tonalEnergyRatio(longMag, peaks, sampleRate, frameSize) < 0.55 || isMainsHum(peaks)) {
+      room.reset();
+      lastChroma = new Float32Array(12);
+      lastBass = null;
+      return {
+        t,
+        chroma: lastChroma,
+        energy: energyOut,
+        bass: null,
+        onset: on.onset,
+        exact: false,
+      };
+    }
     const bassEst = detectBass(peaks, {
       a4,
       minHz: BASS_MIN_HZ,
