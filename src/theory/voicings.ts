@@ -1,7 +1,8 @@
 /**
  * Piano voicings for a chord. Every voicing is an ascending list of MIDI notes, read as two
  * hands split at middle C (`splitHands`): the left hand sits in roughly A1–B3, the right hand
- * in C4–C6.
+ * in C4–C6. Shells put the root in C2–B2 and the guide tones in C3–B3 and up, out of the
+ * low-register mud (C2 E3 B3 for Cmaj7, not C2 E2 B2).
  *
  * Low-register rule: below C3 neighbouring notes are at least a minor third apart (a voicing
  * that would put a second down there moves the upper note up an octave).
@@ -47,7 +48,8 @@ export const DEFAULT_REGISTER = REGISTER_CENTRE.mid;
 export const HAND_SPLIT: MidiNote = 60;
 
 const BASS_LOW = 36; // C2: left-hand bass in C2–B2
-const LH_FLOOR = 28; // E1: shells may drop this far to stay below middle C
+/** C3: shell guide tones start in C3–B3 (E3 sits there), never lower. */
+const GUIDE_LOW = 48;
 const RH_LOW = HAND_SPLIT; // C4
 const RH_HIGH = 84; // C6
 const COMP_LOW = 48; // C3: lowest note of a left-hand rootless comping shape
@@ -68,7 +70,7 @@ const DESCRIPTIONS: Record<VoicingStyle, string> = {
   pop: 'Right-hand triad over the root in octaves',
   close: 'Bass note, right hand in close position',
   spread: 'Left-hand root and fifth, right-hand upper structure',
-  shell: 'Left-hand 1-3-7 and 1-7-3 guide tones',
+  shell: 'Low root, 3rd and 7th (or 7th and 3rd) from C3 up',
   drop2: 'Second voice from the top dropped an octave',
   rootlessA: 'From the 3rd, no root (let the bass take it)',
   rootlessB: 'From the 7th, no root (let the bass take it)',
@@ -281,9 +283,10 @@ function shellVoicings(chord: Chord): MidiNote[][] {
   const usable = (p: PitchClass | undefined): p is PitchClass => p !== undefined && p !== lowPc;
 
   const out: MidiNote[][] = [];
+  // the first tone above the root goes in C3–B3, the rest stack above it
   const chain = (...pcs: PitchClass[]) => {
     const v = [low];
-    for (const p of pcs) v.push(above(p, v[v.length - 1]));
+    for (const p of pcs) v.push(above(p, v.length === 1 ? GUIDE_LOW - 1 : v[v.length - 1]));
     out.push(v);
   };
   if (usable(g3) && usable(g7)) {
@@ -296,11 +299,7 @@ function shellVoicings(chord: Chord): MidiNote[][] {
   } else {
     out.push([low, low + 12]);
   }
-  // a shell is a left-hand shape: keep it below middle C
-  return out.map((shape) => {
-    const v = spaceLowRegister(shape);
-    return Math.max(...v) >= HAND_SPLIT && low - 12 >= LH_FLOOR ? v.map((n) => n - 12) : v;
-  });
+  return out;
 }
 
 function rootlessShapes(chord: Chord): { a: PitchClass[]; b: PitchClass[] } | null {
@@ -382,7 +381,8 @@ function centreOf(register: VoicingOptions['register']): number {
  *   triad is the upper three tones (Em over C for Cmaj7);
  * - `close`: left-hand bass + close-position right hand, every inversion;
  * - `spread`: left-hand root + fifth, the rest as a right-hand upper structure;
- * - `shell`: left-hand root (or slash bass) with 3rd and 7th: 1-3-7 and 1-7-3 (Bud Powell);
+ * - `shell`: root (or slash bass) in C2–B2 with 3rd and 7th from C3 up: 1-3-7 and 1-7-3
+ *   (C2 E3 B♭3 and C2 B♭3 E4 for C7);
  * - `drop2`: close voicings with the second note from the top dropped an octave;
  * - `rootlessA` / `rootlessB`: Bill Evans shapes from the 3rd / from the 7th, no root, with a
  *   colour tone (9, 13) added when the chord has none.

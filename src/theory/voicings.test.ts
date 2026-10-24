@@ -138,17 +138,22 @@ describe('voicings: shapes', () => {
     expect(splitHands(voicings(ch('Cdim7'), { style: 'spread' })[0]).left).toEqual([36, 48]);
   });
 
-  it('shell: 1-3-7 and 1-7-3 in the left hand', () => {
+  it('shell: root in C2–B2, 1-3-7 and 1-7-3 with the guide tones from C3 up', () => {
     expect(voicings(ch('C7'), { style: 'shell' })).toEqual([
-      [36, 40, 46], // 1-3-7
-      [36, 46, 52], // 1-7-3
+      [36, 52, 58], // 1-3-7: C2 E3 Bb3
+      [36, 58, 64], // 1-7-3: C2 Bb3 E4
     ]);
+    expect(voicings(ch('Cmaj7'), { style: 'shell' })[0]).toEqual([36, 52, 59]); // C2 E3 B3
     for (const q of QUALITY_ORDER) {
       for (const root of ROOTS) {
         const c: Chord = { root, quality: q };
         const vs = voicings(c, { style: 'shell' });
         expect(vs.length, q).toBeGreaterThanOrEqual(1);
-        for (const v of vs) expect(splitHands(v).right, `${q} ${v}`).toEqual([]);
+        for (const v of vs) {
+          expect(v[0] >= 36 && v[0] < 48, `${q} ${v} root`).toBe(true);
+          // never a guide tone below C3, and the lowest one in C3–B3 (where E3 is)
+          expect(v[1] >= 48 && v[1] < 60, `${q} ${v} guide`).toBe(true);
+        }
       }
     }
   });
@@ -163,7 +168,10 @@ describe('voicings: shapes', () => {
         for (const g of guides) expect(pcs(v).has(g), `${q} ${v}`).toBe(true);
       }
     }
-    expect(voicings(ch('Csus2'), { style: 'shell' })).toEqual([[36, 43, 50]]);
+    expect(voicings(ch('Csus2'), { style: 'shell' })).toEqual([
+      [36, 50, 55], // C2 D3 G3
+      [36, 55, 62], // C2 G3 D4
+    ]);
   });
 
   it('rootless A starts on the 3rd, B on the 7th (Bill Evans)', () => {
