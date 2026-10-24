@@ -33,7 +33,10 @@ const work = new Float64Array(12);
  * - dim / aug lose up to `alteredPenalty` when the perfect fifth sounds at `fifthRatio` of root;
  * - dominant templates (major third + minor seventh) gain `domBonus` when the ♭7 sounds at
  *   `domRatio` of the mean core-tone level and the major third is at least as loud as the minor
- *   third, so a clear C7 is not read as C (or C6 / Am7) on a blues;
+ *   third, so a clear C7 is not read as C (or C6 / Am7). In a major key the third condition is
+ *   dropped for I7, IV7 and V7 (a minor third over their ♭7 is a blue note), and on the tonic the
+ *   blue third counts towards the dominant's third (`blueThird` × how much louder it is than
+ *   the major third), so C–E♭–G–B♭ in a C blues is C7, not Cm7;
  * - with a (stable) bass: +`bassRoot` for templates rooted on it, +`bassTone` for templates
  *   containing it (inversions), −`bassForeign` for templates that do not contain it, and the
  *   bass bin is raised to `bassFloor` × the loudest bin before the cosine (a left-hand root
@@ -53,7 +56,16 @@ export const EVIDENCE = {
   bassFloor: 0.8,
   domRatio: 0.6,
   domBonus: 0.03,
+  blueThird: 0.12,
 } as const;
+
+export interface ScoreOptions {
+  /**
+   * Tonic of the current key when it is major: over a sounding ♭7, a minor third on I, IV or V
+   * is a blue note, so those dominants keep their bonus without the major-third-louder condition.
+   */
+  majorTonic?: PitchClass | null;
+}
 
 /**
  * Fill `out` (length `bank.size + 1`) with similarities; index `bank.size` is no-chord.
@@ -65,6 +77,7 @@ export function scoreChroma(
   bank: TemplateBank,
   out: Float32Array,
   bass: PitchClass | null = null,
+  opts: ScoreOptions = {},
 ): boolean {
   const n = bank.size;
   let sum = 0;
@@ -118,7 +131,7 @@ export function scoreChroma(
       c10 * d[r + 10] +
       c11 * d[r + 11];
   }
-  applyEvidence(chroma, bank, out, bass);
+  applyEvidence(chroma, bank, out, bass, opts.majorTonic ?? null, inv);
   const flat = sum * inv * INV_SQRT12;
   out[n] = flat * NO_CHORD_SCALE;
   return false;
@@ -129,6 +142,8 @@ function applyEvidence(
   bank: TemplateBank,
   out: Float32Array,
   bass: PitchClass | null,
+  majorTonic: PitchClass | null,
+  inv: number,
 ) {
   const E = EVIDENCE;
   const { ext, core, kind, alteredFifth, dominant, roots, size } = bank;
@@ -155,8 +170,17 @@ function applyEvidence(
         const ratio = c[pc] / ref;
         if (ratio < E.extRatio) pen += E.extPenalty * (1 - ratio / E.extRatio);
       }
-      if (dominant[k] && c[(r + 10) % 12] / ref >= E.domRatio && c[(r + 4) % 12] >= c[(r + 3) % 12])
-        pen -= E.domBonus;
+      if (dominant[k] && c[(r + 10) % 12] / ref >= E.domRatio) {
+        const major3 = c[(r + 4) % 12];
+        const minor3 = c[(r + 3) % 12];
+        const degree = majorTonic === null ? -1 : (r - majorTonic + 12) % 12;
+        if (degree === 0 || degree === 5 || degree === 7) {
+          // I7, IV7, V7 of a major key: a minor third over the ♭7 is a blue note, and on the
+          // tonic it stands in for the major third the template expects
+          pen -= E.domBonus;
+          if (degree === 0 && minor3 > major3) pen -= E.blueThird * (minor3 - major3) * inv;
+        } else if (major3 >= minor3) pen -= E.domBonus;
+      }
     }
     if (kind[k] !== 0) {
       const third = Math.max(c[(r + 3) % 12], c[(r + 4) % 12]) / root;
