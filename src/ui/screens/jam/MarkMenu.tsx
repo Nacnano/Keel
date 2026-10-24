@@ -1,29 +1,25 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Bookmark, Flag } from 'lucide-react';
+import { Bookmark, Flag, Music } from 'lucide-react';
 import type { MarkerKind } from '@/core';
 import { Button } from '../../kit';
-import { MARKER_LABEL } from '../../lib/markers';
+import { MARK_ITEMS, type MarkItem } from '../../lib/markers';
 
-/** Bookmark first, then the song sections in order. One tap each. */
-const MARK_KINDS: readonly MarkerKind[] = [
-  'bookmark',
-  'intro',
-  'verse',
-  'chorus',
-  'bridge',
-  'outro',
-];
+export type { MarkItem };
 
-const WIDTH = 200;
+/** Two columns of 44 pt rows keep the menu short enough to stay below the key line. */
+const WIDTH = 296;
 
 export interface MarkMenuProps {
-  onMark(kind: MarkerKind): void;
+  onMark(item: MarkItem): void;
 }
 
+const ICON: Partial<Record<MarkerKind, typeof Flag>> = { bookmark: Bookmark };
+
 /**
- * "Mark" button with a small menu anchored to it. It opens upwards because the button sits
- * at the bottom of the listening screen.
+ * "Mark" button with a compact two-column menu. It opens upwards from the button (which sits
+ * at the bottom of the listening screen), aligned to the button's left edge so it stays to
+ * the side of the centred key line.
  */
 export function MarkMenu({ onMark }: MarkMenuProps) {
   const id = useId();
@@ -38,7 +34,7 @@ export function MarkMenu({ onMark }: MarkMenuProps) {
       const a = anchor.current?.getBoundingClientRect();
       if (!a) return;
       const vw = window.innerWidth;
-      const left = Math.max(8, Math.min(a.left + a.width / 2 - WIDTH / 2, vw - WIDTH - 8));
+      const left = Math.max(8, Math.min(a.left, vw - WIDTH - 8));
       setPos({ bottom: window.innerHeight - a.top + 8, left });
     };
     place();
@@ -112,27 +108,27 @@ export function MarkMenu({ onMark }: MarkMenuProps) {
             role="menu"
             aria-label="Mark"
             style={pos ? { bottom: pos.bottom, left: pos.left, width: WIDTH } : { width: WIDTH }}
-            className="anim-rise material fixed z-50 flex flex-col rounded-card p-1.5 text-label shadow-elevated"
+            // Opaque: a see-through menu let timeline chips show through the labels.
+            className="anim-rise fixed z-50 grid grid-flow-col grid-cols-2 grid-rows-4 gap-x-1 rounded-card bg-bg-2 p-1.5 text-label shadow-elevated ring-1 ring-separator/40"
           >
-            {MARK_KINDS.map((kind) => (
-              <button
-                key={kind}
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setOpen(false);
-                  onMark(kind);
-                }}
-                className="flex min-h-11 items-center gap-3 rounded-[10px] px-3 text-left text-body outline-none hover:bg-fill-4 focus-visible:bg-fill-3 active:bg-fill-3"
-              >
-                {kind === 'bookmark' ? (
-                  <Bookmark className="size-4 text-label-2" aria-hidden />
-                ) : (
-                  <Flag className="size-4 text-label-2" aria-hidden />
-                )}
-                {MARKER_LABEL[kind]}
-              </button>
-            ))}
+            {MARK_ITEMS.map((item) => {
+              const Icon = item.newSong ? Music : (ICON[item.kind] ?? Flag);
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpen(false);
+                    onMark(item);
+                  }}
+                  className="flex min-h-11 items-center gap-2.5 rounded-[10px] px-3 text-left text-body whitespace-nowrap outline-none hover:bg-fill-4 focus-visible:bg-fill-3 active:bg-fill-3"
+                >
+                  <Icon className="size-4 shrink-0 text-label-2" aria-hidden />
+                  {item.label}
+                </button>
+              );
+            })}
           </div>,
           document.body,
         )}
