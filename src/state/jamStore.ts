@@ -15,6 +15,25 @@ import type {
 
 export type JamStatus = 'idle' | 'starting' | 'listening' | 'error';
 
+/** A key that is replaced sooner than this was the opening wobble, not a key change. */
+export const SHORT_KEY_SEC = 10;
+
+/** A mark snaps back to the start of the sounding chord if that chord began this recently. */
+export const MARK_SNAP_SEC = 2;
+
+/**
+ * Optional fields a newer engine adds to `key` events (clock seconds, like `t`). Read with
+ * optional chaining so today's events (without them) work the same.
+ */
+type KeyEventExtras = {
+  /** Where the evidence for this key started. */
+  since?: number;
+  /** This key replaces a short-lived previous key instead of following it. */
+  supersedes?: unknown;
+  /** Start of the short key being replaced. */
+  replacesSince?: number;
+};
+
 export interface KeyHistoryEntry {
   /** Seconds from session start. */
   t: number;
@@ -43,6 +62,12 @@ export interface JamData {
   recordAudio: boolean;
   /** The session is the scripted demo (nothing is saved). */
   demo: boolean;
+  /** The input has been too quiet to trust ("Can't hear much"); set by the live input. */
+  quiet: boolean;
+  /** Session time the next first key is drawn from: the start, or the last New song. */
+  keyFrom: number;
+  /** Session time the last key change arrived (for the short-key rule). */
+  keyChangedAt: number;
 }
 
 export interface JamActions {
@@ -53,8 +78,12 @@ export interface JamActions {
   /** Clears timeline, key history and markers. Keeps status, source and current key. */
   reset(): void;
   addMarker(kind: MarkerKind, label?: string, t?: number): Marker | null;
-  /** Forget the current key (New song); the timeline and key history stay. */
-  clearKey(): void;
+  /**
+   * Forget the current key (New song); the timeline and key history stay. The next key is
+   * drawn from `from` (session seconds, default now), so the new song is labelled from its start.
+   */
+  clearKey(from?: number): void;
+  setQuiet(quiet: boolean): void;
   setStatus(status: JamStatus, error?: string): void;
   setSource(source: InputSource | null): void;
   toggleRecordAudio(): void;
@@ -71,6 +100,25 @@ function sameKey(a: KeyEstimate, b: KeyEstimate): boolean {
   return a.tonic === b.tonic && a.mode === b.mode;
 }
 
+/** Append `entry`, folding it into the previous entry when that is already the same key. */
+function merged(history: KeyHistoryEntry[], entry: KeyHistoryEntry): KeyHistoryEntry[] {
+  const prev = history[history.length - 1];
+  return prev && sameKey(prev.key, entry.key) ? history : [...history, entry];
+}
+
+/**
+ * Where a mark tapped at `t` belongs: the start of the chord sounding at `t` when that chord
+ * began at most `MARK_SNAP_SEC` earlier (players tap a little after the downbeat), else `t`.
+ */
+export function snapToChordStart(timeline: ChordRecord[], t: number): number {
+  for (let i = timeline.length - 1; i >= 0; i--) {
+    const rec = timeline[i];
+    if (!rec.chord || rec.t > t) continue;
+    return t - rec.t <= MARK_SNAP_SEC ? rec.t : t;
+  }
+  return t;
+}
+
 const EMPTY_SESSION = {
   currentChord: null,
   confidence: 0,
@@ -80,6 +128,9 @@ const EMPTY_SESSION = {
   activeMidiNotes: [],
   markers: [],
   lastT: 0,
+  quiet: false,
+  keyFrom: 0,
+  keyChangedAt: 0,
 } satisfies Partial<JamData>;
 
 export const initialJamData = (): JamData => ({
@@ -128,9 +179,34 @@ export const useJamStore = create<JamState>()((set, get) => ({
           return { ...patch, timeline: [...s.timeline, rec] };
         }
         case 'key': {
-          const last = s.keyHistory[s.keyHistory.length - 1];
+          const history = s.keyHistory;
+          const last = history[history.length - 1];
           if (last && sameKey(last.key, e.key)) return { ...base, key: e.key };
-          return { ...base, key: e.key, keyHistory: [...s.keyHistory, { t, key: e.key }] };
+          const extra = e as typeof e & KeyEventExtras;
+          const arrived = base.lastT;
+          const patch = { ...base, key: e.key, keyChangedAt: arrived };
+          // The first key of a song labels the song from its start, chords heard before it too.
+          if (s.key === null) {
+            const from = Math.min(s.keyFrom, t);
+            const kept = last && last.t >= from ? history.slice(0, -1) : history;
+            return { ...patch, keyHistory: merged(kept, { t: from, key: e.key }) };
+          }
+          // A key replaced within 10 s was the opening wobble: the new key takes its place.
+          const short =
+            Boolean(extra.supersedes) ||
+            extra.replacesSince !== undefined ||
+            arrived - s.keyChangedAt < SHORT_KEY_SEC;
+          if (last && short) {
+            return {
+              ...patch,
+              keyHistory: merged(history.slice(0, -1), { t: last.t, key: e.key }),
+            };
+          }
+          const since = extra.since !== undefined ? extra.since - sessionStart : t;
+          return {
+            ...patch,
+            keyHistory: [...history, { t: Math.max(last?.t ?? 0, Math.min(since, t)), key: e.key }],
+          };
         }
         case 'notes':
           return {
@@ -159,7 +235,7 @@ export const useJamStore = create<JamState>()((set, get) => ({
   },
 
   stopSession() {
-    set({ status: 'idle', activePitchClasses: [], activeMidiNotes: [], level: 0 });
+    set({ status: 'idle', activePitchClasses: [], activeMidiNotes: [], level: 0, quiet: false });
   },
 
   reset() {
@@ -183,8 +259,14 @@ export const useJamStore = create<JamState>()((set, get) => ({
     return marker;
   },
 
-  clearKey() {
-    set({ key: null });
+  clearKey(from) {
+    const s = get();
+    const now = s.sessionStart !== null ? Math.max(0, clock.now() - s.sessionStart) : s.lastT;
+    set({ key: null, keyFrom: from ?? now });
+  },
+
+  setQuiet(quiet) {
+    if (get().quiet !== quiet) set({ quiet });
   },
 
   setStatus(status, error) {
