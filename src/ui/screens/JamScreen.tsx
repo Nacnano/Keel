@@ -129,7 +129,7 @@ export function JamScreen() {
   // Where a side panel fits beside the centred controls, Ideas floats over the right edge and
   // nothing moves; narrower, it is a sheet under the Finish row.
   const sideIdeas = useMediaQuery('(min-width: 1180px)', true);
-  const [pianoVisible, togglePiano] = useStoredToggle('keel.ui.piano', false);
+  const [pianoVisible, togglePiano] = useStoredToggle('keel.ui.piano', true);
   const inspector = useInspectorPref();
   const listening = jam.status === 'listening';
   const starting = jam.status === 'starting';

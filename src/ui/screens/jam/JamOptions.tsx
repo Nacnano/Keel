@@ -62,23 +62,6 @@ export function JamOptions(p: JamOptionsProps) {
         <div className="flex flex-col gap-6 py-4">
           <Group>
             <Row
-              label="Microphone sensitivity"
-              stacked
-              accessory={
-                <Slider
-                  aria-label="Microphone sensitivity"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  aria-valuetext={`${Math.round(p.sensitivity * 100)}%`}
-                  value={p.sensitivity}
-                  onChange={p.onSensitivity}
-                  minLabel="Quieter room"
-                  maxLabel="Soft playing"
-                />
-              }
-            />
-            <Row
               label="Listen to"
               stacked
               accessory={
@@ -106,6 +89,23 @@ export function JamOptions(p: JamOptionsProps) {
                   value={p.instrument}
                   onChange={p.onInstrument}
                   options={INSTRUMENT_OPTIONS}
+                />
+              }
+            />
+            <Row
+              label="Microphone sensitivity"
+              stacked
+              accessory={
+                <Slider
+                  aria-label="Microphone sensitivity"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  aria-valuetext={`${Math.round(p.sensitivity * 100)}%`}
+                  value={p.sensitivity}
+                  onChange={p.onSensitivity}
+                  minLabel="Quieter room"
+                  maxLabel="Soft playing"
                 />
               }
             />
