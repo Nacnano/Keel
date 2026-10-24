@@ -7,6 +7,7 @@ import { inputStore } from '@/state/inputStore';
 import { settingsStore } from '@/state/settingsStore';
 import { liveInput } from '@/app/live/liveInput';
 import { JamScreen } from './JamScreen';
+import { useToastStore } from '../components/toastStore';
 import { stopDemo } from './jam/useMockInput';
 import pkg from '../../../package.json';
 import { SettingsScreen } from './SettingsScreen';
@@ -180,11 +181,65 @@ describe('JamScreen', () => {
       within(menu)
         .getAllByRole('menuitem')
         .map((m) => m.textContent),
-    ).toEqual(['Bookmark', 'Intro', 'Verse', 'Chorus', 'Bridge', 'Outro']);
+    ).toEqual([
+      'Bookmark',
+      'Intro',
+      'Verse',
+      'Pre-chorus',
+      'Chorus',
+      'Bridge',
+      'Outro',
+      'New song',
+    ]);
     fireEvent.click(within(menu).getByRole('menuitem', { name: 'Chorus' }));
     expect(screen.queryByRole('menu')).toBeNull();
     expect(jamStore.getState().markers.map((m) => m.kind)).toEqual(['chorus']);
     expect(screen.getByTestId('timeline-marker')).toHaveTextContent('Chorus');
+    // the flag is the confirmation: no "Chorus at 0:00" toast
+    expect(useToastStore.getState().toasts).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Mark' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'New song' }));
+    expect(jamStore.getState().markers.at(-1)).toMatchObject({ kind: 'custom', label: 'New song' });
+  });
+
+  it('hides the chord and key while the input is too quiet', () => {
+    vi.useFakeTimers();
+    try {
+      renderJam();
+      act(() => {
+        jamStore.getState().startSession(0);
+        jamStore.setState({
+          source: 'mic',
+          currentChord: { root: 0, quality: 'maj' },
+          confidence: 0.9,
+          level: 0.01,
+        });
+      });
+      expect(screen.getByTestId('chord-symbol')).toBeInTheDocument();
+      act(() => void vi.advanceTimersByTime(4100));
+      expect(screen.queryByTestId('chord-symbol')).toBeNull();
+      expect(screen.getByRole('status')).toHaveTextContent('Can’t hear much.');
+      // one loud moment does not bring the chord back; two seconds of sound do
+      act(() => jamStore.setState({ level: 0.5 }));
+      act(() => void vi.advanceTimersByTime(1000));
+      expect(screen.queryByTestId('chord-symbol')).toBeNull();
+      act(() => void vi.advanceTimersByTime(1100));
+      expect(screen.getByTestId('chord-symbol')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('says Recording only while audio is kept', () => {
+    renderJam();
+    act(() => {
+      jamStore.getState().startSession(0);
+      jamStore.setState({ source: 'mic', recordAudio: false });
+    });
+    expect(screen.getByText('Listening')).toBeInTheDocument();
+    expect(screen.queryByText('Recording')).toBeNull();
+    act(() => jamStore.setState({ recordAudio: true }));
+    expect(screen.getByText('Recording')).toBeInTheDocument();
   });
 
   it('shows the chord, a large key line and no match-strength text', () => {
@@ -270,12 +325,16 @@ describe('JamScreen', () => {
   });
 
   it('S opens the ideas inspector on Scales and remembers the choice', () => {
+    vi.useFakeTimers();
     renderJam();
     expect(screen.queryByRole('complementary', { name: 'Ideas' })).toBeNull();
     act(() => {
       jamStore.setState({ currentChord: { root: 2, quality: 'min7' }, confidence: 0.9 });
       fireEvent.keyDown(window, { key: 's' });
     });
+    // Ideas follow a chord once it has held for a second
+    act(() => void vi.advanceTimersByTime(1100));
+    vi.useRealTimers();
     expect(screen.getByRole('complementary', { name: 'Ideas' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'D dorian' })).toBeInTheDocument();
     expect(localStorage.getItem('keel.ui.inspector')).toBe('1:scales');
@@ -380,21 +439,33 @@ describe('SettingsScreen', () => {
 describe('JamScreen voicings', () => {
   it('V opens the inspector on Voicings and the choice persists', () => {
     renderJam();
-    expect(screen.queryByRole('radiogroup', { name: 'Voicing style' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Voicings' })).toBeNull();
     act(() => {
       fireEvent.keyDown(window, { key: 'v' });
     });
-    expect(screen.getByRole('radiogroup', { name: 'Voicing style' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Voicings' })).toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: 'Voicing style' })).toBeNull();
     expect(localStorage.getItem('keel.ui.inspector')).toBe('1:voicings');
     expect(screen.queryByRole('img', { name: /Piano/ })).toBeNull();
   });
 
-  it('voices the current chord', () => {
-    jamStore.setState({ currentChord: { root: 0, quality: 'maj7' }, confidence: 1 });
-    renderJam();
-    act(() => {
-      fireEvent.keyDown(window, { key: 'v' });
-    });
-    expect(screen.getAllByTestId('voicing-card').length).toBeGreaterThanOrEqual(1);
+  it('voices the chord that has held, in three rows', () => {
+    vi.useFakeTimers();
+    try {
+      jamStore.setState({ currentChord: { root: 0, quality: 'maj7' }, confidence: 1 });
+      renderJam();
+      act(() => {
+        fireEvent.keyDown(window, { key: 'v' });
+      });
+      expect(screen.queryAllByTestId('voicing-card')).toHaveLength(0);
+      act(() => void vi.advanceTimersByTime(1100));
+      expect(screen.getAllByTestId('voicing-card')).toHaveLength(3);
+      // a passing chord does not move the panel
+      act(() => jamStore.setState({ currentChord: { root: 7, quality: '7' } }));
+      act(() => void vi.advanceTimersByTime(500));
+      expect(screen.getByRole('region', { name: 'Voicings' })).toHaveTextContent('Cmaj7');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

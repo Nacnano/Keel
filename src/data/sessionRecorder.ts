@@ -12,8 +12,8 @@
  * - The MIDI performance is one `MidiTrack` row per session, checkpointed every
  *   30 s while dirty and written in full on `stop()`.
  * - `stop({ discardIfEmpty: true })` deletes a session in which nothing was heard
- *   (no chord, no MIDI, no audio) and resolves with `null`, so silent runs never
- *   reach the library.
+ *   (no chord and no MIDI; an audio take alone does not count, it is deleted too)
+ *   and resolves with `null`, so silent runs never reach the library.
  */
 import { v4 as uuid } from 'uuid';
 import type {
@@ -78,8 +78,8 @@ export interface SessionHandle {
    * `endT` (event clock) overrides the end time. Idempotent while pending or
    * after success; after a failed write it may be called again to retry.
    *
-   * With `discardIfEmpty`, a session with no chord, no MIDI and no audio is
-   * deleted instead and the promise resolves with `null`.
+   * With `discardIfEmpty`, a session with no chord and no MIDI is deleted
+   * instead (with any audio take) and the promise resolves with `null`.
    */
   stop(opts: StopOptions & { discardIfEmpty: true }): Promise<Session | null>;
   stop(opts?: StopOptions): Promise<Session>;
@@ -320,15 +320,25 @@ export function startSession(meta: SessionMeta): SessionHandle {
       const flushed = writePending(true);
       stopPromise = (async () => {
         await flushed;
-        const heard = allChords.some((c) => c.chord !== null) || midiEvents.length > 0 || audio;
+        // Audio alone is not "heard": a silent take with Record audio on is still silence.
+        const heard = allChords.some((c) => c.chord !== null) || midiEvents.length > 0;
         if (opts?.discardIfEmpty && !heard) {
           await enqueue(async () => {
             const [lo, hi] = sessionRange(id);
             await database.transaction(
               'rw',
-              [database.sessions, database.chords, database.keys, database.markers],
+              [
+                database.sessions,
+                database.chords,
+                database.keys,
+                database.markers,
+                database.recordings,
+                database.midiTracks,
+              ],
               async () => {
                 await Promise.all([
+                  database.recordings.delete(id),
+                  database.midiTracks.delete(id),
                   database.chords.where('[sessionId+t]').between(lo, hi, true, true).delete(),
                   database.keys.where('[sessionId+t]').between(lo, hi, true, true).delete(),
                   database.markers.where('[sessionId+t]').between(lo, hi, true, true).delete(),

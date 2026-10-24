@@ -1,17 +1,19 @@
+import { useMemo } from 'react';
 import type { Chord, Key, MidiNote, VocabLevel } from '@/core';
 import { Segmented, Sheet } from '../../kit';
-import { TryNext, type TryNextSuggestion } from '../../components/TryNext';
+import { TryNext } from '../../components/TryNext';
 import { ScaleHelper } from '../../components/ScaleHelper';
 import { VoicingPanel } from '../../components/VoicingPanel';
 import { ModulationHints } from '../../components/ModulationHints';
+import { suggestNext } from '../../lib/suggest';
+import { useSteadyChord } from './useSteadyChord';
 
-export type InspectorTab = 'next' | 'scales' | 'voicings' | 'keys';
+export type InspectorTab = 'next' | 'scales' | 'voicings';
 
-export const INSPECTOR_TABS: ReadonlyArray<{ value: InspectorTab; label: string }> = [
+const INSPECTOR_TABS: ReadonlyArray<{ value: InspectorTab; label: string }> = [
   { value: 'next', label: 'Next' },
   { value: 'scales', label: 'Scales' },
   { value: 'voicings', label: 'Voicings' },
-  { value: 'keys', label: 'Modulate' },
 ];
 
 export interface JamInspectorProps {
@@ -19,24 +21,38 @@ export interface JamInspectorProps {
   onClose(): void;
   tab: InspectorTab;
   onTab(tab: InspectorTab): void;
+  /** The live chord (null while nothing confident is heard). */
   chord: Chord | null;
   confidence: number;
   keyContext: Key | null;
   level: VocabLevel;
-  suggestions: readonly TryNextSuggestion[];
   spellingFollowsKey: boolean;
   onAudition(chord: Chord): void;
   onPlayNotes(notes: MidiNote[]): void;
   /**
-   * `side`: a panel over the right edge (only where the chord column stays clear of it).
+   * `side`: a column over the right edge (the listening column moves clear of it).
    * `half`: a half-height bottom sheet (`min(42dvh, 420px)`); the listening screen keeps the chord
    * and Finish above it.
    */
   layout: 'side' | 'half';
 }
 
-/** Ideas on demand: what to play next, which scale fits, how to voice it, where to modulate. */
+/**
+ * Ideas on demand: what to play next (and where the key could go), which scale fits, how to
+ * voice it. Everything follows the last chord that held for about a second, not every frame.
+ */
 export function JamInspector(p: JamInspectorProps) {
+  const steady = useSteadyChord(p.chord);
+  const tonic = p.keyContext?.tonic;
+  const mode = p.keyContext?.mode;
+  const key = useMemo<Key | null>(
+    () => (tonic === undefined || !mode ? null : { tonic, mode }),
+    [tonic, mode],
+  );
+  const suggestions = useMemo(
+    () => suggestNext(key, steady.recent, p.level),
+    [key, steady.recent, p.level],
+  );
   return (
     <Sheet
       open={p.open}
@@ -45,7 +61,7 @@ export function JamInspector(p: JamInspectorProps) {
       title="Ideas"
       aria-label="Ideas"
       placement={p.layout === 'side' ? 'side' : 'bottom'}
-      className={p.layout === 'half' ? 'h-[min(42dvh,420px)] lg:left-56' : undefined}
+      className={p.layout === 'half' ? 'h-[min(42dvh,420px)]' : undefined}
     >
       <Segmented
         fill
@@ -57,37 +73,46 @@ export function JamInspector(p: JamInspectorProps) {
         className="mb-4"
       />
       {p.tab === 'next' && (
-        <TryNext
-          detailed
-          suggestions={p.suggestions}
-          keyContext={p.keyContext}
-          onAudition={p.onAudition}
-          spellingFollowsKey={p.spellingFollowsKey}
-        />
+        <div className="flex flex-col gap-5">
+          <TryNext
+            detailed
+            suggestions={suggestions}
+            keyContext={key}
+            onAudition={p.onAudition}
+            spellingFollowsKey={p.spellingFollowsKey}
+          />
+          {key && (
+            <section aria-labelledby="ideas-change-key" className="flex flex-col gap-2">
+              <h3
+                id="ideas-change-key"
+                className="px-1 text-footnote font-medium tracking-wide text-label-2 uppercase"
+              >
+                Change key
+              </h3>
+              <ModulationHints
+                keyContext={key}
+                level={p.level}
+                onAudition={p.onAudition}
+                spellingFollowsKey={p.spellingFollowsKey}
+              />
+            </section>
+          )}
+        </div>
       )}
       {p.tab === 'scales' && (
         <ScaleHelper
-          chord={p.chord}
-          confidence={p.confidence}
-          keyContext={p.keyContext}
+          chord={steady.chord}
+          keyContext={key}
           spellingFollowsKey={p.spellingFollowsKey}
         />
       )}
       {p.tab === 'voicings' && (
         <VoicingPanel
-          chord={p.chord}
-          keyContext={p.keyContext}
+          chord={steady.chord}
+          keyContext={key}
+          level={p.level}
           spellingFollowsKey={p.spellingFollowsKey}
           onPlay={p.onPlayNotes}
-          max={2}
-        />
-      )}
-      {p.tab === 'keys' && (
-        <ModulationHints
-          keyContext={p.keyContext}
-          level={p.level}
-          onAudition={p.onAudition}
-          spellingFollowsKey={p.spellingFollowsKey}
         />
       )}
     </Sheet>

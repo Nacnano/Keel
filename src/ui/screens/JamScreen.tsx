@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 import { Check, ChevronRight, Lightbulb, Mic, Play, Square, Usb } from 'lucide-react';
 import { clock, MIN_DISPLAY_CONFIDENCE } from '@/core';
-import type { Chord, JamMode, MarkerKind, VocabLevel } from '@/core';
+import type { Chord, JamMode, VocabLevel } from '@/core';
 import { jamStore, useJamStore } from '@/state/jamStore';
 import { useInputStore } from '@/state/inputStore';
 import { useSettings } from '@/state/settingsStore';
@@ -12,13 +12,12 @@ import { ChordDisplay } from '../components/ChordDisplay';
 import { KeyBadge } from '../components/KeyBadge';
 import { Piano } from '../components/Piano';
 import { Timeline } from '../components/Timeline';
-import { toast } from '../components/toastStore';
 import { Badge, Button, Meter, Segmented } from '../kit';
 import { cx } from '../lib/cx';
-import { MARKER_LABEL } from '../lib/markers';
+import { MARK_ITEMS, type MarkItem } from '../lib/markers';
 import { playNotes } from '../lib/playNotes';
-import { suggestNext } from '../lib/suggest';
 import { useMediaQuery } from '../lib/useMediaQuery';
+import { ChartCard } from './review/ChartCard';
 import { JamInspector } from './jam/JamInspector';
 import { JamOptions } from './jam/JamOptions';
 import { MODE_OPTIONS } from './jam/labels';
@@ -43,26 +42,30 @@ function useElapsed(listening: boolean, started: number | null) {
   return started === null ? 0 : Math.max(0, now - started);
 }
 
-/** A quiet-input nudge waits long enough for the player to reach the keys. */
+/** Input below this level counts as "can't hear much". */
+const QUIET_LEVEL = 0.06;
+/** Quiet this long before the nudge shows: time to reach the keys. */
+const QUIET_ONSET_MS = 4000;
+/** Loud this long before the nudge goes away, so a single note does not make it blink. */
+const QUIET_RELEASE_MS = 2000;
+
+/** True while the input has been too quiet to trust (with an onset and a release delay). */
 function useQuietInput(listening: boolean, level: number): boolean {
   const [quiet, setQuiet] = useState(false);
-  const since = useRef<number | null>(null);
+  const [wasListening, setWasListening] = useState(listening);
+  // A new session starts without the nudge (state reset during render, not in an effect).
+  if (wasListening !== listening) {
+    setWasListening(listening);
+    setQuiet(false);
+  }
+  const loud = level > QUIET_LEVEL;
   useEffect(() => {
-    if (!listening || level > 0.06) {
-      since.current = null;
-      setQuiet(false);
-      return;
-    }
-    since.current ??= Date.now();
-    const timer = setTimeout(
-      () => {
-        if (since.current !== null && Date.now() - since.current >= 4000) setQuiet(true);
-      },
-      Math.max(0, 4000 - (Date.now() - since.current)),
-    );
+    if (!listening) return;
+    // Each crossing restarts the wait; only a state held for the whole wait flips the flag.
+    const timer = setTimeout(() => setQuiet(!loud), loud ? QUIET_RELEASE_MS : QUIET_ONSET_MS);
     return () => clearTimeout(timer);
-  }, [listening, level]);
-  return quiet;
+  }, [listening, loud]);
+  return listening && quiet;
 }
 
 /** Listen first. Input choices and musical helpers stay one deliberate step away. */
@@ -101,8 +104,8 @@ export function JamScreen() {
   const input = useJamInput();
   const wide = useMediaQuery('(min-width: 1024px)', true);
   const phone = !useMediaQuery('(min-width: 640px)', true);
-  // Ideas docks at the side only where the centred chord column stays clear of it.
-  const sideIdeas = useMediaQuery('(min-width: 1440px)', true);
+  // From 1024 px Ideas is a side column and the listening column moves clear of it.
+  const sideIdeas = wide;
   const [pianoVisible, togglePiano] = useStoredToggle('keel.ui.piano', false);
   const inspector = useInspectorPref();
   const listening = jam.status === 'listening';
@@ -110,9 +113,13 @@ export function JamScreen() {
   const elapsed = useElapsed(listening, jam.sessionStart);
   const quiet = useQuietInput(listening && !input.mock && jam.source !== 'midi', jam.level);
   const stopped = input.finished && !listening && !starting;
-  const hasChord = jam.currentChord && jam.confidence >= MIN_DISPLAY_CONFIDENCE;
+  // While the input is too quiet a chord (and the key built from it) would be a guess.
+  const hasChord = jam.currentChord && jam.confidence >= MIN_DISPLAY_CONFIDENCE && !quiet;
   // Compact widths: Ideas is a half-height sheet and the screen keeps chord + Finish above it.
   const halfIdeas = inspector.open && !sideIdeas;
+  const sideOpen = inspector.open && sideIdeas;
+  // Red dot and "Recording" only while audio is really being kept.
+  const recording = listening && !input.mock && jam.recordAudio && jam.source === 'mic';
   const inputLabel =
     jam.source === 'midi' && listening
       ? 'USB MIDI'
@@ -123,22 +130,26 @@ export function JamScreen() {
       jamStore.getState().setRecordAudio(settings.recordAudioByDefault);
   }, [settings.recordAudioByDefault]);
 
-  const { start, stop } = input;
+  const { start, stop, newSong } = input;
   const toggleListening = useCallback(() => {
     if (input.saving) return;
     const status = jamStore.getState().status;
     if (status === 'listening') void stop();
     else if (status !== 'starting') void start();
   }, [start, stop, input.saving]);
-  const addMarker = useCallback((kind: MarkerKind) => {
-    const marker = jamStore.getState().addMarker(kind);
-    if (marker) toast(`${MARKER_LABEL[kind]} at ${formatTime(marker.t)}`, { durationMs: 1600 });
-  }, []);
+  // The flag in the timeline is the confirmation; no toast.
+  const addMarker = useCallback(
+    (item: MarkItem) => {
+      const marker = jamStore.getState().addMarker(item.kind, item.markerLabel);
+      if (marker && item.newSong) newSong();
+    },
+    [newSong],
+  );
   const audition = useCallback((chord: Chord) => auditionChord(chord), []);
   const setMode = (mode: JamMode) => settings.update({ mode });
   useJamShortcuts({
     toggleListening,
-    bookmark: () => jamStore.getState().status === 'listening' && addMarker('bookmark'),
+    bookmark: () => jamStore.getState().status === 'listening' && addMarker(MARK_ITEMS[0]),
     setLevel: (vocabLevel: VocabLevel) => settings.update({ vocabLevel }),
     togglePiano,
     toggleMode: () => setMode(settings.mode === 'solo' ? 'room' : 'solo'),
@@ -146,15 +157,22 @@ export function JamScreen() {
     showNext: () => inspector.toggleTab('next'),
     showScales: () => inspector.toggleTab('scales'),
     showVoicings: () => inspector.toggleTab('voicings'),
-    showModulate: () => inspector.toggleTab('keys'),
+    // "Change key" is the end of the Next tab now.
+    showModulate: () => inspector.toggleTab('next'),
   });
-  const recent = useMemo(
-    () => jam.timeline.slice(-4).flatMap((r) => (r.chord ? [r.chord] : [])),
-    [jam.timeline],
-  );
-  const suggestions = useMemo(
-    () => suggestNext(jam.keyEstimate, recent, settings.vocabLevel),
-    [jam.keyEstimate, recent, settings.vocabLevel],
+  // The Finished screen draws the take as the same folded chart Review shows.
+  const finishedChart = useMemo(
+    () => ({
+      chords: jam.timeline,
+      keys: jam.keyHistory.map((k, i) => ({
+        id: String(i),
+        sessionId: jam.timeline[0]?.sessionId ?? '',
+        t: k.t,
+        key: k.key,
+      })),
+      markers: jam.markers,
+    }),
+    [jam.timeline, jam.keyHistory, jam.markers],
   );
   const options = (compact: boolean) => (
     <JamOptions
@@ -173,12 +191,12 @@ export function JamScreen() {
       canShowPiano={!phone}
     />
   );
-  const timeline = (live: boolean) => (
+  const timeline = (
     <Timeline
-      align={live ? 'start' : 'center'}
+      align="start"
       timeline={jam.timeline}
       keyHistory={jam.keyHistory}
-      markers={live ? jam.markers : undefined}
+      markers={jam.markers}
       onAudition={audition}
       showSlash={settings.showSlashChords}
       spellingFollowsKey={settings.spellingFollowsKey}
@@ -189,8 +207,10 @@ export function JamScreen() {
     <div
       className={cx(
         'flex h-full flex-col overflow-y-auto',
-        // Room for the half-height Ideas sheet (below lg it also covers the tab bar).
-        halfIdeas && 'pb-[calc(min(42dvh,420px)-3.75rem)] lg:pb-[min(42dvh,420px)]',
+        // Room for the half-height Ideas sheet (it also covers the tab bar).
+        halfIdeas && 'pb-[calc(min(42dvh,420px)-3.75rem)]',
+        // Side Ideas (392 px from the right edge): the column recentres only as far as it must.
+        sideOpen && 'pr-[min(392px,max(0px,calc(1852px-100vw)))]',
       )}
     >
       <header className="mx-auto flex w-full max-w-[900px] items-center justify-between gap-3 px-6 py-5 sm:px-10 sm:py-7">
@@ -201,8 +221,11 @@ export function JamScreen() {
               <Badge>Demo</Badge>
             ) : (
               <>
-                <span className="size-2 rounded-full bg-live" aria-hidden />
-                <span>{starting ? 'Connecting…' : 'Listening'}</span>
+                <span
+                  className={cx('size-2 rounded-full', recording ? 'bg-live' : 'bg-label-3')}
+                  aria-hidden
+                />
+                <span>{starting ? 'Connecting…' : recording ? 'Recording' : 'Listening'}</span>
               </>
             )}
             {listening && (
@@ -309,7 +332,7 @@ export function JamScreen() {
                   : (input.saveError ??
                     (input.saved
                       ? `“${input.saved.name}” is in your Library.`
-                      : 'Nothing was saved. Move closer to your instrument and try again.'))}
+                      : 'No chords were heard, so nothing was saved. Move closer to your instrument and try again.'))}
               </p>
             )}
             {!input.saving && (
@@ -338,7 +361,13 @@ export function JamScreen() {
               </div>
             )}
             {jam.timeline.length > 0 && !input.saveError && (
-              <div className="mt-9 w-full hairline-t pt-5">{timeline(false)}</div>
+              <div className="mt-9 w-full max-w-2xl text-left">
+                <ChartCard
+                  full={finishedChart}
+                  spellingFollowsKey={settings.spellingFollowsKey}
+                  showSlash={settings.showSlashChords}
+                />
+              </div>
             )}
           </div>
         ) : (
@@ -368,7 +397,7 @@ export function JamScreen() {
                 <>
                   <ChordDisplay
                     details={false}
-                    compact={halfIdeas}
+                    compact={inspector.open}
                     chord={jam.currentChord}
                     confidence={jam.confidence}
                     keyContext={jam.keyEstimate}
@@ -383,27 +412,22 @@ export function JamScreen() {
                   />
                 </>
               ) : (
-                <div className="max-w-md text-center">
+                <div className="max-w-md text-center" role={quiet ? 'status' : undefined}>
                   <h2 className="text-title-1 font-semibold tracking-tight">
                     {starting
                       ? 'Connecting your instrument…'
                       : quiet
-                        ? 'A little closer.'
+                        ? 'Can’t hear much.'
                         : 'Play a chord.'}
                   </h2>
                   <p className="mt-3 text-body leading-relaxed text-label-2">
                     {starting
                       ? 'Allow microphone access if your browser asks.'
                       : quiet
-                        ? 'Move your device near the instrument, or raise sensitivity in Listening options.'
+                        ? 'Move closer to your instrument, or raise sensitivity in Listening options.'
                         : 'Hold it briefly. Your chord and key will appear here.'}
                   </p>
                 </div>
-              )}
-              {quiet && hasChord && (
-                <p role="status" className="mt-5 max-w-sm text-center text-subhead text-label-2">
-                  Can’t hear much. Move closer, or raise sensitivity in Listening options.
-                </p>
               )}
               {pianoVisible && listening && !phone && !halfIdeas && (
                 <Piano
@@ -415,15 +439,8 @@ export function JamScreen() {
               )}
             </div>
             {jam.timeline.length > 0 && !halfIdeas && (
-              <section
-                aria-label="Your progression"
-                className={cx(
-                  'hairline-t py-4',
-                  // Keep the newest chords clear of the side Ideas panel.
-                  inspector.open && 'pr-[max(0px,calc(930px-50vw))]',
-                )}
-              >
-                {timeline(true)}
+              <section aria-label="Your progression" className="hairline-t py-4">
+                {timeline}
               </section>
             )}
             <div className={cx('flex flex-col items-center gap-4', halfIdeas ? 'pt-2' : 'pt-5')}>
@@ -468,11 +485,11 @@ export function JamScreen() {
         onClose={() => inspector.setOpen(false)}
         tab={inspector.tab}
         onTab={inspector.setTab}
-        chord={jam.currentChord}
+        chord={hasChord ? jam.currentChord : null}
         confidence={jam.confidence}
         keyContext={jam.keyEstimate}
-        level={settings.vocabLevel}
-        suggestions={suggestions}
+        // With a band always shows simple chords, so Ideas stays at that level too.
+        level={settings.mode === 'room' ? 1 : settings.vocabLevel}
         spellingFollowsKey={settings.spellingFollowsKey}
         onAudition={audition}
         onPlayNotes={playNotes}

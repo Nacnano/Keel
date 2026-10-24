@@ -143,6 +143,50 @@ describe('live input lifecycle', () => {
     await input.stop();
   });
 
+  it('says nothing was saved when the session was discarded as silent', async () => {
+    const input = createLiveInput();
+    const onSaved = vi.fn();
+    await input.start();
+    mocks.startSession.mock.results.at(-1)!.value.stop.mockResolvedValue(null);
+    await input.stop({ onSaved });
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('drops Record audio when the take cannot be recorded, so the header stays honest', async () => {
+    jamStore.getState().setRecordAudio(true);
+    const input = createLiveInput();
+    await input.start();
+    expect(jamStore.getState().recordAudio).toBe(false);
+    await input.stop();
+  });
+
+  it('New song resets the key when the engine supports it', async () => {
+    const input = createLiveInput();
+    await input.start();
+    jamStore.setState({
+      key: {
+        tonic: 0,
+        mode: 'major',
+        confidence: 1,
+        relative: { tonic: 9, mode: 'minor' },
+        alternatives: [],
+      },
+    });
+    input.newSong(); // no resetKey on this engine: the key stays
+    expect(jamStore.getState().key).not.toBeNull();
+    const resetKey = vi.fn();
+    Object.assign(mocks.engine, { resetKey });
+    try {
+      input.newSong();
+      expect(resetKey).toHaveBeenCalledOnce();
+      expect(jamStore.getState().key).toBeNull();
+    } finally {
+      delete (mocks.engine as { resetKey?: unknown }).resetKey;
+    }
+    await input.stop();
+  });
+
   it('does not toast "Saved" when the caller shows its own confirmation', async () => {
     const input = createLiveInput();
     await input.start();

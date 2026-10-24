@@ -8,12 +8,13 @@ const TONE: Record<ToastTone, string> = {
   error: 'text-live',
 };
 
-const SHELL = 'material min-h-11 rounded-full text-subhead font-medium shadow-elevated anim-rise';
+const SHELL = 'material min-h-9 rounded-full text-footnote font-medium shadow-elevated anim-rise';
 
 /**
- * Renders queued toasts bottom-centre (above the tab bar). Mount once in the app shell.
- * Plain toasts are status text that taps pass straight through, so a confirmation never
- * blocks the next tap on the control underneath; only toasts with an action take taps.
+ * Renders queued toasts at the top of the content column, just under the screen header, so
+ * they never sit on the footer text or the controls at the bottom of the Listen screen.
+ * Mount once inside the app shell's (relatively positioned) content area. Plain toasts are
+ * status text that taps pass straight through; only toasts with an action take taps.
  */
 export function Toaster() {
   const toasts = useToastStore((s) => s.toasts);
@@ -21,7 +22,7 @@ export function Toaster() {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-50 flex flex-col items-center gap-2 px-4 lg:bottom-6"
+      className="pointer-events-none absolute inset-x-0 top-[4.25rem] z-50 flex flex-col items-center gap-2 px-4 sm:top-[5.25rem]"
     >
       {toasts.map((t) => {
         const action = t.action;
@@ -29,7 +30,11 @@ export function Toaster() {
           return (
             <p
               key={t.id}
-              className={cx(SHELL, 'pointer-events-none flex items-center px-5 py-2', TONE[t.tone])}
+              className={cx(
+                SHELL,
+                'pointer-events-none flex items-center px-4 py-1.5',
+                TONE[t.tone],
+              )}
             >
               {t.message}
             </p>
