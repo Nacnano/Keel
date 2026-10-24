@@ -1,0 +1,875 @@
+{
+  "version": 1,
+  "fixtures": [
+    {
+      "id": "pop-C-block-90",
+      "file": "pop-C-block-90.wav.gz",
+      "sha256": "9b95f20eeb48a82c0219c5c31a0ef88522b163d4fa3e4ea19391e109ff31a176",
+      "group": "piano",
+      "provenance": "rendered",
+      "instrument": "piano",
+      "key": "C",
+      "recipe": {
+        "id": "pop-C-block-90",
+        "key": "C",
+        "bpm": 90,
+        "beatsPerChord": 4,
+        "style": "block",
+        "voicing": "close",
+        "progression": ["C", "G", "Am", "F"],
+        "repeats": 1,
+        "velocity": 80,
+        "seed": 1
+      },
+      "source": "https://github.com/sfzinstruments/SplendidGrandPiano",
+      "license": "Public domain samples by AKAI; Keel-generated performance",
+      "annotation": "Written progression from eval/render.ts; no detector-derived labels",
+      "spans": [
+        {
+          "start": 0.6,
+          "end": 3.2666666666666666,
+          "label": "C"
+        },
+        {
+          "start": 3.2666666666666666,
+          "end": 5.933333333333334,
+          "label": "G"
+        },
+        {
+          "start": 5.933333333333333,
+          "end": 8.6,
+          "label": "Am"
+        },
+        {
+          "start": 8.6,
+          "end": 11.266666666666666,
+          "label": "F"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "pop-G-broken-72",
+      "file": "pop-G-broken-72.wav.gz",
+      "sha256": "d0c32554740ea0f8779d2b639fb6531098821500170742a2e90ad5462e0a5bc9",
+      "group": "piano",
+      "provenance": "rendered",
+      "instrument": "piano",
+      "key": "G",
+      "recipe": {
+        "id": "pop-G-broken-72",
+        "key": "G",
+        "bpm": 72,
+        "beatsPerChord": 4,
+        "style": "broken",
+        "voicing": "close",
+        "progression": ["G", "Em", "C", "D"],
+        "repeats": 1,
+        "velocity": 70,
+        "seed": 2
+      },
+      "source": "https://github.com/sfzinstruments/SplendidGrandPiano",
+      "license": "Public domain samples by AKAI; Keel-generated performance",
+      "annotation": "Written progression from eval/render.ts; no detector-derived labels",
+      "spans": [
+        {
+          "start": 0.6,
+          "end": 3.9333333333333336,
+          "label": "G"
+        },
+        {
+          "start": 3.9333333333333336,
+          "end": 7.2666666666666675,
+          "label": "Em"
+        },
+        {
+          "start": 7.266666666666667,
+          "end": 10.6,
+          "label": "C"
+        },
+        {
+          "start": 10.6,
+          "end": 13.933333333333334,
+          "label": "D"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "pop-D-pedal-120",
+      "file": "pop-D-pedal-120.wav.gz",
+      "sha256": "93477af5b62c620622ae73a4e22ca037739613d2aa9eb970f437bb2cbf933396",
+      "group": "piano",
+      "provenance": "rendered",
+      "instrument": "piano",
+      "key": "D",
+      "recipe": {
+        "id": "pop-D-pedal-120",
+        "key": "D",
+        "bpm": 120,
+        "beatsPerChord": 2,
+        "style": "pedal",
+        "voicing": "close",
+        "progression": ["D", "A/C#", "Bm", "G"],
+        "repeats": 1,
+        "velocity": 90,
+        "seed": 5
+      },
+      "source": "https://github.com/sfzinstruments/SplendidGrandPiano",
+      "license": "Public domain samples by AKAI; Keel-generated performance",
+      "annotation": "Written progression from eval/render.ts; no detector-derived labels",
+      "spans": [
+        {
+          "start": 0.6,
+          "end": 1.6,
+          "label": "D"
+        },
+        {
+          "start": 1.6,
+          "end": 2.6,
+          "label": "A/C#"
+        },
+        {
+          "start": 2.6,
+          "end": 3.6,
+          "label": "Bm"
+        },
+        {
+          "start": 3.6,
+          "end": 4.6,
+          "label": "G"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "pop-Am-block-80",
+      "file": "pop-Am-block-80.wav.gz",
+      "sha256": "f44a71c11d15d9edbe7d170cd8a8aac304cfc2a6372947f7e4a00d6d58e117e8",
+      "group": "piano",
+      "provenance": "rendered",
+      "instrument": "piano",
+      "key": "Am",
+      "recipe": {
+        "id": "pop-Am-block-80",
+        "key": "Am",
+        "bpm": 80,
+        "beatsPerChord": 4,
+        "style": "pedal",
+        "voicing": "close",
+        "progression": ["Am", "F", "C", "G"],
+        "repeats": 1,
+        "velocity": 78,
+        "seed": 7
+      },
+      "source": "https://github.com/sfzinstruments/SplendidGrandPiano",
+      "license": "Public domain samples by AKAI; Keel-generated performance",
+      "annotation": "Written progression from eval/render.ts; no detector-derived labels",
+      "spans": [
+        {
+          "start": 0.6,
+          "end": 3.6,
+          "label": "Am"
+        },
+        {
+          "start": 3.6,
+          "end": 6.6,
+          "label": "F"
+        },
+        {
+          "start": 6.6,
+          "end": 9.6,
+          "label": "C"
+        },
+        {
+          "start": 9.6,
+          "end": 12.6,
+          "label": "G"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "pop-F-melody-84",
+      "file": "pop-F-melody-84.wav.gz",
+      "sha256": "fcc3f35881f527d9c3a53cd581a9db44f6fb548a53fd19a9451b12f3181e2388",
+      "group": "piano",
+      "provenance": "rendered",
+      "instrument": "piano",
+      "key": "F",
+      "recipe": {
+        "id": "pop-F-melody-84",
+        "key": "F",
+        "bpm": 84,
+        "beatsPerChord": 4,
+        "style": "melody",
+        "voicing": "close",
+        "progression": ["F", "Dm", "Bb", "C"],
+        "repeats": 1,
+        "velocity": 75,
+        "seed": 4
+      },
+      "source": "https://github.com/sfzinstruments/SplendidGrandPiano",
+      "license": "Public domain samples by AKAI; Keel-generated performance",
+      "annotation": "Written progression from eval/render.ts; no detector-derived labels",
+      "spans": [
+        {
+          "start": 0.6,
+          "end": 3.4571428571428573,
+          "label": "F"
+        },
+        {
+          "start": 3.4571428571428573,
+          "end": 6.314285714285715,
+          "label": "Dm"
+        },
+        {
+          "start": 6.314285714285714,
+          "end": 9.17142857142857,
+          "label": "Bb"
+        },
+        {
+          "start": 9.17142857142857,
+          "end": 12.028571428571428,
+          "label": "C"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "jazz-Bb-251-120",
+      "file": "jazz-Bb-251-120.wav.gz",
+      "sha256": "381903377a3232761e2daf9c6726f8281592d5a395a2dfc61f5983491d40c316",
+      "group": "piano",
+      "provenance": "rendered",
+      "instrument": "piano",
+      "key": "Bb",
+      "recipe": {
+        "id": "jazz-Bb-251-120",
+        "key": "Bb",
+        "bpm": 120,
+        "beatsPerChord": 4,
+        "style": "jazz",
+        "voicing": "shell",
+        "progression": ["Cm7", "F7", "Bbmaj7", "Gm7"],
+        "repeats": 1,
+        "velocity": 76,
+        "seed": 8
+      },
+      "source": "https://github.com/sfzinstruments/SplendidGrandPiano",
+      "license": "Public domain samples by AKAI; Keel-generated performance",
+      "annotation": "Written progression from eval/render.ts; no detector-derived labels",
+      "spans": [
+        {
+          "start": 0.6,
+          "end": 2.6,
+          "label": "Cm7"
+        },
+        {
+          "start": 2.6,
+          "end": 4.6,
+          "label": "F7"
+        },
+        {
+          "start": 4.6,
+          "end": 6.6,
+          "label": "Bbmaj7"
+        },
+        {
+          "start": 6.6,
+          "end": 8.6,
+          "label": "Gm7"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "guitarset-00_Rock3-148-C",
+      "file": "guitarset-00_Rock3-148-C.wav.gz",
+      "sha256": "a292e3faeb39496645348ba4801490b764e3744f8b9c3233613c05381a2d08ec",
+      "sourceFile": "00_Rock3-148-C_comp_mic.wav",
+      "sourceSha256": "de26d924d9a1dc9931f9a9ea9b2fa9d71a639b51b25a7e76dcfc9680049685d3",
+      "durationSec": 24.0,
+      "conversion": "First excerpt, mono PCM16 44.1 kHz via ffmpeg; lossless gzip; no gain normalization",
+      "group": "guitar",
+      "provenance": "recorded",
+      "instrument": "guitar",
+      "source": "https://zenodo.org/records/3371780",
+      "license": "CC-BY-4.0",
+      "attribution": "Qingyang Xi, Rachel M. Bittner, Johan Pauwels, Xuzhou Ye and Juan P. Bello. GuitarSet v1.1.0 (2019).",
+      "annotation": "GuitarSet performed chord track (semi-automatic transcription with manual verification). Root/base quality projection; slash bass and added tones ignored; ambiguous alterations explicitly unknown. Not detector predictions.",
+      "annotationSha256": "c9680f201518f7d65d713ae975855831be053c00a402e59bae4e0e6358163bf8",
+      "spans": [
+        {
+          "start": 0.0,
+          "end": 1.6216216216216217,
+          "label": "C",
+          "original": "C:maj/1"
+        },
+        {
+          "start": 1.6216216216216217,
+          "end": 3.2432432432432434,
+          "label": "G",
+          "original": "G:maj/3"
+        },
+        {
+          "start": 3.2432432432432434,
+          "end": 4.864864864864865,
+          "label": "Am7",
+          "original": "A:min7/1"
+        },
+        {
+          "start": 4.864864864864865,
+          "end": 6.486486486486487,
+          "label": "Em",
+          "original": "E:min/1"
+        },
+        {
+          "start": 6.486486486486487,
+          "end": 8.108108108108109,
+          "label": "F",
+          "original": "F:maj/1"
+        },
+        {
+          "start": 8.108108108108109,
+          "end": 9.72972972972973,
+          "label": "C",
+          "original": "C:maj/1"
+        },
+        {
+          "start": 9.72972972972973,
+          "end": 11.351351351351353,
+          "label": "F",
+          "original": "F:maj/1"
+        },
+        {
+          "start": 11.351351351351353,
+          "end": 12.972972972972974,
+          "label": "G",
+          "original": "G:maj/1"
+        },
+        {
+          "start": 12.972972972972974,
+          "end": 14.594594594594595,
+          "label": "C",
+          "original": "C:maj/1"
+        },
+        {
+          "start": 14.594594594594595,
+          "end": 16.216216216216218,
+          "label": "G",
+          "original": "G:maj/1"
+        },
+        {
+          "start": 16.216216216216218,
+          "end": 17.83783783783784,
+          "label": "Am",
+          "original": "A:min/1"
+        },
+        {
+          "start": 17.83783783783784,
+          "end": 19.45945945945946,
+          "label": "Em",
+          "original": "E:min/1"
+        },
+        {
+          "start": 19.45945945945946,
+          "end": 21.08108108108108,
+          "label": "F",
+          "original": "F:maj/1"
+        },
+        {
+          "start": 21.08108108108108,
+          "end": 22.702702702702705,
+          "label": "C",
+          "original": "C:maj/3"
+        },
+        {
+          "start": 22.702702702702705,
+          "end": 24.0,
+          "label": "F",
+          "original": "F:maj/1"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "guitarset-01_SS3-98-C",
+      "file": "guitarset-01_SS3-98-C.wav.gz",
+      "sha256": "da2d1e42c601116f72c7a5b04c67eb512c8d3097d93abfd0cc03d25c76db2c31",
+      "sourceFile": "01_SS3-98-C_comp_mic.wav",
+      "sourceSha256": "325cdcbb3adfac8c68f1b98b6c3e15a6746f063d3043d04af5dcbcb63925fedc",
+      "durationSec": 24.0,
+      "conversion": "First excerpt, mono PCM16 44.1 kHz via ffmpeg; lossless gzip; no gain normalization",
+      "group": "guitar",
+      "provenance": "recorded",
+      "instrument": "guitar",
+      "source": "https://zenodo.org/records/3371780",
+      "license": "CC-BY-4.0",
+      "attribution": "Qingyang Xi, Rachel M. Bittner, Johan Pauwels, Xuzhou Ye and Juan P. Bello. GuitarSet v1.1.0 (2019).",
+      "annotation": "GuitarSet performed chord track (semi-automatic transcription with manual verification). Root/base quality projection; slash bass and added tones ignored; ambiguous alterations explicitly unknown. Not detector predictions.",
+      "annotationSha256": "53bbbc1c8d04f3a896307551e798c784ec1725d3fa0e8ba4da038da752f6e8c2",
+      "spans": [
+        {
+          "start": 0.0,
+          "end": 2.4489795918367347,
+          "label": "C",
+          "original": "C:maj/1"
+        },
+        {
+          "start": 2.4489795918367347,
+          "end": 4.8979591836734695,
+          "label": "G",
+          "original": "G:maj(2)/1"
+        },
+        {
+          "start": 4.8979591836734695,
+          "end": 7.346938775510204,
+          "label": "Am",
+          "original": "A:min/1"
+        },
+        {
+          "start": 7.346938775510204,
+          "end": 9.795918367346939,
+          "label": "Em",
+          "original": "E:min/1"
+        },
+        {
+          "start": 9.795918367346939,
+          "end": 12.244897959183675,
+          "label": "F",
+          "original": "F:maj/1"
+        },
+        {
+          "start": 12.244897959183675,
+          "end": 14.693877551020408,
+          "label": "C",
+          "original": "C:maj(#11)/b5"
+        },
+        {
+          "start": 14.693877551020408,
+          "end": 17.142857142857142,
+          "label": "F",
+          "original": "F:maj/1"
+        },
+        {
+          "start": 17.142857142857142,
+          "end": 19.591836734693878,
+          "label": "G",
+          "original": "G:maj/1"
+        },
+        {
+          "start": 19.591836734693878,
+          "end": 22.040816326530614,
+          "label": "C",
+          "original": "C:maj/1"
+        },
+        {
+          "start": 22.040816326530614,
+          "end": 24.0,
+          "label": "G",
+          "original": "G:maj/1"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "guitarset-02_Jazz1-130-D",
+      "file": "guitarset-02_Jazz1-130-D.wav.gz",
+      "sha256": "28d6c787e8e3e16c6be7919dde3c386528481ea5a8c2640d1ded24536d47051d",
+      "sourceFile": "02_Jazz1-130-D_comp_mic.wav",
+      "sourceSha256": "7b769c278bb3d44440420a79cba1e486119f823a33f78465aa9acdcdef277df5",
+      "durationSec": 22.14721088435374,
+      "conversion": "First excerpt, mono PCM16 44.1 kHz via ffmpeg; lossless gzip; no gain normalization",
+      "group": "guitar",
+      "provenance": "recorded",
+      "instrument": "guitar",
+      "source": "https://zenodo.org/records/3371780",
+      "license": "CC-BY-4.0",
+      "attribution": "Qingyang Xi, Rachel M. Bittner, Johan Pauwels, Xuzhou Ye and Juan P. Bello. GuitarSet v1.1.0 (2019).",
+      "annotation": "GuitarSet performed chord track (semi-automatic transcription with manual verification). Root/base quality projection; slash bass and added tones ignored; ambiguous alterations explicitly unknown. Not detector predictions.",
+      "annotationSha256": "e06bd1f4e088b0a0892366193a2d951420288cd9709bfaaacdafd320bf55489e",
+      "spans": [
+        {
+          "start": 0.0,
+          "end": 7.384615384615385,
+          "label": "D",
+          "original": "D:maj/1"
+        },
+        {
+          "start": 7.384615384615385,
+          "end": 11.076923076923077,
+          "label": "G",
+          "original": "G:maj/1"
+        },
+        {
+          "start": 11.076923076923077,
+          "end": 14.76923076923077,
+          "label": "D",
+          "original": "D:maj/1"
+        },
+        {
+          "start": 14.76923076923077,
+          "end": 16.615384615384617,
+          "label": "unknown",
+          "original": "A:aug(13)/1"
+        },
+        {
+          "start": 16.615384615384617,
+          "end": 18.461538461538463,
+          "label": "G",
+          "original": "G:maj/1"
+        },
+        {
+          "start": 18.461538461538463,
+          "end": 22.147199999999998,
+          "label": "D",
+          "original": "D:maj/1"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "guitarset-04_BN3-154-E",
+      "file": "guitarset-04_BN3-154-E.wav.gz",
+      "sha256": "242e0aecfe35b38a3df16657cc9b8a6234550cad92466427ac84f6d5f94e8628",
+      "sourceFile": "04_BN3-154-E_comp_mic.wav",
+      "sourceSha256": "d26d18e314a0abb1c8ace15e7a940763194611e861b34a56b59191edfd548566",
+      "durationSec": 24.0,
+      "conversion": "First excerpt, mono PCM16 44.1 kHz via ffmpeg; lossless gzip; no gain normalization",
+      "group": "guitar",
+      "provenance": "recorded",
+      "instrument": "guitar",
+      "source": "https://zenodo.org/records/3371780",
+      "license": "CC-BY-4.0",
+      "attribution": "Qingyang Xi, Rachel M. Bittner, Johan Pauwels, Xuzhou Ye and Juan P. Bello. GuitarSet v1.1.0 (2019).",
+      "annotation": "GuitarSet performed chord track (semi-automatic transcription with manual verification). Root/base quality projection; slash bass and added tones ignored; ambiguous alterations explicitly unknown. Not detector predictions.",
+      "annotationSha256": "b3c8cbca3500879194a20c1457165413e68fde292bdcff75862f3d417d7bad40",
+      "spans": [
+        {
+          "start": 0.0,
+          "end": 1.5584415584415585,
+          "label": "Emaj7",
+          "original": "E:maj7/1"
+        },
+        {
+          "start": 1.5584415584415585,
+          "end": 3.116883116883117,
+          "label": "B",
+          "original": "B:maj(*5)/1"
+        },
+        {
+          "start": 3.116883116883117,
+          "end": 4.675324675324676,
+          "label": "C#m7",
+          "original": "C#:min7(*5)/b7"
+        },
+        {
+          "start": 4.675324675324676,
+          "end": 6.233766233766234,
+          "label": "G#m7",
+          "original": "G#:min7/1"
+        },
+        {
+          "start": 6.233766233766234,
+          "end": 7.792207792207792,
+          "label": "A",
+          "original": "A:maj/1"
+        },
+        {
+          "start": 7.792207792207792,
+          "end": 9.350649350649352,
+          "label": "Emaj7",
+          "original": "E:maj7/1"
+        },
+        {
+          "start": 9.350649350649352,
+          "end": 10.90909090909091,
+          "label": "A",
+          "original": "A:maj/1"
+        },
+        {
+          "start": 10.90909090909091,
+          "end": 12.467532467532468,
+          "label": "Bmaj7",
+          "original": "B:maj7(*5)/1"
+        },
+        {
+          "start": 12.467532467532468,
+          "end": 14.025974025974026,
+          "label": "Emaj7",
+          "original": "E:maj7/7"
+        },
+        {
+          "start": 14.025974025974026,
+          "end": 15.584415584415584,
+          "label": "B",
+          "original": "B:maj(*5)/1"
+        },
+        {
+          "start": 15.584415584415584,
+          "end": 17.142857142857142,
+          "label": "C#m7",
+          "original": "C#:min7/b7"
+        },
+        {
+          "start": 17.142857142857142,
+          "end": 18.701298701298704,
+          "label": "G#m7",
+          "original": "G#:min7/1"
+        },
+        {
+          "start": 18.701298701298704,
+          "end": 20.259740259740262,
+          "label": "unknown",
+          "original": "A:maj(b5,b9,*5)/b2"
+        },
+        {
+          "start": 20.259740259740262,
+          "end": 21.81818181818182,
+          "label": "Emaj7",
+          "original": "E:maj7/1"
+        },
+        {
+          "start": 21.81818181818182,
+          "end": 23.376623376623378,
+          "label": "Amaj7",
+          "original": "A:maj7/1"
+        },
+        {
+          "start": 23.376623376623378,
+          "end": 24.0,
+          "label": "B",
+          "original": "B:maj(*5)/1"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "guitarset-05_Rock1-130-A",
+      "file": "guitarset-05_Rock1-130-A.wav.gz",
+      "sha256": "9390085be89000c7f6aac868c98dc987d63868af0727822e46b090438d337031",
+      "sourceFile": "05_Rock1-130-A_comp_mic.wav",
+      "sourceSha256": "711b2cc0a44a3890bf028c282e8edbc3f8ebfc2ec35a3806524abe7537c3db19",
+      "durationSec": 22.14721088435374,
+      "conversion": "First excerpt, mono PCM16 44.1 kHz via ffmpeg; lossless gzip; no gain normalization",
+      "group": "guitar",
+      "provenance": "recorded",
+      "instrument": "guitar",
+      "source": "https://zenodo.org/records/3371780",
+      "license": "CC-BY-4.0",
+      "attribution": "Qingyang Xi, Rachel M. Bittner, Johan Pauwels, Xuzhou Ye and Juan P. Bello. GuitarSet v1.1.0 (2019).",
+      "annotation": "GuitarSet performed chord track (semi-automatic transcription with manual verification). Root/base quality projection; slash bass and added tones ignored; ambiguous alterations explicitly unknown. Not detector predictions.",
+      "annotationSha256": "49a8b51c72e3adc1affbcb41dd36978bd088d4f18c98a761f005d403d8bcc174",
+      "spans": [
+        {
+          "start": 0.0,
+          "end": 7.384615384615385,
+          "label": "A",
+          "original": "A:maj/1"
+        },
+        {
+          "start": 7.384615384615385,
+          "end": 11.076923076923077,
+          "label": "D",
+          "original": "D:maj(#11)/1"
+        },
+        {
+          "start": 11.076923076923077,
+          "end": 14.76923076923077,
+          "label": "A",
+          "original": "A:maj/1"
+        },
+        {
+          "start": 14.76923076923077,
+          "end": 16.615384615384617,
+          "label": "E",
+          "original": "E:maj/1"
+        },
+        {
+          "start": 16.615384615384617,
+          "end": 18.461538461538463,
+          "label": "D",
+          "original": "D:maj(2)/2"
+        },
+        {
+          "start": 18.461538461538463,
+          "end": 22.1472,
+          "label": "unknown",
+          "original": "A:sus4(7)/1"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "room-typing",
+      "file": "room-typing.wav.gz",
+      "sha256": "cc2296a4aea68cf15c42d55a97fe6c8ce434a92c17ff5266fea5ede4c5f76b4a",
+      "sourceFile": "1-137-A-32.wav",
+      "sourceSha256": "d68e4716f74f073be8f78f5fe8e45daf7c09b0ec0575b21f57989d803536abb3",
+      "durationSec": 5.0,
+      "conversion": "First excerpt, mono PCM16 44.1 kHz via ffmpeg; lossless gzip; no gain normalization",
+      "group": "recorded-noise",
+      "provenance": "recorded",
+      "instrument": "piano",
+      "source": "https://github.com/karolpiczak/ESC-50",
+      "license": "CC-BY-NC-3.0 (ESC-50 collection); see ATTRIBUTION.md",
+      "attribution": "Anton: keyboard-typing.wav, Freesound 137 (CC-BY); excerpt prepared by Karol J. Piczak (ESC-50).",
+      "annotation": "Nonmusical event category from ESC-50; expected no chord.",
+      "spans": [
+        {
+          "start": 0,
+          "end": 5.0,
+          "label": null
+        }
+      ],
+      "tail": null
+    },
+    {
+      "id": "room-clapping",
+      "file": "room-clapping.wav.gz",
+      "sha256": "f3756289ecf16f32863f903727323e9c640389399279dc03b3af98c3362e4b5d",
+      "sourceFile": "1-104089-A-22.wav",
+      "sourceSha256": "2b6ec14aafc6ed98c833c5c7e56780d283f3ceaea0d4c3c142b2f49fcc2fd215",
+      "durationSec": 5.0,
+      "conversion": "First excerpt, mono PCM16 44.1 kHz via ffmpeg; lossless gzip; no gain normalization",
+      "group": "recorded-noise",
+      "provenance": "recorded",
+      "instrument": "piano",
+      "source": "https://github.com/karolpiczak/ESC-50",
+      "license": "CC-BY-NC-3.0 (ESC-50 collection); see ATTRIBUTION.md",
+      "attribution": "sorohanro: Clapping Small Room.wav, Freesound 104089 (CC-BY); excerpt prepared by Karol J. Piczak (ESC-50).",
+      "annotation": "Nonmusical event category from ESC-50; expected no chord.",
+      "spans": [
+        {
+          "start": 0,
+          "end": 5.0,
+          "label": null
+        }
+      ],
+      "tail": null
+    },
+    {
+      "id": "room-cough",
+      "file": "room-cough.wav.gz",
+      "sha256": "997ddd27188d4df9e19480c954c71f3e823f7beb5b7a463ac0775adfe69ac8d3",
+      "sourceFile": "1-19111-A-24.wav",
+      "sourceSha256": "ab2afe6d0ee0de5edc1f0107448077919c6ac94dcf59243497e6fcb333685438",
+      "durationSec": 5.0,
+      "conversion": "First excerpt, mono PCM16 44.1 kHz via ffmpeg; lossless gzip; no gain normalization",
+      "group": "recorded-noise",
+      "provenance": "recorded",
+      "instrument": "piano",
+      "source": "https://github.com/karolpiczak/ESC-50",
+      "license": "CC-BY-NC-3.0 (ESC-50 collection); see ATTRIBUTION.md",
+      "attribution": "Fratz: cough1.aiff, Freesound 19111 (CC-BY); excerpt prepared by Karol J. Piczak (ESC-50).",
+      "annotation": "Nonmusical event category from ESC-50; expected no chord.",
+      "spans": [
+        {
+          "start": 0,
+          "end": 5.0,
+          "label": null
+        }
+      ],
+      "tail": null
+    },
+    {
+      "id": "room-vacuum",
+      "file": "room-vacuum.wav.gz",
+      "sha256": "620390cd7df0c86bac8138835391793f989bb535ee1787b28e6ea3e1571cda20",
+      "sourceFile": "2-141682-A-36.wav",
+      "sourceSha256": "86fe6179c0cf6a81dff3620cdc9ece6cfacc208630e6af8664ecc937e862806e",
+      "durationSec": 5.0,
+      "conversion": "First excerpt, mono PCM16 44.1 kHz via ffmpeg; lossless gzip; no gain normalization",
+      "group": "recorded-noise",
+      "provenance": "recorded",
+      "instrument": "piano",
+      "source": "https://github.com/karolpiczak/ESC-50",
+      "license": "CC-BY-NC-3.0 (ESC-50 collection); see ATTRIBUTION.md",
+      "attribution": "DJ Burnham: Vacuum Cleaner switch on, run, switch off 2.aif, Freesound 141682 (CC0); excerpt prepared by Karol J. Piczak (ESC-50).",
+      "annotation": "Nonmusical event category from ESC-50; expected no chord.",
+      "spans": [
+        {
+          "start": 0,
+          "end": 5.0,
+          "label": null
+        }
+      ],
+      "tail": null
+    },
+    {
+      "id": "room-speech",
+      "file": "room-speech.wav.gz",
+      "sha256": "5f9f6dd2ea5fa9ac644e20cf0e4fe7eceb29012e7818a0f69fad140c5904aba1",
+      "sourceFile": "6930-75918-0000.flac",
+      "sourceSha256": "9ce35224156f071ab58eb7feb8a5ceae600f6f9f353da2a6cbf797b6b1ac8a23",
+      "durationSec": 3.505011337868481,
+      "conversion": "First excerpt, mono PCM16 44.1 kHz via ffmpeg; lossless gzip; no gain normalization",
+      "group": "recorded-noise",
+      "provenance": "recorded",
+      "instrument": "piano",
+      "source": "https://www.openslr.org/12/",
+      "license": "CC-BY-4.0",
+      "attribution": "LibriSpeech: Vassil Panayotov, Guoguo Chen, Daniel Povey, Sanjeev Khudanpur; LibriVox reader 6930, recording 75918, utterance 0000.",
+      "annotation": "Read speech; no instrument expected.",
+      "spans": [
+        {
+          "start": 0,
+          "end": 3.505011337868481,
+          "label": null
+        }
+      ],
+      "tail": null
+    },
+    {
+      "id": "ishizaka-bach-c-major",
+      "file": "ishizaka-bach-c-major.wav.gz",
+      "sha256": "221e6f60d6c3ebf3c9dbed0ee665a698b4cf502a15534bad9a3bc25a45294fb4",
+      "sourceFile": "bach-c-major.ogg",
+      "sourceSha256": "abce13d492fbc909db3a00b27c66774220441bb31903f93cf2aef2d4084d93d2",
+      "durationSec": 24.0,
+      "conversion": "First excerpt, mono PCM16 44.1 kHz via ffmpeg; lossless gzip; no gain normalization",
+      "group": "recorded-piano",
+      "provenance": "recorded",
+      "instrument": "piano",
+      "source": "https://commons.wikimedia.org/wiki/File:Kimiko_Ishizaka_-_Bach_-_Well-Tempered_Clavier,_Book_1_-_01_Prelude_No._1_in_C_major,_BWV_846.ogg",
+      "license": "CC0-1.0",
+      "attribution": "Johann Sebastian Bach, performed by Kimiko Ishizaka, Open Well-Tempered Clavier (2015).",
+      "annotation": "Unannotated recorded piano: stability/activity stress test only. No chord accuracy claim.",
+      "spans": [
+        {
+          "start": 0,
+          "end": 24.0,
+          "label": "unknown"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "ninjam-live-band",
+      "file": "ninjam-live-band.wav.gz",
+      "sha256": "eeff0e419a83325745d6f5ad1a8bde150c608e82d82fffc02e1538f3e76d2a71",
+      "group": "band",
+      "provenance": "recorded",
+      "instrument": "guitar",
+      "source": "https://archive.org/details/ninjam_autosongs_20050705",
+      "sourceFile": "20050705_1609_1226_justin_kbh_brennan_Cube7.ogg",
+      "sourceArchiveSha1": "60da3485c5ba55a0ef868344c31772eea11aaae0",
+      "sourcePrefixBytes": 2670538,
+      "sourcePrefixSha256": "03f894d1cf9890957f5b8f10975170d3e4f1ae5f33e6c5e2be5ca04994c81b7d",
+      "durationSec": 24,
+      "conversion": "Seconds 20\u201344, decoded from a downloaded prefix of the source Ogg, mono PCM16 44.1 kHz and lossless gzip. sourceArchiveSha1 is publisher metadata; only the downloaded prefix was hashed locally.",
+      "license": "CC-BY-NC-SA-2.5",
+      "attribution": "NINJAM autosong 2005-07-05; performers justin, kbh, brennan and Cube7, as credited in the archived recording filename.",
+      "annotation": "Unannotated live network jam: stability/activity stress test only; excluded from chord accuracy.",
+      "spans": [
+        {
+          "start": 0,
+          "end": 24,
+          "label": "unknown"
+        }
+      ],
+      "tail": "unknown"
+    }
+  ]
+}
