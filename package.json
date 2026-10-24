@@ -19,7 +19,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "eval": "tsx --tsconfig eval/tsconfig.json eval/run.ts",
-    "eval:inspect": "tsx --tsconfig eval/tsconfig.json eval/inspect.ts"
+    "eval:inspect": "tsx --tsconfig eval/tsconfig.json eval/inspect.ts",
+    "eval:benchmark": "tsx --tsconfig eval/tsconfig.json eval/benchmark.ts --suite=ci",
+    "eval:benchmark:full": "tsx --tsconfig eval/tsconfig.json eval/benchmark.ts --suite=full"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

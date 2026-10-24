@@ -5,8 +5,11 @@ speaker in a room, a singer), runs them through the **live** detection path exac
 does (`createChromaPipeline` hop by hop → `createAnalysisEngine`), and scores what the jam
 screen would show. Results go to [`docs/ACCURACY.md`](../docs/ACCURACY.md).
 
-Not part of CI or `pnpm test`: the first run downloads about 10 MB of piano samples, and a full
-run takes 1–2 minutes. `tsc -b` still typechecks this folder.
+The historical `pnpm eval` sweep below is a development report: its first run downloads
+about 10 MB of piano samples. For the required CI regression gate, recorded guitar/piano/room
+audio, fixed thresholds and the weekly full suite, see [BENCHMARK.md](BENCHMARK.md).
+Run `pnpm eval:benchmark` locally; it uses bundled, checksum-verified audio with no network.
+`tsc -b` typechecks both harnesses, and `pnpm test` tests the benchmark scoring/gating logic.
 
 ```sh
 pnpm eval                 # full run → docs/ACCURACY.md (+ eval/.cache/last.json)

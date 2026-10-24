@@ -13,3 +13,6 @@ dist/
 dev-dist/
 coverage/
 eval/.cache/
+
+# Benchmark recordings are CI-only and carry their own dataset licenses
+eval/fixtures/
