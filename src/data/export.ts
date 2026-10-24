@@ -21,6 +21,7 @@ import {
   type ChordSymbolOptions,
 } from '@/theory';
 import { compressRepeats } from '@/ui/lib/compress';
+import { NEW_SONG_LABEL } from '@/ui/lib/markers';
 import { db } from './db';
 import { normalizeTags, type SessionFull } from './repo';
 import { computeSummary } from './summary';
@@ -47,8 +48,13 @@ export function formatTime(sec: number): string {
 
 /** Key spans shorter than this are folded into a neighbour: a wobble, not a key change. */
 export const MIN_KEY_SPAN_SEC = 10;
-/** Most chords on one line of a run that does not repeat. */
-const MAX_CHORDS_PER_LINE = 8;
+/**
+ * Chords held shorter than this fold into a neighbour in the chart and the text (never in the
+ * stored data): a passing chord or a detection wobble, not a change worth writing down.
+ */
+export const MIN_CHORD_SEC = 1.5;
+/** Most chords on one line of a run that does not repeat (a lead sheet's four bars). */
+const MAX_CHORDS_PER_LINE = 4;
 /** A run this short after (or before) another line joins it instead of standing alone. */
 const MAX_LEFTOVER = 2;
 
@@ -69,6 +75,11 @@ export function sectionTitle(m: Pick<Marker, 'kind' | 'label'>): string {
   return label ? label[0].toUpperCase() + label.slice(1) : SECTION_TITLE[m.kind];
 }
 
+/** A "New song" mark from the Mark menu: it starts the next song of a set. */
+export function isNewSongMarker(m: Pick<Marker, 'kind' | 'label'>): boolean {
+  return m.kind === 'custom' && m.label?.trim().toLowerCase() === NEW_SONG_LABEL.toLowerCase();
+}
+
 /** One chord as it sounded: start, and the start of whatever came next. */
 export interface ChartSpan {
   t: number;
@@ -83,19 +94,34 @@ export interface ChartSegment {
   spans: ChartSpan[];
 }
 
-/** One printed line: a loop, a run of up to eight chords, or a loop with a short tail. */
+/** One printed line: a loop, a run of up to four chords, or a loop with a short tail. */
 export type ChartRow = ChartSegment[];
 
-/** A part of the chart: a section (title from a marker, or none) or a key change. */
+/**
+ * A part of the chart: a song heading (only when New song split the session), a section (title
+ * from a marker, or none) or a key change inside a song.
+ */
 export type ChartPart =
+  | { type: 'song'; n: number; key: Key | null; t: number }
   | { type: 'section'; title: string | null; t: number; key: Key | null; rows: ChartRow[] }
   | { type: 'key'; key: Key; t: number };
+
+export interface ChartKeySpan {
+  key: Key;
+  start: number;
+  end: number;
+}
 
 export interface Chart {
   /** The key that covers the most seconds (the headline key). */
   key: Key | null;
-  /** Key spans that last at least `MIN_KEY_SPAN_SEC` (shorter ones folded into a neighbour). */
-  keys: Array<{ key: Key; start: number; end: number }>;
+  /**
+   * Key spans that last at least `MIN_KEY_SPAN_SEC` (shorter ones folded into a neighbour, the
+   * parallel key folded into the same tonic), song by song.
+   */
+  keys: ChartKeySpan[];
+  /** One entry per song with chords (New song marks split them), each with its key by time. */
+  songs: Array<{ t: number; key: Key | null }>;
   parts: ChartPart[];
   bookmarks: Marker[];
 }
@@ -107,26 +133,49 @@ export type ChartInput = Pick<SessionFull, 'chords' | 'keys' | 'markers'> & {
 const sameKeyish = (a: Key | null | undefined, b: Key | null | undefined) =>
   !!a && !!b && a.tonic === b.tonic && a.mode === b.mode;
 
-/** Key spans with wobbles shorter than `MIN_KEY_SPAN_SEC` folded into a neighbour. */
-function stableKeySpans(keys: readonly KeyRecord[], end: number): Chart['keys'] {
-  const spans: Chart['keys'] = [];
-  for (const k of [...keys].sort((a, b) => a.t - b.t)) {
-    const key: Key = { tonic: k.key.tonic, mode: k.key.mode };
-    const last = spans[spans.length - 1];
-    if (last && sameKeyish(last.key, key)) continue;
-    if (last) last.end = k.t;
-    spans.push({ key, start: spans.length ? k.t : 0, end: Math.max(end, k.t) });
+interface KeySpanDraft extends ChartKeySpan {
+  /** Seconds heard in each mode of this tonic: the span shows the one heard longest. */
+  votes: Array<{ key: Key; sec: number }>;
+}
+
+function vote(span: KeySpanDraft, key: Key, sec: number) {
+  const v = span.votes.find((x) => sameKeyish(x.key, key));
+  if (v) v.sec += sec;
+  else span.votes.push({ key, sec });
+  span.key = span.votes.reduce((a, b) => (b.sec > a.sec ? b : a)).key;
+}
+
+/**
+ * Key spans of `[start, end)` with the parallel key (same tonic, other mode: a blue third, not a
+ * modulation) folded into one span and wobbles shorter than `MIN_KEY_SPAN_SEC` folded into a
+ * neighbour. The key in force at `start` (or the first one after it) covers the start.
+ */
+function stableKeySpans(keys: readonly KeyRecord[], start: number, end: number): ChartKeySpan[] {
+  const sorted = [...keys].sort((a, b) => a.t - b.t);
+  let first = 0;
+  sorted.forEach((k, i) => {
+    if (k.t <= start) first = i;
+  });
+  const spans: KeySpanDraft[] = [];
+  for (let i = first; i < sorted.length && sorted[i].t < end; i++) {
+    const key: Key = { tonic: sorted[i].key.tonic, mode: sorted[i].key.mode };
+    const s = spans.length ? sorted[i].t : start;
+    const e = i + 1 < sorted.length ? Math.min(end, sorted[i + 1].t) : end;
+    const span: KeySpanDraft = { key, start: s, end: Math.max(s, e), votes: [] };
+    vote(span, key, span.end - span.start);
+    spans.push(span);
   }
-  const merge = () => {
+  const join = () => {
     for (let i = spans.length - 1; i > 0; i--) {
-      if (sameKeyish(spans[i - 1].key, spans[i].key)) {
-        spans[i - 1].end = spans[i].end;
-        spans.splice(i, 1);
-      }
+      const [a, b] = [spans[i - 1], spans[i]];
+      if (a.key.tonic !== b.key.tonic) continue;
+      a.end = b.end;
+      for (const v of b.votes) vote(a, v.key, v.sec);
+      spans.splice(i, 1);
     }
   };
   for (;;) {
-    merge();
+    join();
     let shortest = -1;
     spans.forEach((s, i) => {
       const len = s.end - s.start;
@@ -142,11 +191,11 @@ function stableKeySpans(keys: readonly KeyRecord[], end: number): Chart['keys'] 
     else spans[1].start = spans[0].start;
     spans.splice(shortest, 1);
   }
-  return spans;
+  return spans.map(({ key, start: s, end: e }) => ({ key, start: s, end: e }));
 }
 
 /** The key with the most seconds; the earlier one wins a tie. */
-function mainKey(spans: Chart['keys']): Key | null {
+function mainKey(spans: readonly ChartKeySpan[]): Key | null {
   const totals: Array<{ key: Key; seconds: number }> = [];
   for (const s of spans) {
     const entry = totals.find((e) => sameKeyish(e.key, s.key));
@@ -164,49 +213,86 @@ interface Item {
   end: number;
 }
 
-/** Split `n` chords into lines of at most eight, as even as possible (9 → 5 + 4, not 8 + 1). */
-function chunk<T>(xs: readonly T[]): T[][] {
-  const lines = Math.ceil(xs.length / MAX_CHORDS_PER_LINE);
-  const size = Math.ceil(xs.length / Math.max(1, lines));
-  const out: T[][] = [];
-  for (let i = 0; i < xs.length; i += size) out.push(xs.slice(i, i + size));
+/**
+ * Chords held under `MIN_CHORD_SEC` fold into their longer neighbour, the shortest first, so a
+ * passing chord or a one-beat wobble does not break a loop; neighbours of one family that then
+ * touch become one chord.
+ */
+function foldShortChords(items: readonly Item[]): Item[] {
+  const out = items.map((i) => ({ ...i }));
+  const len = (i: Item) => i.end - i.t;
+  while (out.length > 1) {
+    let s = -1;
+    out.forEach((it, i) => {
+      if (len(it) < MIN_CHORD_SEC - 1e-6 && (s < 0 || len(it) < len(out[s]))) s = i;
+    });
+    if (s < 0) break;
+    const prev = out[s - 1];
+    const next = out[s + 1];
+    if (prev && (!next || len(prev) >= len(next))) prev.end = out[s].end;
+    else next.t = out[s].t;
+    out.splice(s, 1);
+    if (s > 0 && s < out.length && sameChordFamily(out[s - 1].chord, out[s].chord)) {
+      out[s - 1].end = out[s].end;
+      out.splice(s, 1);
+    }
+  }
   return out;
 }
 
-const isLeftover = (row: ChartRow) =>
-  row.length === 1 && row[0].repeat === 1 && row[0].chords.length <= MAX_LEFTOVER;
+/** Split `n` chords into lines of at most four, as even as possible (9 → 3 + 3 + 3, not 4 + 4 + 1). */
+function chunk<T>(xs: readonly T[]): T[][] {
+  const lines = Math.max(1, Math.ceil(xs.length / MAX_CHORDS_PER_LINE));
+  const base = Math.floor(xs.length / lines);
+  const out: T[][] = [];
+  for (let l = 0, i = 0; l < lines; l++) {
+    const size = base + (l < xs.length % lines ? 1 : 0);
+    out.push(xs.slice(i, i + size));
+    i += size;
+  }
+  return out.filter((line) => line.length);
+}
 
 /**
  * Rows for one section: loops folded with the Listen timeline's chord-family equality, each
- * loop on its own row, other runs in rows of up to eight; a short leftover run joins the row
- * before it (or after it, at the start of a section) so no row is a lone chord.
+ * loop on its own row, other runs in rows of up to four; a run of one or two chords between
+ * loops joins the row before it (or after it, at the start of a section) so no row is a lone
+ * chord.
  */
 function sectionRows(items: readonly Item[]): ChartRow[] {
   const eq = (a: Item, b: Item) => sameChordFamily(a.chord, b.chord);
-  const rows: ChartRow[] = [];
+  const rows: Array<{ row: ChartRow; leftover: boolean }> = [];
   for (const seg of compressRepeats(items, eq)) {
     const covered = items.slice(seg.start, seg.start + seg.items.length * seg.repeat);
     if (seg.repeat > 1) {
-      rows.push([{ chords: seg.items.map((i) => i.chord), repeat: seg.repeat, spans: covered }]);
+      rows.push({
+        row: [{ chords: seg.items.map((i) => i.chord), repeat: seg.repeat, spans: covered }],
+        leftover: false,
+      });
     } else {
+      const leftover = covered.length <= MAX_LEFTOVER;
       for (const part of chunk(covered)) {
-        rows.push([{ chords: part.map((i) => i.chord), repeat: 1, spans: part }]);
+        rows.push({
+          row: [{ chords: part.map((i) => i.chord), repeat: 1, spans: part }],
+          leftover,
+        });
       }
     }
   }
   for (let i = rows.length - 1; i >= 0 && rows.length > 1; i--) {
-    if (!isLeftover(rows[i])) continue;
-    if (i > 0) rows[i - 1].push(...rows[i]);
-    else rows[1].unshift(...rows[0]);
+    if (!rows[i].leftover) continue;
+    if (i > 0) rows[i - 1].row.push(...rows[i].row);
+    else rows[1].row.unshift(...rows[0].row);
     rows.splice(i, 1);
   }
-  return rows;
+  return rows.map((r) => r.row);
 }
 
 /**
- * The folded chord chart every screen draws and the text export prints: sections from the
- * markers (Title-case), loops folded (`C G Am F ×4`), one key per stretch of at least ten
- * seconds, and the headline key by time.
+ * The folded chord chart every screen draws and the text export prints: songs split by New
+ * song marks (each with its key by time), sections from the other markers (Title-case), chords
+ * held under 1.5 s folded into a neighbour, loops folded (`[C G Am F] ×4`), one key per stretch
+ * of at least ten seconds (the parallel key is never a change), and the headline key by time.
  */
 export function buildChart(full: ChartInput): Chart {
   const records = [...full.chords].sort((a, b) => a.t - b.t);
@@ -214,56 +300,95 @@ export function buildChart(full: ChartInput): Chart {
   const end = Math.max(full.durationSec ?? 0, lastT);
 
   // Named chords, neighbours of one family merged (a no-chord gap between them does not split).
-  const items: Item[] = [];
+  const all: Item[] = [];
   records.forEach((rec, i) => {
     const next = i + 1 < records.length ? records[i + 1].t : Math.max(end, rec.t);
     if (!rec.chord) return;
-    const last = items[items.length - 1];
+    const last = all[all.length - 1];
     if (last && sameChordFamily(last.chord, rec.chord)) last.end = next;
-    else items.push({ chord: rec.chord, t: rec.t, end: next });
+    else all.push({ chord: rec.chord, t: rec.t, end: next });
   });
 
-  const keys = stableKeySpans(full.keys, end);
-  const key = mainKey(keys);
   const markers = [...full.markers].sort((a, b) => a.t - b.t);
+  const songStarts = [0, ...markers.filter(isNewSongMarker).map((m) => m.t)];
+  const ranges = songStarts
+    .map((t, i) => ({ t, end: songStarts[i + 1] ?? Infinity }))
+    .filter((r) => r.end > r.t)
+    .map((r) => {
+      const items = foldShortChords(all.filter((it) => it.t >= r.t && it.t < r.end));
+      const keys = stableKeySpans(full.keys, r.t, Math.min(end, r.end));
+      return { ...r, items, keys, key: mainKey(keys) };
+    });
+  // A song is the chords played after a New song mark; with no chords at all the session is
+  // one song (it can still have a key).
+  const played = ranges.filter((s) => s.items.length > 0);
+  const songs = played.length ? played : ranges.slice(0, 1);
 
-  type Bound = { t: number; title?: string | null; key?: Key };
-  const bounds: Bound[] = [
-    ...markers
-      .filter((m) => m.kind !== 'bookmark')
-      .map((m): Bound => ({ t: m.t, title: sectionTitle(m) })),
-    ...keys.map((k): Bound => ({ t: k.start, key: k.key })),
-  ].sort((a, b) => a.t - b.t || (a.key ? -1 : 1));
-
+  const keys = songs.flatMap((s) => s.keys);
+  const key = mainKey(keys);
   const parts: ChartPart[] = [];
-  let shownKey: Key | null = key;
-  let currentKey: Key | null = keys[0]?.key ?? null;
-  let title: string | null = null;
-  let from = 0;
-  let ci = 0;
-  const flush = (until: number) => {
-    const block: Item[] = [];
-    while (ci < items.length && items[ci].t < until) block.push(items[ci++]);
-    if (block.length) {
-      parts.push({ type: 'section', title, t: from, key: currentKey, rows: sectionRows(block) });
-    }
-  };
-  for (const b of bounds) {
-    flush(b.t);
-    if (b.key) {
-      currentKey = b.key;
-      if (!sameKeyish(shownKey, b.key)) parts.push({ type: 'key', key: b.key, t: b.t });
-      shownKey = b.key;
-      // A key change inside a section continues it without repeating the title.
-      title = null;
-    } else {
-      title = b.title ?? null;
-    }
-    from = b.t;
-  }
-  flush(Infinity);
 
-  return { key, keys, parts, bookmarks: markers.filter((m) => m.kind === 'bookmark') };
+  songs.forEach((song, n) => {
+    if (songs.length > 1) parts.push({ type: 'song', n: n + 1, key: song.key, t: song.t });
+    type Bound = { t: number; title?: string | null; key?: Key };
+    const bounds: Bound[] = [
+      ...markers
+        .filter((m) => m.kind !== 'bookmark' && !isNewSongMarker(m))
+        .filter((m) => m.t >= song.t && m.t < song.end)
+        .map((m): Bound => ({ t: m.t, title: sectionTitle(m) })),
+      ...song.keys.map((k): Bound => ({ t: k.start, key: k.key })),
+    ].sort((a, b) => a.t - b.t || (a.key ? -1 : 1));
+
+    const { items } = song;
+    let shownKey: Key | null = song.key;
+    let currentKey: Key | null = song.keys[0]?.key ?? null;
+    let title: string | null = null;
+    let from = song.t;
+    let ci = 0;
+    const flush = (until: number) => {
+      const block: Item[] = [];
+      while (ci < items.length && items[ci].t < until) block.push(items[ci++]);
+      if (block.length) {
+        parts.push({ type: 'section', title, t: from, key: currentKey, rows: sectionRows(block) });
+      }
+    };
+    for (const b of bounds) {
+      flush(b.t);
+      if (b.key) {
+        currentKey = b.key;
+        if (!sameKeyish(shownKey, b.key)) parts.push({ type: 'key', key: b.key, t: b.t });
+        shownKey = b.key;
+        // A key change inside a section continues it without repeating the title.
+        title = null;
+      } else {
+        title = b.title ?? null;
+      }
+      from = b.t;
+    }
+    flush(Infinity);
+  });
+
+  return {
+    key,
+    keys,
+    songs: songs.map((s) => ({ t: s.t, key: s.key })),
+    parts,
+    bookmarks: markers.filter((m) => m.kind === 'bookmark'),
+  };
+}
+
+/** The songs' keys in order, each once: `[C major, A♭ major]` for a two-song set. */
+export function songKeys(chart: Pick<Chart, 'songs'>): Key[] {
+  const out: Key[] = [];
+  for (const s of chart.songs) {
+    if (s.key && !out.some((k) => sameKeyish(k, s.key))) out.push(s.key);
+  }
+  return out;
+}
+
+/** "Song 2 · A♭ major" (or "Song 2" when no key was heard). */
+export function songHeading(part: { n: number; key: Key | null }): string {
+  return part.key ? `Song ${part.n} · ${prettyAccidentals(keyName(part.key))}` : `Song ${part.n}`;
 }
 
 /** Chord symbol with ♭/♯ glyphs, spelled for `key`. */
@@ -283,7 +408,7 @@ export function chartRows(chart: Chart): Array<{ row: ChartRow; key: Key | null 
   );
 }
 
-/** A row as two aligned text lines: chords (with `×N`) and their numerals. */
+/** A row as two aligned text lines: chords (a loop in brackets with `×N`) and their numerals. */
 export function rowText(row: ChartRow, key: Key | null): [chords: string, numerals: string] {
   const top: string[] = [];
   const bottom: string[] = [];
@@ -293,14 +418,13 @@ export function rowText(row: ChartRow, key: Key | null): [chords: string, numera
     let t = cells.map((c) => c[0].padEnd(width(c))).join(' ');
     let b = cells.map((c) => c[1].padEnd(width(c))).join(' ');
     if (seg.repeat > 1) {
-      const times = ` ×${seg.repeat}`;
-      t += times;
-      b += ' '.repeat(times.length);
+      t = `[${t.trimEnd()}] ×${seg.repeat}`;
+      b = ` ${b}`.padEnd(t.length);
     }
     top.push(t);
     bottom.push(b);
   }
-  return [top.join('   ').trimEnd(), bottom.join('   ').trimEnd()];
+  return [top.join('  ').trimEnd(), bottom.join('  ').trimEnd()];
 }
 
 /**
@@ -310,23 +434,31 @@ export function rowText(row: ChartRow, key: Key | null): [chords: string, numera
  *   Key: C major
  *
  *   [Intro]
- *   C G Am F  ×4
- *   I V vi IV
+ *   [C G Am F] ×4
+ *    I V vi IV
  *
  *   → A minor at 2:35
  *   Am Dm E7 Am
  *   i  iv V7 i
  *
  *   Bookmarks: 1:00 nice
+ *
+ * A set split by New song has a heading per song ("Song 2 · A♭ major") instead of the Key line.
  */
 export function toText(full: SessionFull): string {
   const { session } = full;
   const chart = buildChart({ ...full, durationSec: session.durationSec });
   const out = [`${session.name} — ${formatTime(session.durationSec)}`];
-  if (chart.key) out.push(`Key: ${prettyAccidentals(keyName(chart.key))}`);
+  if (chart.key && chart.songs.length < 2) {
+    out.push(`Key: ${prettyAccidentals(keyName(chart.key))}`);
+  }
 
   for (const part of chart.parts) {
     out.push('');
+    if (part.type === 'song') {
+      out.push(songHeading(part));
+      continue;
+    }
     if (part.type === 'key') {
       out.push(`→ ${prettyAccidentals(keyName(part.key))} at ${formatTime(part.t)}`);
       continue;
@@ -335,11 +467,11 @@ export function toText(full: SessionFull): string {
     for (const row of part.rows) {
       const [chords, numerals] = rowText(row, part.key);
       out.push(chords);
-      if (numerals) out.push(numerals);
+      if (numerals.trim()) out.push(numerals);
     }
   }
-  // A key line runs straight into the section it starts.
-  const lines = out.filter((l, i) => !(l === '' && out[i - 1]?.startsWith('→ ')));
+  // A song heading or a key line runs straight into the section it starts.
+  const lines = out.filter((l, i) => !(l === '' && /^(→ |Song \d)/.test(out[i - 1] ?? '')));
 
   if (chart.bookmarks.length) {
     lines.push(

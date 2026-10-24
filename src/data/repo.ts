@@ -18,7 +18,7 @@ import { DEFAULT_SETTINGS } from '@/core/constants';
 import { db, sessionRange } from './db';
 import { keyName } from './chordSymbol';
 import { computeSummary } from './summary';
-import { buildChart, chartRows, type ChartRow } from './export';
+import { buildChart, chartRows, songKeys, type ChartRow } from './export';
 import { computeStats, rangeStart, type Stats, type StatsRange } from './stats';
 import { isRecordingSession } from './sessionRecorder';
 
@@ -256,10 +256,13 @@ export async function updateChordsLike(
   });
 }
 
-/** The first row of a session's folded chart and its key, for the Library row. */
+/**
+ * The first row of a session's folded chart and its key, for the Library row, plus the keys
+ * the chart heads with (one per song: "C major · A♭ major" for a two-song set).
+ */
 export async function getChartPreview(
   sessionId: string,
-): Promise<{ row: ChartRow; key: Key | null } | null> {
+): Promise<{ row: ChartRow; key: Key | null; keys: Key[] } | null> {
   const session = await db.sessions.get(sessionId);
   if (!session) return null;
   const [lo, hi] = sessionRange(sessionId);
@@ -269,7 +272,8 @@ export async function getChartPreview(
     db.markers.where('[sessionId+t]').between(lo, hi, true, true).toArray(),
   ]);
   const chart = buildChart({ chords, keys, markers, durationSec: session.durationSec });
-  return chartRows(chart)[0] ?? null;
+  const first = chartRows(chart)[0];
+  return first ? { ...first, keys: songKeys(chart) } : null;
 }
 
 export async function addMarker(
