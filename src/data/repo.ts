@@ -13,11 +13,12 @@ import type {
   Session,
   Settings,
 } from '@/core/session';
-import type { Chord } from '@/core/types';
+import type { Chord, Key } from '@/core/types';
 import { DEFAULT_SETTINGS } from '@/core/constants';
 import { db, sessionRange } from './db';
 import { keyName } from './chordSymbol';
 import { computeSummary } from './summary';
+import { buildChart, chartRows, type ChartRow } from './export';
 import { computeStats, rangeStart, type Stats, type StatsRange } from './stats';
 import { isRecordingSession } from './sessionRecorder';
 
@@ -232,6 +233,43 @@ export async function updateChord(chordId: string, chord: Chord | null): Promise
     await refreshSummary(rec.sessionId);
     return updated;
   });
+}
+
+/**
+ * "Change every X in this session": every record with the same root and quality as `match`
+ * (any bass) becomes `chord`. Sets `manual = true`. Returns the updated records.
+ */
+export async function updateChordsLike(
+  sessionId: string,
+  match: Chord,
+  chord: Chord | null,
+): Promise<ChordRecord[]> {
+  return db.transaction('rw', [db.sessions, db.chords, db.keys, db.markers], async () => {
+    const [lo, hi] = sessionRange(sessionId);
+    const rows = await db.chords.where('[sessionId+t]').between(lo, hi, true, true).toArray();
+    const updated = rows
+      .filter((r) => r.chord && r.chord.root === match.root && r.chord.quality === match.quality)
+      .map((r): ChordRecord => ({ ...r, chord, manual: true }));
+    await db.chords.bulkPut(updated);
+    await refreshSummary(sessionId);
+    return updated;
+  });
+}
+
+/** The first row of a session's folded chart and its key, for the Library row. */
+export async function getChartPreview(
+  sessionId: string,
+): Promise<{ row: ChartRow; key: Key | null } | null> {
+  const session = await db.sessions.get(sessionId);
+  if (!session) return null;
+  const [lo, hi] = sessionRange(sessionId);
+  const [chords, keys, markers] = await Promise.all([
+    db.chords.where('[sessionId+t]').between(lo, hi, true, true).toArray(),
+    db.keys.where('[sessionId+t]').between(lo, hi, true, true).toArray(),
+    db.markers.where('[sessionId+t]').between(lo, hi, true, true).toArray(),
+  ]);
+  const chart = buildChart({ chords, keys, markers, durationSec: session.durationSec });
+  return chartRows(chart)[0] ?? null;
 }
 
 export async function addMarker(

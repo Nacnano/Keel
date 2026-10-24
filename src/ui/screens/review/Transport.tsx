@@ -38,14 +38,13 @@ export function Transport(p: TransportProps) {
   const pianoLabel = useId();
   // The MIDI clock waits for the samples: show that instead of a pause button stuck at 0:00.
   const pianoLoading = p.piano === 'loading' && p.source === 'midi';
+  // The Piano sound switch says what it does; the caption only reports trouble.
   const pianoNote =
     p.piano === 'loading'
       ? 'Loading piano sound…'
       : p.piano === 'error'
         ? 'Piano sound unavailable (offline?)'
-        : p.hasAudio
-          ? 'Plays the recorded MIDI along with the audio'
-          : 'Hear the recorded MIDI on a sampled piano';
+        : null;
 
   return (
     <div className="flex flex-col gap-1.5" role="group" aria-label="Transport">
@@ -107,7 +106,6 @@ export function Transport(p: TransportProps) {
         </div>
 
         <Segmented
-          size="sm"
           aria-label="Playback speed"
           options={RATE_OPTIONS}
           value={p.rate as (typeof RATES)[number]}
@@ -124,7 +122,7 @@ export function Transport(p: TransportProps) {
       </div>
       <p className="text-caption text-label-3">
         <span data-testid="clock-source">{SOURCE_LABEL[p.source]}</span>
-        {p.hasMidi && <span> · {pianoNote}</span>}
+        {p.hasMidi && pianoNote && <span> · {pianoNote}</span>}
       </p>
     </div>
   );

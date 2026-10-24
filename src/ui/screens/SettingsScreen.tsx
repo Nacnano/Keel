@@ -8,7 +8,7 @@ import { selectSettings, useSettings } from '@/state/settingsStore';
 import { useSync } from '@/sync/store';
 import { toast } from '../components/toastStore';
 import { useMediaQuery } from '../lib/useMediaQuery';
-import { Button, Group, PageHeader, Row, Segmented, Select, Sheet, Slider, Switch } from '../kit';
+import { Button, Group, Page, Row, Segmented, Select, Sheet, Slider, Switch } from '../kit';
 import { APP_VERSION, JAM_SHORTCUTS } from './settings/about';
 import { AccountSync } from './settings/AccountSync';
 import {
@@ -235,191 +235,181 @@ export function SettingsScreen() {
     settings.sensitivity < 0.34 ? 'Low' : settings.sensitivity > 0.66 ? 'High' : 'Medium';
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-2xl pb-[max(env(safe-area-inset-bottom),32px)]">
-        <PageHeader title="Settings" />
+    <Page title="Settings">
+      <div className="flex flex-col gap-6 px-4 pt-2">
+        <Group
+          title="Input"
+          footer="Settings save automatically. Device changes apply to your next jam."
+        >
+          <Row
+            label="Microphone"
+            detail={
+              inputs.audioDevices.length === 0
+                ? 'Names appear after you allow the microphone once.'
+                : undefined
+            }
+            accessory={
+              <Select
+                inline
+                aria-label="Microphone"
+                options={audioOptions}
+                value={settings.audioDeviceId ?? ''}
+                onChange={(v) => {
+                  set('audioDeviceId', v || null);
+                  inputs.selectAudioDevice(v || null);
+                }}
+              />
+            }
+          />
+          <Row
+            label="MIDI device"
+            detail={midiHint}
+            accessory={
+              <Select
+                inline
+                aria-label="MIDI device"
+                options={midiOptions}
+                value={settings.midiDeviceId ?? ''}
+                disabled={!inputs.midiSupported || inputs.midiDevices.length === 0}
+                onChange={(v) => {
+                  set('midiDeviceId', v || null);
+                  inputs.selectMidiDevice(v || null);
+                }}
+              />
+            }
+          />
+          <div className="px-4 py-3">
+            <Button variant="tinted" loading={findingDevices} onClick={() => void findDevices()}>
+              {findingDevices ? 'Finding devices…' : 'Find input devices'}
+            </Button>
+            <p role="status" className="mt-2 text-footnote leading-relaxed text-label-2">
+              {findingDevices
+                ? 'Allow MIDI access if your browser asks.'
+                : (deviceMessage ?? 'Check for connected microphones and USB MIDI keyboards.')}
+            </p>
+          </div>
+          <Row
+            stacked
+            label={
+              <span className="flex items-baseline justify-between gap-3">
+                <span>Sensitivity</span>
+                <span className="text-subhead text-label-2">{sensitivityWord}</span>
+              </span>
+            }
+            accessory={
+              <Slider
+                aria-label="Microphone sensitivity"
+                aria-valuetext={`${sensitivityWord} (${Math.round(settings.sensitivity * 100)}%)`}
+                min={0}
+                max={1}
+                step={0.05}
+                value={settings.sensitivity}
+                onChange={(v) => set('sensitivity', v)}
+                minLabel={SENSITIVITY_MIN_LABEL}
+                maxLabel={SENSITIVITY_MAX_LABEL}
+              />
+            }
+          />
+        </Group>
 
-        <div className="flex flex-col gap-6 px-4 pt-2">
-          <Group
-            title="Input"
-            footer="Settings save automatically. Device changes apply to your next jam."
-          >
-            <Row
-              label="Microphone"
-              detail={
-                inputs.audioDevices.length === 0
-                  ? 'Names appear after you allow the microphone once.'
-                  : undefined
-              }
-              accessory={
-                <Select
-                  inline
-                  aria-label="Microphone"
-                  options={audioOptions}
-                  value={settings.audioDeviceId ?? ''}
-                  onChange={(v) => {
-                    set('audioDeviceId', v || null);
-                    inputs.selectAudioDevice(v || null);
-                  }}
-                />
-              }
-            />
-            <Row
-              label="MIDI device"
-              detail={midiHint}
-              accessory={
-                <Select
-                  inline
-                  aria-label="MIDI device"
-                  options={midiOptions}
-                  value={settings.midiDeviceId ?? ''}
-                  disabled={!inputs.midiSupported || inputs.midiDevices.length === 0}
-                  onChange={(v) => {
-                    set('midiDeviceId', v || null);
-                    inputs.selectMidiDevice(v || null);
-                  }}
-                />
-              }
-            />
-            <div className="px-4 py-3">
-              <Button variant="tinted" loading={findingDevices} onClick={() => void findDevices()}>
-                {findingDevices ? 'Finding devices…' : 'Find input devices'}
-              </Button>
-              <p role="status" className="mt-2 text-footnote leading-relaxed text-label-2">
-                {findingDevices
-                  ? 'Allow MIDI access if your browser asks.'
-                  : (deviceMessage ?? 'Check for connected microphones and USB MIDI keyboards.')}
-              </p>
-            </div>
-            <Row
-              stacked
-              label={
-                <span className="flex items-baseline justify-between gap-3">
-                  <span>Sensitivity</span>
-                  <span className="text-subhead text-label-2">{sensitivityWord}</span>
-                </span>
-              }
-              accessory={
-                <Slider
-                  aria-label="Microphone sensitivity"
-                  aria-valuetext={`${sensitivityWord} (${Math.round(settings.sensitivity * 100)}%)`}
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={settings.sensitivity}
-                  onChange={(v) => set('sensitivity', v)}
-                  minLabel={SENSITIVITY_MIN_LABEL}
-                  maxLabel={SENSITIVITY_MAX_LABEL}
-                />
-              }
-            />
-          </Group>
+        <Group
+          title="Listening"
+          footer="Choose With a band when other instruments or a recording are playing."
+        >
+          <Row
+            label="Instrument"
+            accessory={
+              <Segmented<Instrument>
+                aria-label="Instrument"
+                options={INSTRUMENTS}
+                value={settings.instrument}
+                onChange={(v) => set('instrument', v)}
+              />
+            }
+          />
+          <Row
+            label="Listening mode"
+            accessory={
+              <Segmented<JamMode>
+                aria-label="Listening mode"
+                options={MODE_OPTIONS}
+                value={settings.mode}
+                onChange={(v) => set('mode', v)}
+              />
+            }
+          />
+          <Row
+            label="Record audio by default"
+            detail="Stored only on this device. You can change it per session."
+            accessory={
+              <Switch
+                aria-label="Record audio by default"
+                checked={settings.recordAudioByDefault}
+                onChange={(v) => set('recordAudioByDefault', v)}
+              />
+            }
+          />
+        </Group>
 
-          <Group
-            title="Listening"
-            footer="Choose With a band when other instruments or a recording are playing."
-          >
-            <Row
-              label="Instrument"
-              accessory={
-                <Segmented<Instrument>
-                  size="sm"
-                  aria-label="Instrument"
-                  options={INSTRUMENTS}
-                  value={settings.instrument}
-                  onChange={(v) => set('instrument', v)}
-                />
-              }
-            />
-            <Row
-              label="Listening mode"
-              accessory={
-                <Segmented<JamMode>
-                  size="sm"
-                  aria-label="Listening mode"
-                  options={MODE_OPTIONS}
-                  value={settings.mode}
-                  onChange={(v) => set('mode', v)}
-                />
-              }
-            />
-            <Row
-              label="Record audio by default"
-              detail="Stored only on this device. You can change it per session."
-              accessory={
-                <Switch
-                  aria-label="Record audio by default"
-                  checked={settings.recordAudioByDefault}
-                  onChange={(v) => set('recordAudioByDefault', v)}
-                />
-              }
-            />
-          </Group>
+        <Group title="Chords">
+          <Row
+            label="Detail"
+            accessory={
+              <Segmented<VocabLevel>
+                aria-label="Chord detail"
+                options={LEVEL_OPTIONS}
+                value={settings.vocabLevel}
+                onChange={(v) => set('vocabLevel', v)}
+              />
+            }
+          />
+          <Row
+            label="Spell notes for the key"
+            detail="B♭ in F major, A♯ in B major. Off: always sharps."
+            accessory={
+              <Switch
+                aria-label="Spell notes for the key"
+                checked={settings.spellingFollowsKey}
+                onChange={(v) => set('spellingFollowsKey', v)}
+              />
+            }
+          />
+        </Group>
 
-          <Group title="Chords">
-            <Row
-              label="Detail"
-              accessory={
-                <Segmented<VocabLevel>
-                  size="sm"
-                  aria-label="Chord detail"
-                  options={LEVEL_OPTIONS}
-                  value={settings.vocabLevel}
-                  onChange={(v) => set('vocabLevel', v)}
-                />
-              }
-            />
-            <Row
-              label="Spell notes for the key"
-              detail="B♭ in F major, A♯ in B major. Off: always sharps."
-              accessory={
-                <Switch
-                  aria-label="Spell notes for the key"
-                  checked={settings.spellingFollowsKey}
-                  onChange={(v) => set('spellingFollowsKey', v)}
-                />
-              }
-            />
-          </Group>
+        {/* keyed so an external change (reset) refreshes the draft */}
+        <TuningGroup key={settings.a4} value={settings.a4} onCommit={(v) => set('a4', v)} />
 
-          {/* keyed so an external change (reset) refreshes the draft */}
-          <TuningGroup key={settings.a4} value={settings.a4} onCommit={(v) => set('a4', v)} />
+        <Group title="Appearance">
+          <Row
+            label="Theme"
+            accessory={
+              <Segmented<Settings['theme']>
+                aria-label="Theme"
+                options={THEMES}
+                value={settings.theme}
+                onChange={(v) => set('theme', v)}
+              />
+            }
+          />
+        </Group>
 
-          <Group title="Appearance">
-            <Row
-              label="Theme"
-              accessory={
-                <Segmented<Settings['theme']>
-                  size="sm"
-                  aria-label="Theme"
-                  options={THEMES}
-                  value={settings.theme}
-                  onChange={(v) => set('theme', v)}
-                />
-              }
-            />
-          </Group>
+        {syncConfigured && <AccountSync />}
 
-          {syncConfigured && <AccountSync />}
+        <Group title="About">
+          <Row label="Version" accessory={<span className="tabular">{APP_VERSION}</span>} />
+          {!touch && <Row label="Keyboard shortcuts" chevron onClick={() => setShortcuts(true)} />}
+        </Group>
 
-          <Group title="About">
-            <Row label="Version" accessory={<span className="tabular">{APP_VERSION}</span>} />
-            {!touch && (
-              <Row label="Keyboard shortcuts" chevron onClick={() => setShortcuts(true)} />
-            )}
-          </Group>
+        <Group footer="Saved sessions are not affected.">
+          <Row
+            label={<span className="text-live">Reset all settings</span>}
+            onClick={() => setConfirmReset(true)}
+          />
+        </Group>
 
-          <Group footer="Saved sessions are not affected.">
-            <Row
-              label={<span className="text-live">Reset all settings</span>}
-              onClick={() => setConfirmReset(true)}
-            />
-          </Group>
-
-          <p data-testid="storage-line" className="px-4 text-center text-footnote text-label-3">
-            {storage ? storageLine(storage) : '\u00a0'}
-          </p>
-        </div>
+        <p data-testid="storage-line" className="px-4 text-center text-footnote text-label-3">
+          {storage ? storageLine(storage) : '\u00a0'}
+        </p>
       </div>
 
       <ShortcutsSheet open={shortcuts} onClose={() => setShortcuts(false)} />
@@ -451,6 +441,6 @@ export function SettingsScreen() {
           </Button>
         </div>
       </Sheet>
-    </div>
+    </Page>
   );
 }

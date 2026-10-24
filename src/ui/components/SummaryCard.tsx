@@ -1,24 +1,21 @@
 import type { SessionSummary } from '@/core';
 import { Group, Row } from '../kit';
-import { chordSymbol, keyLabel, pretty } from '../lib/chordLabel';
+import { keyLabel, pretty } from '../lib/chordLabel';
 import { cx } from '../lib/cx';
-import { romanNumeral } from '../lib/numeral';
 import { clockLabel } from '../screens/review/timeline';
 
 export interface SummaryCardProps {
   summary: SessionSummary | null;
   durationSec: number;
   spellingFollowsKey?: boolean;
-  showSlash?: boolean;
   className?: string;
 }
 
-/** Session summary as inset groups: time per key, top repeating progressions, counts. */
+/** Session summary as inset groups: time per key and counts (the chart shows the loops). */
 export function SummaryCard({
   summary,
   durationSec,
   spellingFollowsKey = true,
-  showSlash = true,
   className,
 }: SummaryCardProps) {
   if (!summary) {
@@ -30,7 +27,6 @@ export function SummaryCard({
       </section>
     );
   }
-  const home = summary.keys[0]?.key ?? null;
   const total = Math.max(
     1,
     durationSec,
@@ -69,34 +65,6 @@ export function SummaryCard({
               />
             );
           })
-        )}
-      </Group>
-
-      <Group title="Top progressions">
-        {summary.topProgressions.length === 0 ? (
-          <Row label={<span className="text-label-2">No repeating progressions found.</span>} />
-        ) : (
-          summary.topProgressions.map((p, i) => (
-            <div
-              key={i}
-              data-testid="summary-progression"
-              className="flex min-h-11 items-center gap-3 px-4 py-2"
-            >
-              <span className="flex min-w-0 flex-1 flex-wrap gap-x-3 gap-y-1">
-                {p.chords.map((c, j) => (
-                  <span key={j} className="flex flex-col items-center leading-tight">
-                    <span className="text-body font-semibold text-label">
-                      {pretty(chordSymbol(c, home, { spellingFollowsKey, showSlash }))}
-                    </span>
-                    <span className="text-caption font-medium text-accent">
-                      {home ? pretty(romanNumeral(c, home)) : ''}
-                    </span>
-                  </span>
-                ))}
-              </span>
-              <span className="text-subhead text-label-2 tabular">×{p.count}</span>
-            </div>
-          ))
         )}
       </Group>
 

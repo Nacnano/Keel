@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { AudioLines, ChartNoAxesColumn, ChevronRight, Ear, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { Group, PageHeader } from '../kit';
+import { Group, Page } from '../kit';
 
 const tools = [
   {
@@ -26,26 +26,23 @@ const tools = [
 
 export function ToolsScreen() {
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-3xl pb-[max(env(safe-area-inset-bottom),32px)] lg:px-4">
-        <PageHeader title="Tools" subtitle="A little help before or after you play." />
-        <div className="flex flex-col gap-8 px-4 pt-4">
-          <Group aria-label="Music tools">
-            {tools.map((tool) => (
-              <ToolLink key={tool.to} {...tool} />
-            ))}
-          </Group>
-          <Group aria-label="App settings">
-            <ToolLink
-              to="/settings"
-              title="Settings"
-              description="Choose your input, listening preferences and appearance."
-              icon={Settings}
-            />
-          </Group>
-        </div>
+    <Page title="Tools" subtitle="A little help before or after you play.">
+      <div className="flex flex-col gap-8 px-4 pt-2">
+        <Group aria-label="Music tools">
+          {tools.map((tool) => (
+            <ToolLink key={tool.to} {...tool} />
+          ))}
+        </Group>
+        <Group aria-label="App settings">
+          <ToolLink
+            to="/settings"
+            title="Settings"
+            description="Choose your input, listening preferences and appearance."
+            icon={Settings}
+          />
+        </Group>
       </div>
-    </div>
+    </Page>
   );
 }
 

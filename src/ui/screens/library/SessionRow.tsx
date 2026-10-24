@@ -1,12 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { ChevronRight, Ellipsis, Pencil, Trash2 } from 'lucide-react';
-import type { Chord, Session } from '@/core';
-import { chordFamilyKey, getSessionFull } from '@/data';
+import type { Key, Session } from '@/core';
+import { chartNumeral, chartSymbol, getChartPreview, getSessionFull, type ChartRow } from '@/data';
 import { Button } from '../../kit';
-import { chordSymbol, keyLabel, pretty } from '../../lib/chordLabel';
+import { keyLabel, pretty } from '../../lib/chordLabel';
 import { cx } from '../../lib/cx';
-import { romanNumeral } from '../../lib/numeral';
 import { clockLabel } from '../review/timeline';
 import { DownloadItems, ShareItem, ShareLinkItem } from './ShareItems';
 import { Menu, MenuItem, MenuSeparator } from './Menu';
@@ -31,19 +30,20 @@ function shortDate(ms: number, now = Date.now()): string {
   });
 }
 
-/**
- * The loop as a player reads it: slash basses dropped and neighbours with the same root and
- * quality merged (older summaries were computed with the bass).
- */
-function foldProgression(chords: readonly Chord[]): Chord[] {
-  const out: Chord[] = [];
-  for (const c of chords) {
-    const plain: Chord = { root: c.root, quality: c.quality };
-    if (!out.length || chordFamilyKey(out[out.length - 1]) !== chordFamilyKey(plain))
-      out.push(plain);
-  }
-  if (out.length > 1 && chordFamilyKey(out[0]) === chordFamilyKey(out[out.length - 1])) out.pop();
-  return out;
+/** The first row of the session's folded chart, loaded once per edit of the session. */
+function useChartPreview(id: string, updatedAt: number) {
+  const [preview, setPreview] = useState<{ row: ChartRow; key: Key | null } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    getChartPreview(id).then(
+      (p) => alive && setPreview(p),
+      () => alive && setPreview(null),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [id, updatedAt]);
+  return preview;
 }
 
 /**
@@ -60,7 +60,7 @@ export function SessionRow({
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState(s.name);
   const home = s.summary?.keys[0]?.key ?? null;
-  const prog = s.summary?.topProgressions[0];
+  const preview = useChartPreview(s.id, s.updatedAt);
 
   const commit = async () => {
     setRenaming(false);
@@ -114,24 +114,30 @@ export function SessionRow({
           </h3>
         )}
         <p className="mt-0.5 truncate text-footnote text-label-2 tabular">{meta.join(' · ')}</p>
-        {prog && (
+        {preview && (
           <p
             className="mt-1 flex items-baseline gap-x-2.5 overflow-hidden text-subhead whitespace-nowrap"
             data-testid="session-progression"
           >
-            {foldProgression(prog.chords).map((c, i) => (
-              <span key={i} className="inline-flex items-baseline gap-1">
-                <span className="font-semibold text-label">
-                  {pretty(chordSymbol(c, home, { spellingFollowsKey }))}
-                </span>
-                {home && (
-                  <span className="text-caption font-medium text-accent">
-                    {pretty(romanNumeral(c, home))}
+            {preview.row.map((seg, i) => (
+              <span key={i} className="inline-flex items-baseline gap-x-2.5">
+                {seg.chords.map((c, j) => (
+                  <span key={j} className="inline-flex items-baseline gap-1">
+                    <span className="font-semibold text-label">
+                      {chartSymbol(c, preview.key, { spellingFollowsKey, showSlash: false })}
+                    </span>
+                    {preview.key && (
+                      <span className="text-caption font-medium text-accent">
+                        {chartNumeral(c, preview.key)}
+                      </span>
+                    )}
                   </span>
+                ))}
+                {seg.repeat > 1 && (
+                  <span className="text-footnote text-label-3 tabular">×{seg.repeat}</span>
                 )}
               </span>
             ))}
-            <span className="text-footnote text-label-3 tabular">×{prog.count}</span>
           </p>
         )}
       </div>

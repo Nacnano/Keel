@@ -23,11 +23,14 @@ primitives and tokens; no raw `zinc-*`/`violet-*` classes, no ad-hoc borders.
 
 `Button` (filled | tinted | gray | plain; `destructive`, `icon`, `round`, `loading`),
 `Segmented`, `Group` + `Row` (inset grouped lists), `Switch`, `Slider`, `Select`,
-`Toolbar` + `PageHeader`, `Sheet` (side / bottom / center), `Popover`, `Meter`, `EmptyState`, `Badge`.
+`Page` (the one page shell), `Sheet` (side / bottom / center), `Popover`, `Meter`, `EmptyState`, `Badge`.
 
 ## Rules
 
-- **Hierarchy first.** One large title per list screen (`PageHeader`), one primary action per
+- **One page shell.** Every page is a `Page`: a 768 px column (Review: `wide`, 1104 px), a top
+  bar row with the back link and actions, and the large title under it at the same place on
+  every page.
+- **Hierarchy first.** One large title per page, one primary action per
   screen (`Button variant="filled"`), everything else gray or plain.
 - **Lists, not cards.** Collections are inset grouped lists (`Group`/`Row`) or plain rows
   with hairlines. No card grids of icon + heading + text.
@@ -41,6 +44,7 @@ primitives and tokens; no raw `zinc-*`/`violet-*` classes, no ad-hoc borders.
 - **Dev-only affordances** (seed buttons, stress data) must be hidden unless
   `location.search` contains `seed=1`, and must look like a footnote, not a primary button.
 - **Motion** only on state change, 150–300 ms, exponential ease-out. No page-load choreography.
-- Touch targets ≥ 44 px; keyboard focus uses the global focus ring.
+- Touch targets ≥ 44 px on coarse pointers, measured on the element itself (small buttons,
+  segments, the slider); keyboard focus uses the global focus ring.
 
 Exemplar: `src/ui/screens/JamScreen.tsx` with `jam/JamInspector.tsx` and `jam/JamOptions.tsx`.

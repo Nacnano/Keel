@@ -51,7 +51,6 @@ export function KeyDrill({ level, keys, bpm, playback, lifetime, onGraded, rng }
       {q && (
         <div className="flex flex-col items-center gap-4">
           <Segmented<KeyMode>
-            size="sm"
             aria-label="Key mode"
             options={MODE_OPTIONS}
             value={mode}

@@ -5,7 +5,7 @@ import { chordSymbol, noteName, pretty } from '../lib/chordLabel';
 import { cx } from '../lib/cx';
 import { romanNumeral } from '../lib/numeral';
 import { levelOf, qualitiesForLevel } from '../screens/review/vocab';
-import { Button, Segmented, Select, Sheet } from '../kit';
+import { Button, Segmented, Select, Sheet, Switch } from '../kit';
 
 export interface ChordPickerProps {
   open: boolean;
@@ -19,8 +19,14 @@ export interface ChordPickerProps {
   atLabel?: string;
   spellingFollowsKey?: boolean;
   saving?: boolean;
+  /**
+   * Other chords in the session with the same root and quality as `initial` (this one
+   * included). Above one, a "Change every …" switch shows, on by default.
+   */
+  sameCount?: number;
   onClose(): void;
-  onSave(chord: Chord | null): void;
+  /** `all`: change every chord with the same root and quality, not just this one. */
+  onSave(chord: Chord | null, all: boolean): void;
 }
 
 const LEVEL_OPTIONS: Array<{ value: VocabLevel; label: string; title: string }> = [
@@ -41,9 +47,12 @@ export function ChordPicker({
   atLabel,
   spellingFollowsKey = true,
   saving = false,
+  sameCount = 1,
   onClose,
   onSave,
 }: ChordPickerProps) {
+  const [all, setAll] = useState(true);
+  const offerAll = initial !== null && sameCount > 1;
   const [none, setNone] = useState(initial === null);
   const [root, setRoot] = useState<PitchClass>(initial?.root ?? keyContext?.tonic ?? 0);
   const [quality, setQuality] = useState<ChordQuality>(initial?.quality ?? 'maj');
@@ -150,7 +159,6 @@ export function ChordPicker({
               <span className="text-footnote font-medium text-label-2">Quality</span>
               <Segmented<VocabLevel>
                 aria-label="Chord vocabulary"
-                size="sm"
                 options={LEVEL_OPTIONS}
                 value={level}
                 onChange={setLevel}
@@ -189,11 +197,27 @@ export function ChordPicker({
           </div>
         </fieldset>
 
+        {offerAll && initial && (
+          <label className="flex min-h-11 items-center justify-between gap-3 rounded-cell bg-fill-4 px-3 py-2">
+            <span className="text-subhead text-label">
+              Change every{' '}
+              {pretty(chordSymbol(initial, keyContext, { ...spell, showSlash: false }))} in this
+              session
+              <span className="block text-footnote text-label-2">{sameCount} chords</span>
+            </span>
+            <Switch
+              aria-label={`Change every ${pretty(chordSymbol(initial, keyContext, { ...spell, showSlash: false }))} in this session`}
+              checked={all}
+              onChange={setAll}
+            />
+          </label>
+        )}
+
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="gray" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="filled" loading={saving} onClick={() => onSave(chord)}>
+          <Button variant="filled" loading={saving} onClick={() => onSave(chord, offerAll && all)}>
             Save chord
           </Button>
         </div>

@@ -21,7 +21,9 @@ import {
   setTags,
   softDeleteSession,
   storageEstimate,
+  getChartPreview,
   updateChord,
+  updateChordsLike,
   updateMarker,
 } from './repo';
 
@@ -155,6 +157,32 @@ describe('repo', () => {
     await updateChord('s1-c-2', null);
     expect((await getSession('s1'))?.summary?.chordCount).toBe(7);
     await expect(updateChord('nope', null)).rejects.toThrow(/not found/);
+  });
+
+  it('updateChordsLike changes every chord of the same root and quality', async () => {
+    // s1 is C G Am F twice: both Am become A.
+    const changed = await updateChordsLike(
+      's1',
+      { root: 9, quality: 'min', bass: 4 },
+      {
+        root: 9,
+        quality: 'maj',
+      },
+    );
+    expect(changed.map((c) => c.id)).toEqual(['s1-c-2', 's1-c-6']);
+    const rows = (await getSessionFull('s1'))!.chords;
+    expect(rows.filter((c) => c.chord?.root === 9).every((c) => c.chord?.quality === 'maj')).toBe(
+      true,
+    );
+    expect(rows.filter((c) => c.manual).map((c) => c.id)).toEqual(['s1-c-2', 's1-c-6']);
+  });
+
+  it('getChartPreview returns the first folded row of the chart', async () => {
+    const preview = await getChartPreview('s1');
+    expect(preview?.key).toEqual({ tonic: 0, mode: 'major' });
+    expect(preview?.row[0]).toMatchObject({ repeat: 2 });
+    expect(preview?.row[0].chords.map((c) => c.root)).toEqual([0, 7, 9, 5]);
+    expect(await getChartPreview('missing')).toBeNull();
   });
 
   it('adds, updates and deletes markers', async () => {
