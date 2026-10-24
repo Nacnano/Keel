@@ -141,7 +141,9 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
   let smoother: Smoother = createSmoother({ numStates: bank.size + 1, stability: cfg.stability });
 
   let lastDecodedFrame = -1;
+  /** Last chord shown, and the heard chord it was read from. */
   let lastChord: Chord | null = null;
+  let lastHeard: Chord | null = null;
   let lastNotes = '';
   let heldSims: Float32Array | null = null;
   let prevBass: PitchClass | null = null;
@@ -184,13 +186,28 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     updateInKey();
   }
 
-  /** Emit on a real change only: a new bass note or added tone over the same chord is not one. */
-  function emitChord(t: number, chord: Chord | null, confidence: number, source: InputSource) {
-    if (sameChordFamily(chord, lastChord)) return;
-    lastChord = chord;
+  /** The chord shown for a heard chord: mic chords are read in the current key. */
+  function shownFor(heard: Chord | null, source: InputSource): Chord | null {
+    return heard && source === 'mic' ? keyReading(heard, key, level, keys.blues()) : heard;
+  }
+
+  /**
+   * A heard chord passed the dwell gate. The key estimator sees what was heard (so a Dm under a
+   * provisional D-major key still counts as Dm); the display shows the key reading of it, and
+   * only on a real change: a new bass note or added tone over the same chord is not one.
+   */
+  function emitChord(t: number, heard: Chord | null, confidence: number, source: InputSource) {
+    if (sameChordFamily(heard, lastHeard)) return;
+    lastHeard = heard;
     lastSource = source;
     lastConfidence = confidence;
-    keys.observeChord(t, chord && confidence >= MIN_DISPLAY_CONFIDENCE ? chord : null);
+    keys.observeChord(t, heard && confidence >= MIN_DISPLAY_CONFIDENCE ? heard : null);
+    showChord(t, shownFor(heard, source), confidence, source);
+  }
+
+  function showChord(t: number, chord: Chord | null, confidence: number, source: InputSource) {
+    if (sameChordFamily(chord, lastChord)) return;
+    lastChord = chord;
     emitter.emit({ type: 'chord', t, chord, confidence, source });
   }
 
@@ -205,21 +222,21 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     const dwell = dwellSeconds(cfg.stability, cfg.mode);
     if (chord && confidence >= MIN_DISPLAY_CONFIDENCE) {
       lastSureT = t;
-      if (sameChordFamily(chord, lastChord)) {
+      if (sameChordFamily(chord, lastHeard)) {
         pending = null;
         return;
       }
       if (!pending || !sameChordFamily(pending.chord, chord))
         pending = { chord, t0: t, confidence };
       pending.confidence = Math.max(pending.confidence, confidence);
-      const need = lastChord && lastChord.root === chord.root ? dwell * SAME_ROOT_DWELL : dwell;
+      const need = lastHeard && lastHeard.root === chord.root ? dwell * SAME_ROOT_DWELL : dwell;
       if (tEnd - pending.t0 + 1e-6 >= need) {
         emitChord(pending.t0, pending.chord, pending.confidence, 'mic');
         pending = null;
       }
       return;
     }
-    if (!lastChord) return;
+    if (!lastHeard) return;
     // Released silence has already waited RELEASE_HOLD_SEC; a gap with sound waits GAP_HOLD_SEC.
     if (silent || tEnd - lastSureT + 1e-6 >= GAP_HOLD_SEC) {
       emitChord(silent ? t : lastSureT, null, confidence, 'mic');
@@ -278,13 +295,11 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     const tEnd = times[(decoded.frame + decoded.run - 1) % TIME_RING];
     let chord: Chord | null = null;
     if (decoded.state < bank.size) {
-      const raw = keyReading(
-        { root: bank.roots[decoded.state] as PitchClass, quality: bank.qualities[decoded.state] },
-        key,
-        level,
-        keys.blues(),
-      );
-      chord = applyBass(raw, bass.stableAt(delay), cfg.showSlashChords);
+      const heard: Chord = {
+        root: bank.roots[decoded.state] as PitchClass,
+        quality: bank.qualities[decoded.state],
+      };
+      chord = applyBass(heard, bass.stableAt(delay), cfg.showSlashChords);
     }
     gate(t, tEnd, chord, decoded.confidence, quiet[decoded.frame % TIME_RING] === 1);
   }
@@ -314,11 +329,8 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
         emitter.emit({ type: 'key', t, key: next });
         // The chord on screen is re-read in the new key (the first chord, heard before the key,
         // is a Cm that the key C major reads as C).
-        if (lastChord && lastSource === 'mic') {
-          const reread = keyReading(lastChord, key, level, keys.blues());
-          if (!sameChordFamily(reread, lastChord))
-            emitChord(frame.t, reread, lastConfidence, 'mic');
-        }
+        if (lastHeard)
+          showChord(frame.t, shownFor(lastHeard, lastSource), lastConfidence, lastSource);
       }
     },
     resetKey() {
@@ -335,6 +347,7 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
       bass.reset();
       rebuild();
       lastChord = null;
+      lastHeard = null;
       lastSureT = -Infinity;
       lastNotes = '';
       lastSoundT = -Infinity;
