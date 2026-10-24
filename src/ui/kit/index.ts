@@ -5,6 +5,7 @@ export { Switch, type SwitchProps } from './Switch';
 export { Slider, type SliderProps } from './Slider';
 export { Select, type SelectOption, type SelectProps } from './Select';
 export { Toolbar, PageHeader, type ToolbarProps, type PageHeaderProps } from './Toolbar';
+export { Page, type PageProps } from './Page';
 export { Sheet, type SheetProps } from './Sheet';
 export { Popover, type PopoverProps } from './Popover';
 export { Meter, type MeterProps } from './Meter';

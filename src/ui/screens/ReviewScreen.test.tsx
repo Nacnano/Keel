@@ -76,10 +76,13 @@ describe('ReviewScreen', () => {
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     renderAt(`/review/${ID}`);
     const chart = await screen.findByTestId('review-chart');
-    expect(within(chart).getAllByTestId('chart-line')[0]).toHaveTextContent('Intro');
+    expect(within(chart).getAllByTestId('chart-section')[0]).toHaveTextContent('Intro');
+    expect(within(chart).getAllByTestId('chart-numeral')[0]).toHaveTextContent('I');
     fireEvent.click(screen.getByRole('button', { name: 'Share' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
-    expect(writeText.mock.calls[0][0]).toMatch(/^Evening idea in C — .*\nKey: C major\n/);
+    expect(writeText.mock.calls[0][0]).toMatch(
+      /^Evening idea in C — .*\nKey: C major\n\n\[Intro\]\n/,
+    );
     await waitFor(() =>
       expect(useToastStore.getState().toasts.map((t) => t.message)).toContain('Chord chart copied'),
     );

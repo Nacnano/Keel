@@ -1,4 +1,3 @@
-import { ToolsBackLink } from './tools/ToolsBackLink';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
@@ -7,28 +6,27 @@ import { AlertCircle, Pause, Play } from 'lucide-react';
 import {
   analyseSamplesToEvents,
   decodeFileToMono,
-  headlineKey,
   type DecodedAudio,
   type OfflineAnalysisResult,
   type OfflineStage,
 } from '@/audio/offline';
-import type { JamMode, VocabLevel } from '@/core';
+import type { JamMode, KeyEstimate, VocabLevel } from '@/core';
+import { buildChart, chartNumeral, chartSymbol } from '@/data';
 import { draftFromAnalysis, nameFromFile, saveAnalysedSession } from '@/data/importAnalysis';
 import { useSettings } from '@/state/settingsStore';
 import { KeyBadge } from '../components/KeyBadge';
 import { toast } from '../components/toastStore';
-import { Button, Group, PageHeader, Row, Segmented, Slider, Switch } from '../kit';
-import { chordSymbol, keyLabel, pretty } from '../lib/chordLabel';
+import { Button, Group, Page, Row, Segmented, Slider, Switch } from '../kit';
+import { ChordChart } from '../components/ChordChart';
+import { keyLabel, pretty, sameKey } from '../lib/chordLabel';
 import { cx } from '../lib/cx';
-import { romanNumeral } from '../lib/numeral';
 import { useMediaQuery } from '../lib/useMediaQuery';
-import { buildChart, keyAt, keySpans, locate } from './analyze/chart';
-import { ChordChart } from './analyze/ChordChart';
 import { DropZone } from './analyze/DropZone';
 import { audioMimeType, formatBytes, isSupportedAudio, LARGE_FILE_BYTES } from './analyze/files';
 import { useAudioTime } from './analyze/useAudioTime';
 import { copyChart } from './library/exportActions';
-import { clockLabel } from './review/timeline';
+import { keyAtTime } from './review/chordText';
+import { clockLabel, indexAt } from './review/timeline';
 import { LEVEL_OPTIONS, MODE_OPTIONS } from './settings/labels';
 
 type Phase =
@@ -162,73 +160,72 @@ export function AnalyzeScreen() {
     <AnalyzeOptions level={level} mode={mode} onLevel={changeLevel} onMode={changeMode} />
   );
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-3xl pb-[max(env(safe-area-inset-bottom),32px)]">
-        <ToolsBackLink />
-        <PageHeader title="Analyze a song" subtitle="Key and chords from a song" />
+    <Page
+      title="Analyze a song"
+      subtitle="Key and chords from a song"
+      back={{ to: '/tools', label: 'Tools' }}
+    >
+      <div className="flex flex-col gap-6 px-4 pt-2">
+        {phase.kind === 'done' && file ? (
+          <>
+            <DropZone onFile={pick} compact />
+            <AnalyzeResult
+              key={`${file.name}:${file.size}:${file.lastModified}`}
+              file={file}
+              result={phase.result}
+              level={phase.level}
+              mode={phase.mode}
+              instrument={instrument}
+              spellingFollowsKey={settings.spellingFollowsKey}
+              showSlash={showSlashChords}
+              options={options}
+              onReset={reset}
+            />
+          </>
+        ) : (
+          <>
+            <DropZone onFile={pick} disabled={busy} />
 
-        <div className="flex flex-col gap-6 px-4 pt-2">
-          {phase.kind === 'done' && file ? (
-            <>
-              <DropZone onFile={pick} compact />
-              <AnalyzeResult
-                key={`${file.name}:${file.size}:${file.lastModified}`}
-                file={file}
-                result={phase.result}
-                level={phase.level}
-                mode={phase.mode}
-                instrument={instrument}
-                spellingFollowsKey={settings.spellingFollowsKey}
-                showSlash={showSlashChords}
-                options={options}
-                onReset={reset}
+            {phase.kind === 'working' && (
+              <Progress
+                stage={phase.stage}
+                fraction={phase.fraction}
+                name={file?.name}
+                onCancel={reset}
               />
-            </>
-          ) : (
-            <>
-              <DropZone onFile={pick} disabled={busy} />
+            )}
 
-              {phase.kind === 'working' && (
-                <Progress
-                  stage={phase.stage}
-                  fraction={phase.fraction}
-                  name={file?.name}
-                  onCancel={reset}
-                />
-              )}
+            {phase.kind === 'large' && (
+              <Notice
+                tone="warn"
+                title={`${phase.file.name} is ${formatBytes(phase.file.size)}`}
+                actions={
+                  <>
+                    <Button variant="filled" size="sm" onClick={() => void start(phase.file)}>
+                      Analyze anyway
+                    </Button>
+                    <Button variant="plain" size="sm" onClick={reset}>
+                      Choose another file
+                    </Button>
+                  </>
+                }
+              >
+                Files over {formatBytes(LARGE_FILE_BYTES)} are decoded to raw audio in memory (often
+                ten times the file size), which can be slow or fail on a phone or tablet.
+              </Notice>
+            )}
 
-              {phase.kind === 'large' && (
-                <Notice
-                  tone="warn"
-                  title={`${phase.file.name} is ${formatBytes(phase.file.size)}`}
-                  actions={
-                    <>
-                      <Button variant="filled" size="sm" onClick={() => void start(phase.file)}>
-                        Analyze anyway
-                      </Button>
-                      <Button variant="plain" size="sm" onClick={reset}>
-                        Choose another file
-                      </Button>
-                    </>
-                  }
-                >
-                  Files over {formatBytes(LARGE_FILE_BYTES)} are decoded to raw audio in memory
-                  (often ten times the file size), which can be slow or fail on a phone or tablet.
-                </Notice>
-              )}
+            {phase.kind === 'error' && (
+              <Notice tone="error" title={phase.title}>
+                {phase.message}
+              </Notice>
+            )}
 
-              {phase.kind === 'error' && (
-                <Notice tone="error" title={phase.title}>
-                  {phase.message}
-                </Notice>
-              )}
-
-              {options}
-            </>
-          )}
-        </div>
+            {options}
+          </>
+        )}
       </div>
-    </div>
+    </Page>
   );
 }
 
@@ -419,24 +416,35 @@ function AnalyzeResult({
     [name, result, mode, instrument, level],
   );
   const draft = useMemo(() => draftFromAnalysis(input), [input]);
+  // The same folded chart as Review and the shared text: key by time, wobbles under 10 s hidden.
   const chart = useMemo(
-    () => buildChart(draft.chords, draft.keys, result.durationSec),
+    () => buildChart({ ...draft, durationSec: result.durationSec }),
     [draft, result.durationSec],
   );
-  const spans = useMemo(
-    () => keySpans(draft.keys, result.durationSec),
-    [draft.keys, result.durationSec],
+  // The headline is the chart's key; its last estimate carries the confidence and alternatives.
+  const mainKey = useMemo((): KeyEstimate | null => {
+    let est: KeyEstimate | null = null;
+    for (const e of result.events) if (e.type === 'key' && sameKey(e.key, chart.key)) est = e.key;
+    return est;
+  }, [result.events, chart.key]);
+  // The second key by time, the same one the key chips show, or none.
+  const secondKey = useMemo(() => {
+    const totals = new Map<string, { key: (typeof chart.keys)[number]['key']; s: number }>();
+    for (const k of chart.keys) {
+      const id = `${k.key.tonic}:${k.key.mode}`;
+      const e = totals.get(id) ?? { key: k.key, s: 0 };
+      e.s += k.end - k.start;
+      totals.set(id, e);
+    }
+    return [...totals.values()].sort((a, b) => b.s - a.s)[1]?.key ?? null;
+  }, [chart]);
+  const i = indexAt(draft.chords, time);
+  const rec = i >= 0 ? draft.chords[i] : null;
+  const key = keyAtTime(
+    chart.keys.map((k) => ({ t: k.start, key: k.key })),
+    time,
   );
-
-  // The headline is the key of the song (most time), not of the first seconds.
-  const mainKey = useMemo(
-    () => headlineKey(result.events, result.durationSec),
-    [result.events, result.durationSec],
-  );
-  const position = locate(chart, time);
-  const keyRec = keyAt(draft.keys, time);
-  const key = keyRec?.key ?? null;
-  const now = position?.item.chord ?? null;
+  const now = rec?.chord ?? null;
   const opts = { spellingFollowsKey };
 
   const save = async () => {
@@ -474,22 +482,28 @@ function AnalyzeResult({
     <div data-testid="analyze-result" className="flex flex-col gap-6">
       <section aria-label="Player" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-          <KeyBadge
-            keyEstimate={mainKey}
-            spellingFollowsKey={spellingFollowsKey}
-            className="-ml-2.5"
-          />
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+            <KeyBadge
+              keyEstimate={mainKey}
+              primaryOnly
+              spellingFollowsKey={spellingFollowsKey}
+              className="-ml-3"
+            />
+            {secondKey && (
+              <span data-testid="analyze-second-key" className="text-headline text-label-2">
+                and {pretty(keyLabel(secondKey, opts))}
+              </span>
+            )}
+          </div>
           <div className="flex min-h-11 items-baseline gap-2.5" aria-live="off">
             <span className="text-footnote font-medium tracking-wide text-label-3 uppercase">
               Now
             </span>
             <span data-testid="analyze-now" className="text-title-1 font-bold text-label">
-              {now ? pretty(chordSymbol(now, key, { spellingFollowsKey, showSlash })) : '—'}
+              {now ? chartSymbol(now, key, { spellingFollowsKey, showSlash }) : '—'}
             </span>
             {now && key && (
-              <span className="text-callout font-medium text-accent">
-                {pretty(romanNumeral(now, key))}
-              </span>
+              <span className="text-callout font-medium text-accent">{chartNumeral(now, key)}</span>
             )}
           </div>
         </div>
@@ -528,12 +542,12 @@ function AnalyzeResult({
           <audio ref={setAudioEl} preload="auto" className="hidden" />
         </div>
 
-        {spans.length > 0 && (
+        {chart.keys.length > 1 && (
           <ul aria-label="Key history" className="flex flex-wrap gap-1.5">
-            {spans.map((s) => (
-              <li key={s.rec.id}>
+            {chart.keys.map((s) => (
+              <li key={s.start}>
                 <KeySpanButton
-                  label={pretty(keyLabel(s.rec.key, opts))}
+                  label={pretty(keyLabel(s.key, opts))}
                   range={`${clockLabel(s.start)}–${clockLabel(s.end)}`}
                   active={time >= s.start && time < s.end}
                   onClick={() => seek(s.start)}
@@ -544,13 +558,20 @@ function AnalyzeResult({
         )}
       </section>
 
-      <ChordChart
-        chart={chart}
-        position={position}
-        onSeek={seek}
-        spellingFollowsKey={spellingFollowsKey}
-        showSlash={showSlash}
-      />
+      {chart.parts.length ? (
+        <ChordChart
+          chart={chart}
+          time={time}
+          onSeek={seek}
+          spellingFollowsKey={spellingFollowsKey}
+          showSlash={showSlash}
+          className="rounded-card bg-surface px-4 py-3"
+        />
+      ) : (
+        <p className="rounded-card bg-surface px-4 py-4 text-subhead text-label-2">
+          No chords found. The file may be silent, mostly drums or speech, or very quiet.
+        </p>
+      )}
 
       {options}
 
@@ -583,7 +604,7 @@ function AnalyzeResult({
         <Button variant="filled" onClick={() => void save()} loading={saving}>
           Save to library
         </Button>
-        <Button variant="gray" onClick={() => void copy()} disabled={!chart.items.length}>
+        <Button variant="gray" onClick={() => void copy()} disabled={!chart.parts.length}>
           Copy chart
         </Button>
         <Button variant="plain" onClick={onReset} className="ml-auto">

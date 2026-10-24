@@ -107,8 +107,9 @@ describe('AnalyzeScreen', () => {
     expect(cells[0]).toHaveAccessibleName('C, I at 0:00');
     expect(cells[0]).toHaveAttribute('aria-current', 'true'); // playhead at 0
     expect(within(result).getByTestId('chart-segment')).toHaveTextContent('×2');
-    expect(within(result).getByText('Key C major')).toBeInTheDocument();
-    expect(within(result).getAllByTestId('key-span')[0]).toHaveTextContent('C major0:00–0:17');
+    // One key: no key chips, no second key.
+    expect(within(result).queryAllByTestId('key-span')).toHaveLength(0);
+    expect(within(result).queryByTestId('analyze-second-key')).toBeNull();
     expect(screen.getByRole('button', { name: /Key C major/ })).toBeInTheDocument();
     expect(screen.getByTestId('analyze-now')).toHaveTextContent('C');
     expect(screen.getByLabelText('Play Let It Be.mp3')).toBeInTheDocument();
