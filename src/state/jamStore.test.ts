@@ -225,3 +225,71 @@ describe('snapToChordStart', () => {
     expect(snapToChordStart([], 3)).toBe(3);
   });
 });
+
+describe('provisional live results', () => {
+  it('previews never create a session or alter confirmed history', () => {
+    const s = jamStore.getState();
+    const preview: AnalysisEvent = {
+      type: 'preview',
+      t: 20,
+      chord: G,
+      confidence: 0.6,
+      key: A_MINOR,
+    };
+    s.applyEvent(preview);
+    expect(jamStore.getState()).toMatchObject({ sessionId: null, currentChord: null, key: null });
+    s.startSession(0);
+    s.applyEvent(chord(1, C));
+    s.applyEvent({ type: 'key', t: 1, key: C_MAJOR_KEY });
+    s.applyEvent(preview);
+    expect(jamStore.getState()).toMatchObject({
+      currentChord: C,
+      key: C_MAJOR_KEY,
+      previewChord: G,
+      previewKey: A_MINOR,
+      lastT: 1,
+    });
+    expect(jamStore.getState().timeline).toHaveLength(1);
+    expect(jamStore.getState().keyHistory).toHaveLength(1);
+  });
+
+  it('keeps tentative notes disjoint and clears them on legacy or MIDI events', () => {
+    const s = jamStore.getState();
+    s.applyEvent({
+      type: 'notes',
+      t: 1,
+      pitchClasses: [0],
+      midiNotes: [60],
+      tentativeMidiNotes: [60, 64],
+    });
+    expect(jamStore.getState().tentativeMidiNotes).toEqual([64]);
+    s.applyEvent({ type: 'notes', t: 2, pitchClasses: [0], midiNotes: [60] });
+    expect(jamStore.getState().tentativeMidiNotes).toEqual([]);
+  });
+
+  it('clears live estimates on stop without erasing chord or key history', () => {
+    const s = jamStore.getState();
+    s.startSession(0);
+    s.applyEvent(chord(1, C));
+    s.applyEvent({ type: 'key', t: 1, key: C_MAJOR_KEY });
+    s.applyEvent({ type: 'preview', t: 2, chord: G, confidence: 0.6, key: A_MINOR });
+    s.applyEvent({
+      type: 'notes',
+      t: 2,
+      pitchClasses: [0],
+      midiNotes: [60],
+      tentativeMidiNotes: [64],
+    });
+    s.stopSession();
+    expect(jamStore.getState()).toMatchObject({
+      currentChord: null,
+      key: null,
+      previewChord: null,
+      previewKey: null,
+      activeMidiNotes: [],
+      tentativeMidiNotes: [],
+    });
+    expect(jamStore.getState().timeline).toHaveLength(1);
+    expect(jamStore.getState().keyHistory).toHaveLength(1);
+  });
+});

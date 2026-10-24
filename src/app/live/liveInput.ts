@@ -16,6 +16,7 @@ import type {
   AnalysisEngine,
   AnalysisEvent,
   ChromaFrame,
+  InputSource,
   Marker,
   MidiEvent,
   Settings,
@@ -203,6 +204,8 @@ export function createLiveInput(): LiveInputController {
   let audioRec: AudioRecorder | null = null;
   let subs: Unsub[] = [];
   let lastMidiActivity = -Infinity;
+  let activeSource: InputSource | null = null;
+  let lastFrameTime: number | null = null;
   let midiConnected = false;
   let persistedMarkers = 0;
   let unsubDevices: Unsub | null = null;
@@ -213,6 +216,10 @@ export function createLiveInput(): LiveInputController {
 
   // Keep engine + mic settings live.
   settingsStore.subscribe((s, prev) => {
+    if (running && (s.mode !== prev.mode || s.instrument !== prev.instrument || s.a4 !== prev.a4)) {
+      jamStore.getState().clearLiveReadout();
+      heldChord = null;
+    }
     const cfg = analysisConfigFrom(s);
     if (JSON.stringify(cfg) !== JSON.stringify(analysisConfigFrom(prev))) {
       engine.configure(cfg);
@@ -235,12 +242,12 @@ export function createLiveInput(): LiveInputController {
 
   function forward(e: AnalysisEvent) {
     jamStore.getState().applyEvent(e);
-    session?.onAnalysisEvent(e);
+    if (e.type !== 'preview') session?.onAnalysisEvent(e);
   }
 
   /** MIDI is exact: a quiet room says nothing about it. */
   function quietApplies(t: number): boolean {
-    return jamStore.getState().source !== 'midi' && t - lastMidiActivity >= MIDI_PRIORITY_SEC;
+    return activeSource !== 'midi' && t - lastMidiActivity >= MIDI_PRIORITY_SEC;
   }
 
   function onEngineEvent(e: AnalysisEvent) {
@@ -250,6 +257,8 @@ export function createLiveInput(): LiveInputController {
       const jam = jamStore.getState();
       if (jam.quiet !== quiet) {
         jam.setQuiet(quiet);
+        if (quiet)
+          jam.applyEvent({ type: 'preview', t: e.t, chord: null, confidence: 0, key: null });
         // Sound is back: the chord the engine settled on meanwhile is what is playing now.
         if (!quiet && heldChord) forward({ ...heldChord, t: e.t });
         heldChord = null;
@@ -261,17 +270,38 @@ export function createLiveInput(): LiveInputController {
       heldChord = e;
       return;
     }
+    if (e.type === 'preview' && jamStore.getState().quiet) {
+      forward({ ...e, chord: null, confidence: 0, key: null });
+      return;
+    }
     forward(e);
+  }
+
+  function acceptSource(source: InputSource, t: number) {
+    const discontinuity = lastFrameTime !== null && (t < lastFrameTime || t - lastFrameTime > 0.5);
+    if ((activeSource !== null && activeSource !== source) || discontinuity) {
+      jamStore.getState().clearLiveReadout();
+      heldChord = null;
+      quietGate.reset();
+      jamStore.getState().setQuiet(false);
+    }
+    lastFrameTime = t;
+    activeSource = source;
+    jamStore.getState().setSource(source);
   }
 
   function onMicFrame(f: ChromaFrame) {
     if (midiConnected && f.t - lastMidiActivity < MIDI_PRIORITY_SEC) return;
+    acceptSource('mic', f.t);
     engine.push(f);
+    jamStore.getState().setSource('mic');
   }
 
   function onMidiFrame(f: ChromaFrame) {
     if (f.energy > 0) lastMidiActivity = f.t;
+    acceptSource('midi', f.t);
     engine.push(f);
+    jamStore.getState().setSource('midi');
   }
 
   function onMidiEvent(e: MidiEvent) {
@@ -338,6 +368,9 @@ export function createLiveInput(): LiveInputController {
     engine.configure(analysisConfigFrom(settings));
     engine.reset();
     lastMidiActivity = -Infinity;
+    activeSource = null;
+    lastFrameTime = null;
+    jam.clearLiveReadout();
     persistedMarkers = 0;
     quietGate.reset();
     heldChord = null;
@@ -402,6 +435,10 @@ export function createLiveInput(): LiveInputController {
       midiConnected ? midi.onFrame(onMidiFrame) : () => {},
       midiConnected ? midi.onEvent(onMidiEvent) : () => {},
       mic.onError((err) => {
+        if (activeSource !== 'midi') {
+          jamStore.getState().clearLiveReadout();
+          heldChord = null;
+        }
         toast(`Microphone stopped: ${err.message}`, { tone: 'error' });
       }),
       jamStore.subscribe((s, prev) => {

@@ -8,6 +8,8 @@ import { useFadeOnChange } from './useFadeOnChange';
 export interface ChordDisplayProps {
   chord: Chord | null;
   confidence: number;
+  /** Transient estimate, excluded from confirmed theory and saved history. */
+  tentative?: boolean;
   /** Key context for the numeral and spelling. */
   keyContext?: Key | null;
   showSlash?: boolean;
@@ -25,7 +27,7 @@ export interface ChordDisplayProps {
 
 export const DASH = '—';
 
-/** Below this the chord is still shown, but dimmed: the only sign of a tentative match. */
+/** Legacy callers may still supply a lower-confidence estimate. */
 export const TENTATIVE_BELOW = 0.6;
 
 /** Base symbol size: at least 120 px on a 1024 px+ laptop, readable from the piano bench. */
@@ -39,6 +41,7 @@ const COMPACT_SYMBOL_SIZE = 'clamp(80px, min(13vw, 15dvh), 208px)';
 export function ChordDisplay({
   chord,
   confidence,
+  tentative: provisional = false,
   keyContext = null,
   showSlash = true,
   spellingFollowsKey = true,
@@ -50,10 +53,10 @@ export function ChordDisplay({
 }: ChordDisplayProps) {
   const size = compact ? COMPACT_SYMBOL_SIZE : SYMBOL_SIZE;
   const shown = chord && confidence >= MIN_DISPLAY_CONFIDENCE ? chord : null;
-  const tentative = shown !== null && confidence < TENTATIVE_BELOW;
+  const tentative = shown !== null && (provisional || confidence < TENTATIVE_BELOW);
   const spell = { spellingFollowsKey };
   const symbol = shown ? pretty(chordSymbol(shown, keyContext, { ...spell, showSlash })) : DASH;
-  const numeral = shown && keyContext ? pretty(romanNumeral(shown, keyContext)) : '';
+  const numeral = shown && !tentative && keyContext ? pretty(romanNumeral(shown, keyContext)) : '';
   const tones = shown ? chordTones(shown).map((pc) => pretty(noteName(pc, keyContext, spell))) : [];
   const bass = shown ? pretty(noteName(shown.bass ?? shown.root, keyContext, spell)) : '';
   const symbolRef = useFadeOnChange<HTMLSpanElement>(symbol);
@@ -64,14 +67,14 @@ export function ChordDisplay({
   return (
     <div className={cx('flex flex-col items-center justify-center text-center', className)}>
       <div
-        aria-live="polite"
+        aria-live={tentative ? 'off' : 'polite'}
         aria-atomic="true"
         data-testid="chord-symbol"
         data-tentative={tentative || undefined}
         // Opacity sits on the wrapper so it never fights the change animation on the glyph.
         className={cx(
           'flex w-full items-center justify-center overflow-hidden transition-opacity duration-500 ease-out',
-          tentative && 'opacity-55',
+          tentative && 'text-label-2',
         )}
         style={{ height: `calc(${size} * 1.1)` }}
       >
@@ -80,7 +83,7 @@ export function ChordDisplay({
           style={{ fontSize: `calc(${size} * ${scale})` }}
           className={cx(
             'leading-none font-semibold tracking-[-0.03em] whitespace-nowrap',
-            shown ? 'text-label' : 'text-label-4',
+            shown ? (tentative ? 'text-label-2' : 'text-label') : 'text-label-4',
           )}
         >
           {shown ? (
@@ -103,8 +106,9 @@ export function ChordDisplay({
           )}
         </span>
       </div>
+      {tentative && <p className="mt-2 text-subhead font-medium text-label-2">Tentative chord</p>}
       {/* No row before the key is known: an empty numeral slot read as "C ()". */}
-      {keyContext && (
+      {keyContext && !tentative && (
         <div
           data-testid="chord-numeral"
           className={cx(
@@ -118,7 +122,7 @@ export function ChordDisplay({
       )}
       {details && (
         <div className="mt-3 flex h-7 items-center gap-5 text-body text-label-2">
-          {shown ? (
+          {shown && !tentative ? (
             <>
               <span className="flex gap-3 font-medium tracking-wide text-label">
                 {tones.map((t, i) => (

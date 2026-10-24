@@ -278,3 +278,44 @@ describe('live input lifecycle', () => {
     }
   });
 });
+
+describe('provisional result routing', () => {
+  it('shows previews without sending them to session persistence', async () => {
+    let emit: (e: AnalysisEvent) => void = () => {};
+    mocks.engine.subscribe.mockImplementationOnce((cb) => {
+      emit = cb;
+      return () => {};
+    });
+    const input = createLiveInput();
+    await input.start();
+    const session = mocks.startSession.mock.results.at(-1)!.value;
+    emit({ type: 'preview', t: 1, chord: { root: 0, quality: 'maj' }, confidence: 0.6, key: null });
+    expect(jamStore.getState().previewChord?.root).toBe(0);
+    expect(session.onAnalysisEvent).not.toHaveBeenCalled();
+    settingsStore.getState().update({ mode: 'room' });
+    expect(jamStore.getState().previewChord).toBeNull();
+    await input.stop();
+  });
+});
+
+describe('source transition readout', () => {
+  it('keeps the accepted microphone source after an engine clear carrying the old source', async () => {
+    let emit: (e: AnalysisEvent) => void = () => {};
+    mocks.engine.subscribe.mockImplementationOnce((cb) => {
+      emit = cb;
+      return () => {};
+    });
+    const input = createLiveInput();
+    await input.start();
+    const frame = (mocks.mic.onFrame.mock.calls.at(-1) as unknown as [(f: unknown) => void])[0];
+    mocks.engine.push.mockImplementationOnce(() => {
+      emit({ type: 'chord', t: 1, chord: null, confidence: 0, source: 'midi' });
+    });
+    frame({ t: 1, exact: false, energy: 0, chroma: new Float32Array(12) });
+    expect(jamStore.getState().source).toBe('mic');
+    emit({ type: 'level', t: 2, energy: 0 });
+    emit({ type: 'level', t: 7, energy: 0 });
+    expect(jamStore.getState().quiet).toBe(true);
+    await input.stop();
+  });
+});

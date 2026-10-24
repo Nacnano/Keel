@@ -9,8 +9,10 @@ export interface PianoProps {
   keys?: PianoSize;
   /** Detected pitch classes: lit dimly in every octave. */
   activePitchClasses?: readonly PitchClass[];
-  /** Exact notes (MIDI): lit brightly. */
+  /** Confirmed observed notes, in their detected octaves. */
   activeMidiNotes?: readonly MidiNote[];
+  /** Provisional observed notes: outlined, never repeated across octaves. */
+  tentativeMidiNotes?: readonly MidiNote[];
   /** Explicit [lowest, highest] MIDI range; overrides `keys` (e.g. a two-octave helper). */
   range?: readonly [MidiNote, MidiNote];
   /** Scale tones: tinted softly in every octave (below detected notes in priority). */
@@ -36,7 +38,7 @@ const H = 128;
 const BW = 14;
 const BH = 80;
 
-export type KeyState = 'off' | 'scale' | 'chord' | 'pc' | 'exact' | 'left' | 'right';
+export type KeyState = 'off' | 'scale' | 'chord' | 'pc' | 'exact' | 'tentative' | 'left' | 'right';
 
 interface KeyGeom {
   note: number;
@@ -61,6 +63,7 @@ const FILL: Record<KeyState, [white: string, black: string]> = {
   chord: ['fill-accent/80', 'fill-accent'],
   pc: ['fill-accent/22', 'fill-accent/45'],
   exact: ['fill-accent', 'fill-accent'],
+  tentative: ['fill-[#f4f4f5]', 'fill-[#111113]'],
   left: ['fill-sky-400', 'fill-sky-500'],
   right: ['fill-accent', 'fill-accent'],
 };
@@ -70,6 +73,7 @@ export const Piano = memo(function Piano({
   keys = 88,
   activePitchClasses = [],
   activeMidiNotes = [],
+  tentativeMidiNotes = [],
   range,
   highlightPitchClasses = [],
   accentPitchClasses = [],
@@ -84,6 +88,7 @@ export const Piano = memo(function Piano({
   const geom = useMemo(() => layout(lo, hi), [lo, hi]);
   const pcs = new Set<number>(activePitchClasses);
   const exact = new Set<number>(activeMidiNotes);
+  const tentative = new Set<number>(tentativeMidiNotes);
   const scale = new Set<number>(highlightPitchClasses);
   const accent = new Set<number>(accentPitchClasses);
   const left = new Set<number>(leftHandNotes);
@@ -95,13 +100,15 @@ export const Piano = memo(function Piano({
         ? 'right'
         : exact.has(n)
           ? 'exact'
-          : pcs.has(n % 12)
-            ? 'pc'
-            : accent.has(n % 12)
-              ? 'chord'
-              : scale.has(n % 12)
-                ? 'scale'
-                : 'off';
+          : tentative.has(n)
+            ? 'tentative'
+            : pcs.has(n % 12)
+              ? 'pc'
+              : accent.has(n % 12)
+                ? 'chord'
+                : scale.has(n % 12)
+                  ? 'scale'
+                  : 'off';
 
   const names = [
     ...new Set([
@@ -111,6 +118,19 @@ export const Piano = memo(function Piano({
   ]
     .sort((a, b) => a - b)
     .map((pc) => NOTE_NAMES_SHARP[pc]);
+
+  const noteName = (n: number) => `${NOTE_NAMES_SHARP[n % 12]}${Math.floor(n / 12) - 1}`;
+  const observedNames = [...exact].sort((a, b) => a - b).map(noteName);
+  const tentativeNames = [...tentative]
+    .filter((n) => !exact.has(n))
+    .sort((a, b) => a - b)
+    .map(noteName);
+  const accessibleNotes = [
+    observedNames.length ? `confirmed ${observedNames.join(', ')}` : '',
+    tentativeNames.length ? `tentative ${tentativeNames.join(', ')}` : '',
+  ]
+    .filter(Boolean)
+    .join('; ');
 
   const renderKey = (k: KeyGeom) => {
     const st = stateOf(k.note);
@@ -124,8 +144,13 @@ export const Piano = memo(function Piano({
         width={k.black ? BW : W}
         height={k.black ? BH : H}
         rx={k.black ? 2 : 3}
-        className={cx(FILL[st][k.black ? 1 : 0], 'stroke-black/70 transition-[fill] duration-75')}
-        strokeWidth={k.black ? 1 : 1.5}
+        className={cx(
+          FILL[st][k.black ? 1 : 0],
+          st === 'tentative' ? 'stroke-accent' : 'stroke-black/70',
+          'transition-[fill] duration-75',
+        )}
+        strokeWidth={st === 'tentative' ? 3 : k.black ? 1 : 1.5}
+        vectorEffect="non-scaling-stroke"
       />
     );
   };
@@ -136,7 +161,12 @@ export const Piano = memo(function Piano({
       preserveAspectRatio="xMidYMid meet"
       role="img"
       aria-label={
-        ariaLabel ?? (names.length ? `Piano, sounding ${names.join(' ')}` : 'Piano, no notes')
+        ariaLabel ??
+        (accessibleNotes
+          ? `Piano, ${accessibleNotes}`
+          : names.length
+            ? `Piano, sounding ${names.join(' ')}`
+            : 'Piano, no notes')
       }
       className={cx('block h-auto w-full select-none', className)}
     >
