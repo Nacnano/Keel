@@ -130,6 +130,54 @@ describe('JamScreen', () => {
     stop.mockRestore();
   });
 
+  it('shows transient previews and exact heard notes without treating previews as theory', () => {
+    localStorage.setItem('keel.ui.piano', '1');
+    jamStore.setState({
+      status: 'listening',
+      source: 'mic',
+      sessionStart: clock.now(),
+      currentChord: { root: 0, quality: 'maj' },
+      confidence: 0.9,
+      key: C_MAJOR_KEY,
+      activeMidiNotes: [60],
+      tentativeMidiNotes: [66],
+      activePitchClasses: [0, 4, 7],
+      previewChord: { root: 2, quality: 'maj' },
+      previewConfidence: 0.7,
+      previewKey: { ...C_MAJOR_KEY, tonic: 7 },
+    });
+    const { container } = renderJam();
+    expect(screen.getByText('Tentative chord')).toBeInTheDocument();
+    expect(screen.getByTestId('chord-symbol')).toHaveTextContent('D');
+    expect(screen.queryByTestId('chord-numeral')).toBeNull();
+    expect(screen.getByRole('button', { name: /Tentative key G major/ })).toBeInTheDocument();
+    const state = (n: number) =>
+      container.querySelector(`[data-note="${n}"]`)?.getAttribute('data-state');
+    expect(state(60)).toBe('exact');
+    expect(state(66)).toBe('tentative');
+    expect(state(48)).toBe('off');
+    expect(state(64)).toBe('off');
+    act(() =>
+      jamStore.setState({
+        activeMidiNotes: [],
+        tentativeMidiNotes: [],
+        previewChord: null,
+        previewKey: null,
+      }),
+    );
+    expect(state(60)).toBe('off');
+    expect(state(66)).toBe('off');
+    expect(screen.queryByText('Tentative chord')).toBeNull();
+    expect(screen.getByTestId('chord-symbol')).toHaveTextContent('C');
+    expect(screen.getByTestId('chord-numeral')).toHaveTextContent('I');
+    expect(jamStore.getState().key).toEqual(C_MAJOR_KEY);
+    expect(jamStore.getState().timeline).toHaveLength(0);
+    act(() => jamStore.setState({ status: 'error', error: 'Microphone interrupted.' }));
+    expect(screen.queryByTestId('chord-symbol')).toBeNull();
+    expect(screen.queryByRole('img', { name: /Piano/ })).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('Microphone interrupted.');
+  });
+
   it('renders the idle layout', () => {
     renderJam();
     expect(screen.queryByRole('complementary', { name: 'Ideas' })).toBeNull();
@@ -148,8 +196,10 @@ describe('JamScreen', () => {
   it('chooses the listening mode right on the idle screen', () => {
     renderJam();
     const mode = screen.getByRole('radiogroup', { name: 'Listen to' });
-    expect(within(mode).getByRole('radio', { name: 'Just me', checked: true })).toBeInTheDocument();
-    fireEvent.click(within(mode).getByRole('radio', { name: 'With a band' }));
+    expect(
+      within(mode).getByRole('radio', { name: 'My instrument', checked: true }),
+    ).toBeInTheDocument();
+    fireEvent.click(within(mode).getByRole('radio', { name: 'Overall harmony' }));
     expect(settingsStore.getState().mode).toBe('room');
   });
 
@@ -161,8 +211,13 @@ describe('JamScreen', () => {
     const dialog = screen.getByRole('dialog', { name: 'Listening options' });
     expect(within(dialog).getByText('Quieter room')).toBeInTheDocument();
     expect(within(dialog).getByText('Soft playing')).toBeInTheDocument();
-    expect(within(dialog).getByRole('radio', { name: 'With a band' })).toBeInTheDocument();
-    expect(within(dialog).getByText(/Steadier, simpler chords/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('radio', { name: 'Piano/keyboard', checked: true }),
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'Guitar' }));
+    expect(settingsStore.getState().instrument).toBe('guitar');
+    expect(within(dialog).getByRole('radio', { name: 'Overall harmony' })).toBeInTheDocument();
+    expect(within(dialog).getByText(/Favors your selected instrument/)).toBeInTheDocument();
     expect(within(dialog).getByRole('radio', { name: 'Simple' })).toBeInTheDocument();
     expect(within(dialog).getByRole('radio', { name: 'With 7ths' })).toBeInTheDocument();
     expect(within(dialog).getByRole('radio', { name: 'Everything' })).toBeInTheDocument();
@@ -437,7 +492,7 @@ describe('SettingsScreen', () => {
     fireEvent.blur(a4);
     expect(settingsStore.getState().a4).toBe(442);
 
-    fireEvent.click(screen.getByRole('radio', { name: 'With a band' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Overall harmony' }));
     expect(settingsStore.getState().mode).toBe('room');
     expect(screen.getByLabelText('MIDI device')).toBeDisabled();
 

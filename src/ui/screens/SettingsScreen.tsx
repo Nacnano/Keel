@@ -18,13 +18,10 @@ import {
   SENSITIVITY_MIN_LABEL,
 } from './settings/labels';
 
+import { INSTRUMENT_OPTIONS } from './jam/labels';
+
 export const A4_MIN = 415;
 export const A4_MAX = 466;
-
-const INSTRUMENTS = [
-  { value: 'piano' as const, label: 'Piano' },
-  { value: 'guitar' as const, label: 'Guitar' },
-];
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -314,14 +311,15 @@ export function SettingsScreen() {
 
         <Group
           title="Listening"
-          footer="Choose With a band when other instruments or a recording are playing."
+          footer="Overall harmony follows the music around you. My instrument favors your selected instrument."
         >
           <Row
             label="Instrument"
+            stacked
             accessory={
               <Segmented<Instrument>
                 aria-label="Instrument"
-                options={INSTRUMENTS}
+                options={INSTRUMENT_OPTIONS}
                 value={settings.instrument}
                 onChange={(v) => set('instrument', v)}
               />
@@ -329,6 +327,7 @@ export function SettingsScreen() {
           />
           <Row
             label="Listening mode"
+            stacked
             accessory={
               <Segmented<JamMode>
                 aria-label="Listening mode"

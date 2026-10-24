@@ -6,44 +6,76 @@ export const NOTE_RELEASE_THRESHOLD = 0.06;
 export const NOTE_ATTACK_SEC = 0.12;
 export const NOTE_RELEASE_SEC = 0.24;
 
-/**
- * Same attack and release as {@link createNoteTracker}, for exact MIDI keys.
- * Display only. Chord scoring does not use it.
- */
+/** Repeated candidates preview one hop before the historical confirmation gate. */
+export const NOTE_TENTATIVE_SEC = 0.08;
+export const NOTE_CONFIRM_SEC = NOTE_ATTACK_SEC;
+
+/** Octave-specific microphone observations; exact MIDI bypasses this tracker entirely. */
 export function createPlayedNoteTracker() {
-  const active = new Set<number>();
-  const pending = new Map<number, number>();
+  const visible = new Set<number>();
+  const confirmed = new Set<number>();
+  const attacks = new Map<number, number>();
+  const releases = new Map<number, number>();
   let lastT = -Infinity;
 
   function reset() {
-    active.clear();
-    pending.clear();
+    visible.clear();
+    confirmed.clear();
+    attacks.clear();
+    releases.clear();
     lastT = -Infinity;
+  }
+
+  function pushState(
+    t: number,
+    notes: readonly number[],
+    silent = false,
+    tentativeNotes: readonly number[] = notes,
+  ) {
+    if (t < lastT || t - lastT > 0.5) reset();
+    const repeated = t > lastT;
+    lastT = t;
+    const eligible = new Set(tentativeNotes);
+    const want = new Set(
+      silent ? [] : notes.filter((n) => Number.isInteger(n) && n >= 0 && n <= 127),
+    );
+    for (const note of attacks.keys()) if (!want.has(note)) attacks.delete(note);
+    for (const note of want) {
+      releases.delete(note);
+      if (!attacks.has(note)) attacks.set(note, t);
+      const held = t - attacks.get(note)!;
+      if (repeated && eligible.has(note) && held + 1e-6 >= NOTE_TENTATIVE_SEC) visible.add(note);
+      if (repeated && held + 1e-6 >= NOTE_CONFIRM_SEC) {
+        visible.add(note);
+        confirmed.add(note);
+      }
+    }
+    for (const note of visible) {
+      if (want.has(note)) continue;
+      if (!confirmed.has(note)) {
+        visible.delete(note);
+        continue;
+      }
+      if (!releases.has(note)) releases.set(note, t);
+      if (t - releases.get(note)! + 1e-6 >= NOTE_RELEASE_SEC) {
+        visible.delete(note);
+        confirmed.delete(note);
+        releases.delete(note);
+      }
+    }
+    return {
+      midiNotes: [...confirmed].sort((a, b) => a - b),
+      tentativeMidiNotes: [...visible].filter((n) => !confirmed.has(n)).sort((a, b) => a - b),
+    };
   }
 
   return {
     reset,
+    pushState,
+    /** Historical union API retained for callers that do not distinguish certainty. */
     push(t: number, notes: readonly number[], silent = false): number[] {
-      if (t < lastT || t - lastT > 0.5) reset();
-      lastT = t;
-      const want = new Set<number>(silent ? [] : notes);
-      for (const note of pending.keys()) {
-        if (want.has(note) === active.has(note)) pending.delete(note);
-      }
-      for (const note of want) {
-        if (!active.has(note) && !pending.has(note)) pending.set(note, t);
-      }
-      for (const note of active) {
-        if (!want.has(note) && !pending.has(note)) pending.set(note, t);
-      }
-      for (const [note, since] of pending) {
-        const dwell = active.has(note) ? NOTE_RELEASE_SEC : NOTE_ATTACK_SEC;
-        if (t - since + 1e-6 < dwell) continue;
-        if (active.has(note)) active.delete(note);
-        else active.add(note);
-        pending.delete(note);
-      }
-      return [...active].sort((a, b) => a - b);
+      const state = pushState(t, notes, silent);
+      return [...state.midiNotes, ...state.tentativeMidiNotes].sort((a, b) => a - b);
     },
   };
 }

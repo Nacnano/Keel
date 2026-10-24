@@ -22,6 +22,7 @@ import type {
   InputSource,
   Key,
   KeyEvent,
+  KeyEstimate,
   MidiNote,
   PitchClass,
   VocabLevel,
@@ -230,6 +231,63 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
   let inKeyBonus: Float32Array | null = null;
   let lastSource: InputSource = 'mic';
   let lastConfidence = 0;
+  let lastFrameT: number | null = null;
+  let inputExact: boolean | null = null;
+  let previewChord: Chord | null = null;
+  let previewConfidence = 0;
+  let previewSignature = JSON.stringify([null, 0, null]);
+  let musicalFrame = false;
+  let musicalSince: number | null = null;
+  let lastOnsetT = -Infinity;
+  const keyFrames: ChromaFrame[] = [];
+  let previewSupport: { chord: Chord; since: number } | null = null;
+
+  function emitPreview(t: number, estimate: KeyEstimate | null = null) {
+    const provisionalKey = publisher.current() ? null : estimate;
+    const sig = JSON.stringify([previewChord, previewConfidence, provisionalKey]);
+    if (sig === previewSignature) return;
+    previewSignature = sig;
+    emitter.emit({
+      type: 'preview',
+      t,
+      chord: previewChord,
+      confidence: previewConfidence,
+      key: provisionalKey,
+    });
+  }
+
+  /** Discard stream-specific evidence while preserving session publication identity. */
+  function clearStream(t: number, notify: boolean) {
+    keys.reset();
+    publisher.reset();
+    key = null;
+    dominant = false;
+    inKeyBonus = null;
+    bass.reset();
+    micNotes.reset();
+    playedNotes.reset();
+    rebuild();
+    if (notify) {
+      emitNotes(t, [], []);
+      if (lastChord)
+        emitter.emit({ type: 'chord', t, chord: null, confidence: 0, source: lastSource });
+    }
+    lastChord = lastHeard = null;
+    lastHeardT = 0;
+    lastConfidence = 0;
+    lastSureT = lastSoundT = -Infinity;
+    prevBass = null;
+    previewChord = null;
+    previewConfidence = 0;
+    previewSupport = null;
+    musicalSince = null;
+    lastOnsetT = -Infinity;
+    keyFrames.length = 0;
+    if (notify) emitPreview(t);
+    else previewSignature = JSON.stringify([null, 0, null]);
+    lastFrameT = null;
+    inputExact = null;
+  }
 
   function updateInKey() {
     if (!key) {
@@ -307,6 +365,10 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
       lastSureT = t;
       if (sameChordFamily(chord, lastHeard)) {
         pending = null;
+        if (confidence !== lastConfidence) {
+          lastConfidence = confidence;
+          emitter.emit({ type: 'chord', t, chord: lastChord, confidence, source: 'mic' });
+        }
         return;
       }
       if (!pending || !sameChordFamily(pending.chord, chord))
@@ -333,17 +395,28 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     }
   }
 
-  function emitNotes(t: number, pcs: PitchClass[], midiNotes?: readonly MidiNote[]) {
+  function emitNotes(
+    t: number,
+    pcs: PitchClass[],
+    midiNotes?: readonly MidiNote[],
+    tentative: readonly MidiNote[] = [],
+  ) {
     const midi = midiNotes ? [...midiNotes] : undefined;
-    const sig = `${pcs.join(',')}|${midi ? midi.join(',') : ''}`;
+    const sig = `${pcs.join(',')}|${midi ? midi.join(',') : ''}|${tentative.join(',')}`;
     if (sig === lastNotes) return;
     lastNotes = sig;
-    if (pcs.length === 0 && (!midi || midi.length === 0)) {
+    if (pcs.length === 0 && (!midi || midi.length === 0) && tentative.length === 0) {
       if (!announcedNotes) return;
     } else announcedNotes = true;
     emitter.emit(
       midi
-        ? { type: 'notes', t, pitchClasses: pcs, midiNotes: midi }
+        ? {
+            type: 'notes',
+            t,
+            pitchClasses: pcs,
+            midiNotes: midi,
+            ...(tentative.length ? { tentativeMidiNotes: [...tentative] } : {}),
+          }
         : { type: 'notes', t, pitchClasses: pcs },
     );
   }
@@ -366,6 +439,31 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     const silent = scoreChroma(frame.chroma, frame.energy, bank, sims, stableBass, {
       majorTonic: key?.mode === 'major' ? key.tonic : null,
     });
+    if (frame.onset && !silent) lastOnsetT = frame.t;
+    let best = 0;
+    for (let i = 1; i < bank.size; i++) if (sims[i] > sims[best]) best = i;
+    // Reject uninformative flat spectra and isolated pitch bins. Broad acoustic
+    // rejection belongs upstream: aggressive bin ratios here erased quiet chord tones
+    // and changed the established key reading of real guitar recordings.
+    const max = Math.max(...frame.chroma);
+    const min = Math.min(...frame.chroma);
+    const supportedBins = [...frame.chroma].filter((v) => v >= max * 0.02).length;
+    musicalFrame = !silent && supportedBins >= 2 && max - min > max * 0.1;
+    if (!musicalFrame) musicalSince = null;
+    else musicalSince ??= frame.t;
+    const candidate: Chord | null =
+      musicalFrame && sims[best] > sims[bank.size] && sims[best] >= MIN_DISPLAY_CONFIDENCE
+        ? { root: bank.roots[best] as PitchClass, quality: bank.qualities[best] }
+        : null;
+    if (!candidate) previewSupport = null;
+    else if (!previewSupport || !sameChordFamily(candidate, previewSupport.chord))
+      previewSupport = { chord: candidate, since: frame.t };
+    previewChord =
+      candidate && previewSupport && frame.t - previewSupport.since + 1e-6 >= 0.12
+        ? shownFor(candidate, 'mic')
+        : null;
+    if (sameChordFamily(previewChord, lastChord)) previewChord = null;
+    previewConfidence = previewChord ? Math.min(1, sims[best]) : 0;
     if (!silent && inKeyBonus) for (let i = 0; i < bank.size; i++) sims[i] += inKeyBonus[i];
     if (!silent) {
       lastSoundT = frame.t;
@@ -374,9 +472,24 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     if (frame.midiNotes) {
       // Pitch classes keep the chord-display coverage. The keyboard uses only the
       // exact notes, so a pitch class does not light every octave.
-      const notes = playedNotes.push(frame.t, frame.midiNotes, silent);
+      const noteChroma = frame.noteChroma ?? frame.chroma;
+      const notePeak = Math.max(...noteChroma);
+      const strongHarmony =
+        musicalFrame &&
+        frame.t - lastOnsetT <= 0.14 &&
+        sims[best] >= 0.9 &&
+        sims[best] - sims[bank.size] >= 0.2 &&
+        previewSupport !== null &&
+        frame.t - previewSupport.since + 1e-6 >= 0.08;
+      const tentative = strongHarmony
+        ? frame.midiNotes.filter(
+            (note) =>
+              noteChroma[note % 12] >= notePeak * 0.6 && frame.chroma[note % 12] >= max * 0.4,
+          )
+        : [];
+      const notes = playedNotes.pushState(frame.t, frame.midiNotes, silent, tentative);
       const pcs = micNotes.push(frame.t, frame.noteChroma ?? frame.chroma, silent);
-      emitNotes(frame.t, pcs, notes);
+      emitNotes(frame.t, pcs, notes.midiNotes, notes.tentativeMidiNotes);
     } else {
       playedNotes.reset();
       emitNotes(frame.t, micNotes.push(frame.t, frame.noteChroma ?? frame.chroma, silent));
@@ -409,16 +522,45 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     configure(patch) {
       const prev = cfg;
       cfg = { ...cfg, ...patch };
+      if (cfg.mode !== prev.mode || cfg.instrument !== prev.instrument || cfg.a4 !== prev.a4)
+        clearStream(lastFrameT ?? 0, true);
       // the room bank has its own qualities, so a mode change rebuilds too
       if (effectiveVocabLevel(cfg) !== level || cfg.mode !== prev.mode) rebuild();
       else if (cfg.stability !== prev.stability) smoother.setStability(cfg.stability);
     },
     push(frame) {
+      if (
+        lastFrameT !== null &&
+        (frame.t < lastFrameT || frame.t - lastFrameT > 0.5 || inputExact !== frame.exact)
+      )
+        clearStream(frame.t, true);
+      lastFrameT = frame.t;
+      inputExact = frame.exact;
       emitter.emit({ type: 'level', t: frame.t, energy: frame.energy });
       if (frame.exact) pushExact(frame);
       else pushMic(frame);
-      const changed = keys.push(frame) !== null;
-      const pub = publisher.update(frame.t, keys, changed);
+      const accepted = frame.exact || musicalFrame;
+      const continuous =
+        frame.exact || (accepted && musicalSince !== null && frame.t - musicalSince + 1e-6 >= 0.12);
+      let changed = false;
+      if (frame.exact) changed = keys.push(frame) !== null;
+      else if (!accepted) {
+        keyFrames.length = 0;
+        keys.push({ ...frame, chroma: new Float32Array(12), energy: 0 });
+      } else if (!continuous) {
+        // Do not let unrelated short noises accumulate into phrase evidence. Replay a
+        // supported attack once, retaining the original histogram and first-sound times.
+        if (keyFrames.at(-1)?.t !== frame.t && keyFrames.length < TIME_RING) keyFrames.push(frame);
+      } else {
+        for (const buffered of keyFrames) changed = keys.push(buffered) !== null || changed;
+        keyFrames.length = 0;
+        changed = keys.push(frame) !== null || changed;
+      }
+      const pub = publisher.update(
+        frame.t,
+        continuous ? keys : { current: () => null, since: () => null, lead: () => 0 },
+        changed,
+      );
       if (pub) {
         const e: KeyEvent = { type: 'key', t: pub.t, key: pub.key, id: pub.id, since: pub.since };
         if (pub.supersedes !== undefined) {
@@ -427,6 +569,11 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
         }
         emitter.emit(e);
       }
+      if (sameChordFamily(previewChord, lastChord)) {
+        previewChord = null;
+        previewConfidence = 0;
+      }
+      if (!frame.exact) emitPreview(frame.t, continuous ? keys.current() : null);
       if (changed || pub) setKey(publisher.current() ?? keys.current());
       else if (key && keys.dominantTonic(key) !== dominant) {
         dominant = !dominant;
@@ -437,25 +584,24 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
       keys.reset();
       publisher.reset();
       setKey(null);
-    },
-    reset() {
-      keys.reset();
-      publisher.reset(true);
-      key = null;
-      dominant = false;
-      inKeyBonus = null;
-      bass.reset();
       micNotes.reset();
       playedNotes.reset();
+      bass.reset();
+      prevBass = null;
+      musicalSince = null;
+      lastOnsetT = -Infinity;
+      keyFrames.length = 0;
       rebuild();
-      lastChord = null;
-      lastHeard = null;
-      lastHeardT = 0;
-      lastSureT = -Infinity;
+      emitNotes(lastFrameT ?? 0, [], []);
+      previewChord = null;
+      previewConfidence = 0;
+      previewSupport = null;
+      emitPreview(lastFrameT ?? 0);
+    },
+    reset() {
+      clearStream(lastFrameT ?? 0, false);
       lastNotes = '';
       announcedNotes = false;
-      lastSoundT = -Infinity;
-      prevBass = null;
     },
     subscribe: (cb) => emitter.subscribe(cb),
   };

@@ -28,7 +28,7 @@ import {
 import { findPeaks } from './peaks';
 import { INSTRUMENT_PROFILES } from './profiles';
 import { createRoomProcessor } from './room';
-import { isMainsHum, spectralFlatness, tonalEnergyRatio } from './tonality';
+import { isMainsHum, octaveBandFlatness, spectralFlatness, tonalEnergyRatio } from './tonality';
 import { amplitudeScale, hann } from './window';
 import {
   createMusicalGate,
@@ -353,9 +353,26 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
     // Chord chroma stays available for the smoother. Keys follow exact fundamentals,
     // not every octave of a pitch class. Hiss, a click or an inharmonic ring lights nothing.
     const noteChroma = randomNoiseFrame(noiseFeatures) ? new Float32Array(12) : undefined;
-    const midiNotes = noteChroma
+    // Local flatness catches colored rumble whose spectral slope hides its noise
+    // in whole-band flatness. Restrict this guard to octave-specific observations:
+    // chord/key chroma retains its existing masking and sustain behavior.
+    let midiNotes = noteChroma
       ? []
       : estimatePlayedMidiNotes(chromaPeaks, tunedA4, profile.harmonics, profile.peakExponent);
+    const localFlatness = octaveBandFlatness(longMag, sampleRate, frameSize);
+    // Only a strong spectral slope calls for this additional check. Guitar
+    // attacks can be locally noisy without the large whole/local entropy
+    // contrast of colored rumble; leave those to the existing musical gate.
+    const lockedHarmonics = harmonic > 0.8 && coherenceValue > 0.8;
+    if (localFlatness > 0.4 && flatness < localFlatness * 0.1 && !lockedHarmonics) {
+      midiNotes = midiNotes.filter((note) => {
+        const freq = tunedA4 * 2 ** ((note - 69) / 12);
+        return (
+          octaveBandFlatness(longMag, sampleRate, frameSize, freq / Math.SQRT2, freq * Math.SQRT2) <
+          0.2
+        );
+      });
+    }
     return {
       t,
       chroma,

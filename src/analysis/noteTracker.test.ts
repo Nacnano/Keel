@@ -91,12 +91,13 @@ describe('microphone note display', () => {
     expect(notes).toEqual([{ type: 'notes', t: 0.13, pitchClasses: [0, 4, 7], midiNotes: [60] }]);
   });
 
-  it('holds an exact key through a short dropout', () => {
+  it('holds a confirmed microphone key through a short dropout', () => {
     const tracker = createPlayedNoteTracker();
     expect(tracker.push(0, [60])).toEqual([]);
     expect(tracker.push(0.13, [60])).toEqual([60]);
-    expect(tracker.push(0.2, [])).toEqual([60]);
-    expect(tracker.push(0.45, [])).toEqual([]);
+    expect(tracker.push(0.26, [60])).toEqual([60]);
+    expect(tracker.push(0.3, [])).toEqual([60]);
+    expect(tracker.push(0.55, [])).toEqual([]);
   });
 
   it('keeps MIDI press/release immediate and clears mic state when switching inputs', () => {
@@ -122,7 +123,7 @@ describe('microphone note display', () => {
     push(0.17, 0.4);
     expect(notes).toEqual([
       { type: 'notes', t: 0.13, pitchClasses: [0] },
-      { type: 'notes', t: 0.14, pitchClasses: [] },
+      { type: 'notes', t: 0.14, pitchClasses: [], midiNotes: [] },
       { type: 'notes', t: 0.15, pitchClasses: [0] },
       { type: 'notes', t: 0.16, pitchClasses: [] },
     ]);

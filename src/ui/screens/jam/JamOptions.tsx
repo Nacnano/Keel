@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
-import type { JamMode, VocabLevel } from '@/core';
+import type { Instrument, JamMode, VocabLevel } from '@/core';
 import { Button, Group, Row, Segmented, Sheet, Slider, Switch } from '../../kit';
-import { MODE_OPTIONS, VOCAB_OPTIONS } from './labels';
+import { INSTRUMENT_OPTIONS, MODE_OPTIONS, VOCAB_OPTIONS } from './labels';
 import { useMediaQuery } from '../../lib/useMediaQuery';
 
 export interface JamOptionsProps {
@@ -10,6 +10,8 @@ export interface JamOptionsProps {
   onVocabLevel(level: VocabLevel): void;
   mode: JamMode;
   onMode(mode: JamMode): void;
+  instrument: Instrument;
+  onInstrument(instrument: Instrument): void;
   sensitivity: number;
   onSensitivity(value: number): void;
   recordAudio: boolean;
@@ -90,8 +92,21 @@ export function JamOptions(p: JamOptionsProps) {
               }
               detail={
                 p.mode === 'room'
-                  ? 'With a band always shows simple chords.'
-                  : 'Steadier, simpler chords when others are playing.'
+                  ? 'Follows the music around you, using simple chords.'
+                  : 'Favors your selected instrument. Other music may still be heard.'
+              }
+            />
+            <Row
+              label="Instrument"
+              stacked
+              accessory={
+                <Segmented
+                  fill
+                  aria-label="Instrument"
+                  value={p.instrument}
+                  onChange={p.onInstrument}
+                  options={INSTRUMENT_OPTIONS}
+                />
               }
             />
             <Row

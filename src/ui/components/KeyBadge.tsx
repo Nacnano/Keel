@@ -6,6 +6,7 @@ import { Popover } from '../kit/Popover';
 
 export interface KeyBadgeProps {
   keyEstimate: KeyEstimate | null;
+  tentative?: boolean;
   spellingFollowsKey?: boolean;
   className?: string;
   primaryOnly?: boolean;
@@ -19,6 +20,7 @@ const label = (k: Key, spellingFollowsKey: boolean) => pretty(keyLabel(k, { spel
  */
 export function KeyBadge({
   keyEstimate,
+  tentative = false,
   spellingFollowsKey = true,
   className,
   primaryOnly,
@@ -39,7 +41,9 @@ export function KeyBadge({
       <div
         className={cx('flex min-h-11 items-center justify-center gap-2 text-label-3', className)}
       >
-        <span className="text-footnote font-medium tracking-wide uppercase">Key</span>
+        <span className="text-footnote font-medium tracking-wide uppercase">
+          {tentative ? 'Tentative key' : 'Key'}
+        </span>
         <span className="text-headline">—</span>
       </div>
     );
@@ -48,8 +52,13 @@ export function KeyBadge({
   const winner = keyEstimate;
   const major = winner.mode === 'major' ? winner : winner.relative;
   const minor = winner.mode === 'minor' ? winner : winner.relative;
-  const pct = Math.round(Math.max(0, Math.min(1, winner.confidence)) * 100);
-  const tone = pct >= 70 ? 'bg-ok' : pct >= 45 ? 'bg-warn' : 'bg-label-3';
+  const evidence =
+    winner.confidence >= 0.7
+      ? 'Strong evidence'
+      : winner.confidence >= 0.45
+        ? 'Building evidence'
+        : 'Limited evidence';
+  const tone = winner.confidence >= 0.7 ? 'bg-ok' : 'bg-label-3';
   const part = (k: Key) => (
     <span
       className={k.mode === winner.mode ? 'font-semibold text-label' : 'font-normal text-label-2'}
@@ -69,7 +78,7 @@ export function KeyBadge({
         <button
           type="button"
           {...p}
-          aria-label={`Key ${label(winner, spellingFollowsKey)}, ${pct}% confident. Show alternatives`}
+          aria-label={`${tentative ? 'Tentative key' : 'Key'} ${label(winner, spellingFollowsKey)}. ${evidence}. Show alternatives`}
           className={cx(
             'flex min-h-11 max-w-full items-center gap-2 rounded-control px-2 transition-colors hover:bg-fill-4',
             primaryOnly
@@ -78,11 +87,14 @@ export function KeyBadge({
             className,
           )}
         >
+          {!primaryOnly && tentative && <span className="text-label-2">Tentative key</span>}
           {!primaryOnly && <span aria-hidden className={cx('size-2 rounded-full', tone)} />}
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
             {primaryOnly ? (
               <>
-                <span className="font-normal text-label-2">Key</span>
+                <span className="font-normal text-label-2">
+                  {tentative ? 'Tentative key' : 'Key'}
+                </span>
                 {part(winner)}
                 <ChevronDown
                   className="size-5 self-center text-label-3 sm:size-6"
@@ -104,13 +116,7 @@ export function KeyBadge({
       <div className="px-2 pt-1 pb-2">
         <div className="flex items-baseline justify-between">
           <span className="text-headline font-semibold">{label(winner, spellingFollowsKey)}</span>
-          <span className="text-footnote text-label-2 tabular">{pct}%</span>
-        </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-fill-3">
-          <div
-            className="h-full rounded-full bg-accent transition-[width] duration-300"
-            style={{ width: `${pct}%` }}
-          />
+          <span className="text-footnote text-label-2 tabular">{evidence}</span>
         </div>
       </div>
       <p className="px-2 pt-1 pb-1 text-caption font-medium tracking-wide text-label-2 uppercase">
@@ -126,17 +132,6 @@ export function KeyBadge({
               className="flex items-center justify-between gap-3 rounded-[8px] px-2 py-1.5 text-subhead"
             >
               <span className="text-label">{label(a, spellingFollowsKey)}</span>
-              <span className="flex items-center gap-2">
-                <span className="h-1 w-14 overflow-hidden rounded-full bg-fill-3">
-                  <span
-                    className="block h-full bg-label-3"
-                    style={{ width: `${Math.round(a.score * 100)}%` }}
-                  />
-                </span>
-                <span className="w-10 text-right text-label-2 tabular">
-                  {Math.round(a.score * 100)}%
-                </span>
-              </span>
             </li>
           ))}
         </ul>

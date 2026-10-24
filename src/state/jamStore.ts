@@ -52,6 +52,10 @@ export interface JamData {
   timeline: ChordRecord[];
   activePitchClasses: PitchClass[];
   activeMidiNotes: MidiNote[];
+  tentativeMidiNotes: MidiNote[];
+  previewChord: Chord | null;
+  previewConfidence: number;
+  previewKey: KeyEstimate | null;
   /** Microphone frames named exact keys, so the keyboard must not light every octave. */
   exactKeys: boolean;
   level: number;
@@ -77,6 +81,8 @@ export interface JamActions {
   /** Clears the session data and starts a new session at `t0` (clock seconds, default now). */
   startSession(t0?: number, opts?: { demo?: boolean }): void;
   stopSession(): void;
+  /** Clears live estimates without changing the saved session history. */
+  clearLiveReadout(): void;
   /** Clears timeline, key history and markers. Keeps status, source and current key. */
   reset(): void;
   addMarker(kind: MarkerKind, label?: string, t?: number): Marker | null;
@@ -128,6 +134,10 @@ const EMPTY_SESSION = {
   timeline: [],
   activePitchClasses: [],
   activeMidiNotes: [],
+  tentativeMidiNotes: [],
+  previewChord: null,
+  previewConfidence: 0,
+  previewKey: null,
   exactKeys: false,
   markers: [],
   lastT: 0,
@@ -155,6 +165,9 @@ export const useJamStore = create<JamState>()((set, get) => ({
 
   applyEvent(e) {
     set((s) => {
+      if (e.type === 'preview') {
+        return { previewChord: e.chord, previewConfidence: e.confidence, previewKey: e.key };
+      }
       const sessionStart = s.sessionStart ?? e.t;
       const sessionId = s.sessionId ?? uuid();
       const t = Math.max(0, e.t - sessionStart);
@@ -164,6 +177,8 @@ export const useJamStore = create<JamState>()((set, get) => ({
           const patch = {
             ...base,
             currentChord: e.chord,
+            previewChord: null,
+            previewConfidence: 0,
             confidence: e.confidence,
             source: e.source,
           };
@@ -184,10 +199,10 @@ export const useJamStore = create<JamState>()((set, get) => ({
         case 'key': {
           const history = s.keyHistory;
           const last = history[history.length - 1];
-          if (last && sameKey(last.key, e.key)) return { ...base, key: e.key };
+          if (last && sameKey(last.key, e.key)) return { ...base, key: e.key, previewKey: null };
           const extra = e as typeof e & KeyEventExtras;
           const arrived = base.lastT;
-          const patch = { ...base, key: e.key, keyChangedAt: arrived };
+          const patch = { ...base, key: e.key, previewKey: null, keyChangedAt: arrived };
           // The first key of a song labels the song from its start, chords heard before it too.
           if (s.key === null) {
             const from = Math.min(s.keyFrom, t);
@@ -216,6 +231,9 @@ export const useJamStore = create<JamState>()((set, get) => ({
             ...base,
             activePitchClasses: e.pitchClasses,
             activeMidiNotes: e.midiNotes ?? [],
+            tentativeMidiNotes: (e.tentativeMidiNotes ?? []).filter(
+              (note) => !e.midiNotes?.includes(note),
+            ),
             exactKeys: e.midiNotes !== undefined,
           };
         case 'level':
@@ -239,6 +257,7 @@ export const useJamStore = create<JamState>()((set, get) => ({
   },
 
   stopSession() {
+    get().clearLiveReadout();
     set({
       status: 'idle',
       activePitchClasses: [],
@@ -246,6 +265,24 @@ export const useJamStore = create<JamState>()((set, get) => ({
       exactKeys: false,
       level: 0,
       quiet: false,
+    });
+  },
+
+  clearLiveReadout() {
+    const s = get();
+    const now = s.sessionStart !== null ? Math.max(0, clock.now() - s.sessionStart) : s.lastT;
+    set({
+      currentChord: null,
+      confidence: 0,
+      key: null,
+      keyFrom: now,
+      activePitchClasses: [],
+      activeMidiNotes: [],
+      tentativeMidiNotes: [],
+      previewChord: null,
+      previewConfidence: 0,
+      previewKey: null,
+      exactKeys: false,
     });
   },
 
@@ -273,7 +310,7 @@ export const useJamStore = create<JamState>()((set, get) => ({
   clearKey(from) {
     const s = get();
     const now = s.sessionStart !== null ? Math.max(0, clock.now() - s.sessionStart) : s.lastT;
-    set({ key: null, keyFrom: from ?? now });
+    set({ key: null, previewKey: null, keyFrom: from ?? now });
   },
 
   setQuiet(quiet) {

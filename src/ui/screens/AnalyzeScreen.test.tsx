@@ -157,7 +157,7 @@ describe('AnalyzeScreen', () => {
       expect(await screen.findByRole('alert')).toHaveTextContent(title);
 
       fireEvent.click(screen.getByRole('radio', { name: 'Everything' }));
-      fireEvent.click(screen.getByRole('radio', { name: 'Just me' }));
+      fireEvent.click(screen.getByRole('radio', { name: 'My instrument' }));
       expect(screen.getByRole('alert')).toHaveTextContent(title);
       expect(screen.queryByTestId('analyze-result')).not.toBeInTheDocument();
       expect(analyse).toHaveBeenCalledTimes(1);
@@ -179,7 +179,7 @@ describe('AnalyzeScreen', () => {
       await screen.findByRole('progressbar', { name: 'Decoding progress' }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('radio', { name: 'Everything' }));
-    fireEvent.click(screen.getByRole('radio', { name: 'Just me' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'My instrument' }));
     await act(async () => {
       finishDecode({ samples: new Float32Array(16), sampleRate: 44100, durationSec: 17 });
     });

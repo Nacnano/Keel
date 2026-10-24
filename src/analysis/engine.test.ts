@@ -40,7 +40,10 @@ function runFrames(frames: ChromaFrame[], config: Partial<AnalysisConfig> = {}) 
     engine.push(f);
     frame++;
   }
-  const chords = events.filter((e): e is ChordEvent & { frame: number } => e.type === 'chord');
+  const chordEvents = events.filter((e): e is ChordEvent & { frame: number } => e.type === 'chord');
+  const chords = chordEvents.filter(
+    (e, i) => i === 0 || label(e.chord) !== label(chordEvents[i - 1].chord),
+  );
   return { engine, events, chords, labels: chords.map((e) => label(e.chord)) };
 }
 
@@ -172,7 +175,9 @@ describe('mic path', () => {
   it('configure() switches vocab level at runtime', () => {
     const engine = createAnalysisEngine({ vocabLevel: 1 });
     const labels: string[] = [];
-    engine.subscribe((e) => e.type === 'chord' && labels.push(label(e.chord)));
+    engine.subscribe(
+      (e) => e.type === 'chord' && labels.at(-1) !== label(e.chord) && labels.push(label(e.chord)),
+    );
     const cmaj7 = progressionFrames(steps([['C3', 'C4', 'E4', 'G4', 'B4']], 1));
     for (const f of cmaj7) engine.push(f);
     engine.configure({ vocabLevel: 2 });
@@ -316,7 +321,12 @@ describe('mic path', () => {
     engine.subscribe((e) => e.type !== 'level' && after.push(e));
     engine.reset();
     for (const f of frames) engine.push(f);
-    expect(after).toEqual(expected);
+    const normalizeIds = (events: AnalysisEvent[]) =>
+      events.map((e) => (e.type === 'key' ? { ...e, id: 0, supersedes: undefined } : e));
+    expect(normalizeIds(after)).toEqual(normalizeIds(expected));
+    const beforeIds = expected.filter((e) => e.type === 'key').map((e) => e.id!);
+    const afterIds = after.filter((e) => e.type === 'key').map((e) => e.id!);
+    expect(Math.min(...afterIds)).toBeGreaterThan(Math.max(...beforeIds));
   });
 });
 
@@ -446,7 +456,9 @@ describe('room mode (With a band)', () => {
   it('MIDI: a played diminished triad shows as its band triad', () => {
     const engine = createAnalysisEngine({ mode: 'room' });
     const labels: string[] = [];
-    engine.subscribe((e) => e.type === 'chord' && labels.push(label(e.chord)));
+    engine.subscribe(
+      (e) => e.type === 'chord' && labels.at(-1) !== label(e.chord) && labels.push(label(e.chord)),
+    );
     engine.push(frameFromNotes(midiChord(['B3', 'D4', 'F4']), 0));
     expect(labels).toEqual(['Bmin']);
   });
@@ -494,7 +506,9 @@ describe('room mode (With a band)', () => {
     const c7 = ['C3', 'C4', 'E4', 'G4', 'Bb4'];
     const engine = createAnalysisEngine({ vocabLevel: 2 });
     const labels: string[] = [];
-    engine.subscribe((e) => e.type === 'chord' && labels.push(label(e.chord)));
+    engine.subscribe(
+      (e) => e.type === 'chord' && labels.at(-1) !== label(e.chord) && labels.push(label(e.chord)),
+    );
     for (const f of progressionFrames(steps([c7]))) engine.push(f);
     engine.configure({ mode: 'room' });
     for (const f of progressionFrames(steps([C, c7]), { t0: 2 })) engine.push(f);

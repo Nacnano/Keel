@@ -76,3 +76,38 @@ export function spectralFlatness(
   if (n === 0 || sum <= 0) return 1;
   return Math.exp(logSum / n) / (sum / n);
 }
+
+/**
+ * Power-weighted flatness within octave bands. A fan's low-frequency rumble can
+ * have near-zero whole-spectrum flatness simply because its high frequencies
+ * are quiet. Measuring the shape locally keeps that spectral slope from being
+ * mistaken for partials. Power weighting keeps quiet gaps between real notes
+ * from dominating the result. This is evidence against notes, not a noise profile.
+ */
+export function octaveBandFlatness(
+  mag: ArrayLike<number>,
+  sampleRate: number,
+  fftSize: number,
+  minHz = 30,
+  maxHz = 5000,
+): number {
+  const binHz = sampleRate / fftSize;
+  let total = 0;
+  let weighted = 0;
+  for (let lowHz = minHz; lowHz < maxHz; lowHz *= 2) {
+    const lo = Math.max(1, Math.ceil(lowHz / binHz));
+    const hi = Math.min(mag.length - 1, Math.ceil(Math.min(maxHz, lowHz * 2) / binHz) - 1);
+    if (hi < lo) continue;
+    let sum = 0;
+    let logSum = 0;
+    for (let k = lo; k <= hi; k++) {
+      const power = mag[k] * mag[k] + 1e-20;
+      sum += power;
+      logSum += Math.log(power);
+    }
+    const n = hi - lo + 1;
+    total += sum;
+    weighted += n * Math.exp(logSum / n);
+  }
+  return total > 0 ? weighted / total : 1;
+}

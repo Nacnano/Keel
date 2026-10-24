@@ -92,6 +92,10 @@ export function JamScreen() {
       source: s.source,
       currentChord: s.currentChord,
       confidence: s.confidence,
+      previewChord: s.previewChord,
+      previewConfidence: s.previewConfidence,
+      previewKey: s.previewKey,
+      tentativeMidiNotes: s.tentativeMidiNotes,
       keyEstimate: s.key,
       keyHistory: s.keyHistory,
       timeline: s.timeline,
@@ -109,6 +113,7 @@ export function JamScreen() {
     useShallow((s) => ({
       vocabLevel: s.vocabLevel,
       mode: s.mode,
+      instrument: s.instrument,
       sensitivity: s.sensitivity,
       audioDeviceId: s.audioDeviceId,
       showSlashChords: s.showSlashChords,
@@ -133,7 +138,13 @@ export function JamScreen() {
   const quiet = listening && !input.mock && jam.quiet;
   const stopped = input.finished && !listening && !starting;
   // While the input is too quiet a chord (and the key built from it) would be a guess.
-  const hasChord = jam.currentChord && jam.confidence >= MIN_DISPLAY_CONFIDENCE && !quiet;
+  const previewChord =
+    !quiet && jam.previewChord && jam.previewConfidence >= MIN_DISPLAY_CONFIDENCE
+      ? jam.previewChord
+      : null;
+  const shownChord = previewChord ?? jam.currentChord;
+  const shownConfidence = previewChord ? jam.previewConfidence : jam.confidence;
+  const hasChord = shownChord && shownConfidence >= MIN_DISPLAY_CONFIDENCE && !quiet;
   // Compact widths: Ideas is a sheet under the Finish row; chord, key and timeline stay above.
   const halfIdeas = inspector.open && !sideIdeas;
   const sideOpen = inspector.open && sideIdeas;
@@ -207,6 +218,8 @@ export function JamScreen() {
       onVocabLevel={(vocabLevel) => settings.update({ vocabLevel })}
       mode={settings.mode}
       onMode={setMode}
+      instrument={settings.instrument}
+      onInstrument={(instrument) => settings.update({ instrument })}
       sensitivity={settings.sensitivity}
       onSensitivity={(sensitivity) => settings.update({ sensitivity })}
       recordAudio={jam.recordAudio}
@@ -300,7 +313,7 @@ export function JamScreen() {
                   {jam.error}
                 </p>
               )}
-              <div className="mt-8 flex w-full max-w-72 flex-col gap-3">
+              <div className="mt-8 flex w-full max-w-80 flex-col gap-3">
                 <Segmented
                   fill
                   aria-label="Listen to"
@@ -424,17 +437,12 @@ export function JamScreen() {
                   <ChordDisplay
                     details={false}
                     compact={halfIdeas}
-                    chord={jam.currentChord}
-                    confidence={jam.confidence}
+                    chord={shownChord}
+                    confidence={shownConfidence}
+                    tentative={!!previewChord}
                     keyContext={jam.keyEstimate}
                     showSlash={settings.showSlashChords}
                     spellingFollowsKey={settings.spellingFollowsKey}
-                  />
-                  <KeyBadge
-                    primaryOnly
-                    keyEstimate={jam.keyEstimate}
-                    spellingFollowsKey={settings.spellingFollowsKey}
-                    className="mt-3"
                   />
                 </>
               ) : (
@@ -455,13 +463,36 @@ export function JamScreen() {
                   </p>
                 </div>
               )}
-              {pianoVisible && listening && !phone && !halfIdeas && (
-                <Piano
-                  keys={wide ? 88 : 61}
-                  activePitchClasses={jam.exactKeys ? [] : jam.activePitchClasses}
-                  activeMidiNotes={jam.activeMidiNotes}
-                  className="mt-8 w-full"
+              {!quiet && !starting && (hasChord || jam.previewKey || jam.keyEstimate) && (
+                <KeyBadge
+                  primaryOnly
+                  keyEstimate={jam.previewKey ?? jam.keyEstimate}
+                  tentative={!!jam.previewKey}
+                  spellingFollowsKey={settings.spellingFollowsKey}
+                  className="mt-3"
                 />
+              )}
+              {pianoVisible && listening && !phone && !halfIdeas && (
+                <div className="mt-8 w-full">
+                  <Piano
+                    keys={wide ? 88 : 61}
+                    activeMidiNotes={quiet ? [] : jam.activeMidiNotes}
+                    tentativeMidiNotes={quiet ? [] : jam.tentativeMidiNotes}
+                  />
+                  <div
+                    className="mt-2 flex justify-center gap-4 text-caption text-label-2"
+                    aria-label="Keyboard note legend"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span aria-hidden className="size-2.5 rounded-sm border-2 border-accent" />
+                      Tentative
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span aria-hidden className="size-2.5 rounded-sm bg-accent" />
+                      Confirmed
+                    </span>
+                  </div>
+                </div>
               )}
             </div>
             {jam.timeline.length > 0 && (

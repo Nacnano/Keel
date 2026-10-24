@@ -31,6 +31,21 @@ describe('ChordDisplay', () => {
     expect(screen.getByTestId('chord-symbol')).not.toHaveTextContent('Cmaj7');
   });
 
+  it('labels a preview and keeps provisional theory out of the readout', () => {
+    render(
+      <ChordDisplay
+        chord={{ root: 2, quality: 'maj' }}
+        confidence={0.8}
+        tentative
+        keyContext={C_MAJOR}
+      />,
+    );
+    expect(screen.getByText('Tentative chord')).toBeInTheDocument();
+    expect(screen.getByTestId('chord-symbol')).toHaveAttribute('aria-live', 'off');
+    expect(screen.queryByTestId('chord-numeral')).toBeNull();
+    expect(screen.queryByText('bass')).toBeNull();
+  });
+
   it('shows the symbol, numeral, tones and bass for a confident chord', () => {
     render(
       <ChordDisplay
@@ -137,6 +152,27 @@ describe('Piano', () => {
     expect(container.querySelector('[data-note="60"]')).toHaveClass('fill-accent');
   });
 
+  it('outlines tentative observed notes in their exact octaves and clears them on release', () => {
+    const { container, rerender } = render(
+      <Piano activeMidiNotes={[60]} tentativeMidiNotes={[60, 61, 64]} />,
+    );
+    const state = (n: number) =>
+      container.querySelector(`[data-note="${n}"]`)?.getAttribute('data-state');
+    expect(state(60)).toBe('exact');
+    expect(state(61)).toBe('tentative');
+    expect(state(64)).toBe('tentative');
+    expect(state(49)).toBe('off');
+    expect(state(76)).toBe('off');
+    expect(container.querySelector('[data-note="61"]')).toHaveClass(
+      'stroke-accent',
+      'fill-[#111113]',
+    );
+    expect(screen.getByRole('img')).toHaveAccessibleName('Piano, confirmed C4; tentative C#4, E4');
+    rerender(<Piano />);
+    expect(state(61)).toBe('off');
+    expect(screen.getByRole('img')).toHaveAccessibleName('Piano, no notes');
+  });
+
   it('supports a 61-key range', () => {
     const { container } = render(<Piano keys={61} />);
     expect(container.querySelectorAll('[data-note]')).toHaveLength(61);
@@ -170,15 +206,11 @@ describe('KeyBadge', () => {
     render(<KeyBadge keyEstimate={C_MAJOR_KEY} />);
     expect(screen.getByText('C major')).toHaveClass('font-semibold');
     expect(screen.getByText('A minor')).not.toHaveClass('font-semibold');
-    fireEvent.click(screen.getByRole('button', { name: /Key C major, 82%/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Key C major. Strong evidence/ }));
     const pop = screen.getByRole('dialog', { name: 'Key alternatives' });
     expect(within(pop).getByText('G major')).toBeInTheDocument();
-    expect(within(pop).getByText('82%')).toBeInTheDocument();
-    // every alternative score carries a % like the winner
-    const scores = within(pop)
-      .getAllByRole('listitem')
-      .map((li) => li.lastElementChild?.textContent);
-    expect(scores.every((t) => /^\d+%$/.test(t ?? ''))).toBe(true);
+    expect(within(pop).getByText('Strong evidence')).toBeInTheDocument();
+    expect(pop).not.toHaveTextContent('%');
   });
 
   it('shows the key as a large tappable line in the jam view', () => {
