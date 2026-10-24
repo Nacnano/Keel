@@ -152,7 +152,7 @@ export function AppShell() {
             · Return to your jam
           </Link>
         )}
-        {/* Toasts sit at the top of the content column, under the screen header. */}
+        {/* Toasts: above the tab bar on compact widths, under the page header on wide ones. */}
         <main className="relative min-h-0 flex-1">
           <Outlet />
           <Toaster />
