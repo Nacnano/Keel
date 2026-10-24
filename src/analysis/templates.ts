@@ -49,8 +49,12 @@ export interface TemplateBank {
   dominant: Uint8Array;
 }
 
-export function buildTemplates(level: VocabLevel): TemplateBank {
-  const qs = qualitiesForLevel(level);
+/**
+ * Templates for every quality of a vocabulary level, or (`only`) for the qualities of the level
+ * that are in `only` (the room-mode bank: major and minor triads).
+ */
+export function buildTemplates(level: VocabLevel, only?: readonly ChordQuality[]): TemplateBank {
+  const qs = qualitiesForLevel(level).filter((q) => !only || only.includes(q));
   const size = qs.length * 12;
   const roots = new Uint8Array(size);
   const qualities = new Array<ChordQuality>(size);

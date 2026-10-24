@@ -3,10 +3,14 @@ import { NOTE_NAMES_SHARP } from '@/core';
 import type { AnalysisConfig, AnalysisEvent, Chord, ChromaFrame, PitchClass } from '@/core';
 import { frameFromNotes, midiChord } from '@/core/testing/midi';
 import {
+  OUT_OF_KEY_HOLD_SEC,
   ROOM_VOCAB_LEVEL,
+  bandTriad,
   createAnalysisEngine,
+  dim7Root,
   dwellSeconds,
   effectiveVocabLevel,
+  inKey,
   keyReading,
 } from './engine';
 import { CHORD_VOCAB, chordTones, qualitiesForLevel } from './templates';
@@ -322,6 +326,29 @@ describe('key-aware reading', () => {
     expect(after).not.toContain('Cmin');
   });
 
+  it('a diminished seventh is named from the leading tone of the key', () => {
+    const Edim7 = { root: 4 as PitchClass, quality: 'dim7' as const };
+    expect(keyReading(Edim7, Dminor, 2)).toEqual({ root: 1, quality: 'dim7' }); // C♯dim7
+    expect(dim7Root({ root: 7, quality: 'dim7' }, Dminor).root).toBe(1);
+    // not one of its tones: unchanged (C♯dim7 has no B, the leading tone of C)
+    expect(dim7Root({ root: 1, quality: 'dim7' }, Cmajor).root).toBe(1);
+    expect(dim7Root({ root: 2, quality: 'dim7' }, Cmajor).root).toBe(11); // Ddim7 → Bdim7
+    expect(dim7Root({ root: 2, quality: 'dim' }, Cmajor).root).toBe(2);
+  });
+
+  it('names the mic dim7 from the leading tone in a minor key (C♯dim7, not Edim7)', () => {
+    const Dm = ['D3', 'D4', 'F4', 'A4'];
+    const Gm = ['G2', 'G3', 'Bb3', 'D4'];
+    const A7 = ['A2', 'A3', 'C#4', 'G4'];
+    const Edim7 = ['E2', 'E3', 'G3', 'Bb3', 'C#4'];
+    const { chords } = runFrames(
+      progressionFrames(steps([Dm, Gm, A7, Dm, Gm, A7, Dm, Edim7, Edim7, Dm])),
+    );
+    const late = chords.filter((c) => c.t > 10).map((c) => label(c.chord));
+    expect(late).toContain('C#dim7');
+    expect(late).not.toContain('Edim7');
+  });
+
   it('a diminished tonic in D minor shows as Dm', () => {
     const Dm = ['D3', 'D4', 'F4', 'A4'];
     const Gm = ['G2', 'G3', 'Bb3', 'D4'];
@@ -334,7 +361,86 @@ describe('key-aware reading', () => {
   });
 });
 
+describe('in-key preference', () => {
+  const Cmajor = { tonic: 0 as PitchClass, mode: 'major' as const };
+  const Aminor = { tonic: 9 as PitchClass, mode: 'minor' as const };
+
+  it('in key: the scale, harmonic minor, and ♭3 / ♭7 for a dominant tonality', () => {
+    expect(inKey({ root: 9, quality: 'min' }, Cmajor)).toBe(true);
+    expect(inKey({ root: 4, quality: 'maj' }, Aminor)).toBe(true); // V from harmonic minor
+    expect(inKey({ root: 0, quality: '7' }, Cmajor)).toBe(false);
+    // a C blues: C7, F7, B♭ and Cm fit; D7 and A7 still do not
+    expect(inKey({ root: 0, quality: '7' }, Cmajor, true)).toBe(true);
+    expect(inKey({ root: 5, quality: '7' }, Cmajor, true)).toBe(true);
+    expect(inKey({ root: 10, quality: 'maj' }, Cmajor, true)).toBe(true);
+    expect(inKey({ root: 0, quality: 'min' }, Cmajor, true)).toBe(true);
+    expect(inKey({ root: 2, quality: '7' }, Cmajor, true)).toBe(false);
+    expect(inKey({ root: 9, quality: '7' }, Cmajor, true)).toBe(false);
+    // only for a major key
+    expect(inKey({ root: 9, quality: '7' }, Aminor, true)).toBe(false);
+  });
+
+  it('Just me prefers the in-key chord too (Am, not A, in C major)', () => {
+    // A–C–C♯–E with both thirds exactly as loud
+    const ambiguous = ['A2', 'A3', 'C4', 'C#4', 'E4'];
+    const prog = steps([C, F, G, C, F, G, ambiguous, ambiguous, ambiguous], 1.5);
+    const frames = progressionFrames(prog).map((f) => {
+      if (f.t < 9) return f;
+      const chroma = Float32Array.from(f.chroma);
+      chroma[0] = chroma[1] = (chroma[0] + chroma[1]) / 2;
+      return { ...f, chroma };
+    });
+    const { chords } = runFrames(frames, { mode: 'solo', vocabLevel: 2 });
+    const late = chords.filter((c) => c.t > 9).map((c) => label(c.chord));
+    expect(late).toContain('Amin');
+    expect(late).not.toContain('Amaj');
+  });
+});
+
 describe('room mode (With a band)', () => {
+  it('names major and minor triads only: no diminished chord', () => {
+    const Bdim = ['B2', 'B3', 'D4', 'F4'];
+    const prog = steps([C, F, G, C, Bdim, Bdim, C, ['C#3', 'C#4', 'E4', 'G4'], C]);
+    const { chords } = runFrames(progressionFrames(prog), { mode: 'room' });
+    for (const c of chords) if (c.chord) expect(c.chord.quality, label(c.chord)).not.toBe('dim');
+  });
+
+  it('band triad of a diminished chord: in-key minor, else the chord it belongs to', () => {
+    const E = { tonic: 4 as PitchClass, mode: 'major' as const };
+    const Cmaj = { tonic: 0 as PitchClass, mode: 'major' as const };
+    expect(bandTriad({ root: 1, quality: 'dim' }, E)).toEqual({ root: 1, quality: 'min' });
+    expect(bandTriad({ root: 11, quality: 'dim' }, Cmaj)).toEqual({ root: 7, quality: 'maj' });
+    expect(bandTriad({ root: 6, quality: 'dim' }, Cmaj)).toEqual({ root: 9, quality: 'min' });
+    expect(bandTriad({ root: 11, quality: 'dim' }, null)).toEqual({ root: 11, quality: 'min' });
+    expect(bandTriad({ root: 0, quality: 'maj' }, Cmaj)).toEqual({ root: 0, quality: 'maj' });
+  });
+
+  it('MIDI: a played diminished triad shows as its band triad', () => {
+    const engine = createAnalysisEngine({ mode: 'room' });
+    const labels: string[] = [];
+    engine.subscribe((e) => e.type === 'chord' && labels.push(label(e.chord)));
+    engine.push(frameFromNotes(midiChord(['B3', 'D4', 'F4']), 0));
+    expect(labels).toEqual(['Bmin']);
+  });
+
+  it(`an out-of-key triad has to hold ${OUT_OF_KEY_HOLD_SEC} s before it shows`, () => {
+    const Eb = ['Eb3', 'Eb4', 'G4', 'Bb4'];
+    const intro = [C, F, G, C, F, G];
+    const short = runFrames(progressionFrames(steps([...intro, C, Eb, C, C], 1.5)), {
+      mode: 'room',
+    });
+    expect(short.labels).not.toContain('D#maj');
+    const long = runFrames(
+      progressionFrames([...steps([...intro, C], 1.5), { notes: Eb, seconds: 3 }, ...steps([C])]),
+      { mode: 'room' },
+    );
+    const eb = long.chords.find((c) => label(c.chord) === 'D#maj');
+    expect(eb).toBeDefined();
+    // dated from where it started, not from when it was believed
+    expect(eb!.t).toBeLessThan(11);
+    expect(eb!.frame / FPS).toBeGreaterThanOrEqual(10.5 + OUT_OF_KEY_HOLD_SEC);
+  });
+
   it('decodes triads only, whatever the chord-detail level', () => {
     expect(effectiveVocabLevel({ mode: 'room', vocabLevel: 3 })).toBe(ROOM_VOCAB_LEVEL);
     expect(effectiveVocabLevel({ mode: 'solo', vocabLevel: 3 })).toBe(3);
@@ -344,7 +450,7 @@ describe('room mode (With a band)', () => {
       ['D3', 'D4', 'F4', 'A4', 'C5'],
       ['C3', 'C4', 'F4', 'G4'],
     ];
-    const l1 = new Set(qualitiesForLevel(1));
+    const l1 = new Set<string>(qualitiesForLevel(1).filter((q) => q !== 'dim'));
     for (const vocabLevel of [2, 3] as const) {
       const { chords } = runFrames(progressionFrames(steps(sevenths)), {
         mode: 'room',
@@ -384,8 +490,9 @@ describe('key events', () => {
     const key = events.find((e) => e.type === 'key')!;
     const chord = events.find((e) => e.type === 'chord' && e.chord)!;
     expect(key.t).toBeLessThanOrEqual(chord.t);
-    // but it is emitted only once there is evidence
+    // but it is published only once it has held
     expect(key.frame / FPS).toBeGreaterThanOrEqual(1.4);
+    expect(key).toMatchObject({ id: 1, since: key.t });
   });
 
   it('resetKey() forgets the key and estimates it again from what follows', () => {
