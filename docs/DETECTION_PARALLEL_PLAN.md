@@ -489,3 +489,18 @@ Validation: 32 screen tests, typecheck, targeted lint and production build pass.
 the Show keyboard switch persisted an explicit hide preference. Mode/instrument/sensitivity
 order and existing keyboard shortcut behavior are covered by tests. Playback and saving were
 checked with the combined startup recovery changes.
+
+### Improvement round 3 — calm, readable uncertainty
+
+Observed feedback: brief candidates repeatedly replaced the large chord, and the symbol
+briefly dimmed during each change. An established chord and key now stay primary while a
+single reserved secondary line shows a different tentative candidate. Before confirmation,
+the tentative result remains explicitly labeled in the main readout. Focused live symbols
+change immediately; detailed views retain their existing animation. Fixed context/candidate
+slots keep nearby content steady. No confirmation thresholds or saved theory changed.
+
+In the same 32-second hybrid fixture, sampled main-readout state changes fell from 67 to 21;
+this measures visual churn, not musical accuracy. Browser traces verified candidates alongside
+confirmed chords, quiet-tail clearing, interruption behavior and saving. Focused UI tests cover
+candidate priority, published key stability, tentative-only onset, quiet/release clearing and
+reserved layout slots. Physical microphone and independent recorded-note accuracy limits remain.
