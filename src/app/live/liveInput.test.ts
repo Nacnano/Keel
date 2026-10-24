@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import type { AnalysisEvent, PitchClass } from '@/core';
 import { jamStore, initialJamData } from '@/state/jamStore';
 import { settingsStore } from '@/state/settingsStore';
 
@@ -23,7 +24,12 @@ const mocks = vi.hoisted(() => ({
     onFrame: vi.fn(),
     onEvent: vi.fn(),
   },
-  engine: { configure: vi.fn(), reset: vi.fn(), subscribe: vi.fn(() => () => {}), push: vi.fn() },
+  engine: {
+    configure: vi.fn(),
+    reset: vi.fn(),
+    subscribe: vi.fn((_cb: (e: AnalysisEvent) => void) => () => {}),
+    push: vi.fn(),
+  },
   startSession: vi.fn(),
 }));
 vi.mock('@/audio', () => ({
@@ -158,6 +164,46 @@ describe('live input lifecycle', () => {
     const input = createLiveInput();
     await input.start();
     expect(jamStore.getState().recordAudio).toBe(false);
+    await input.stop();
+  });
+
+  it('keeps chords out of the timeline and the session while it cannot hear much', async () => {
+    let emit: (e: AnalysisEvent) => void = () => {};
+    mocks.engine.subscribe.mockImplementationOnce((cb: (e: AnalysisEvent) => void) => {
+      emit = cb;
+      return () => {};
+    });
+    const input = createLiveInput();
+    await input.start();
+    const session = mocks.startSession.mock.results[0].value as { onAnalysisEvent: Mock };
+    const t0 = jamStore.getState().sessionStart ?? 0;
+    const level = (t: number, energy: number) => emit({ type: 'level', t: t0 + t, energy });
+    const chord = (t: number, root: PitchClass): AnalysisEvent => ({
+      type: 'chord',
+      t: t0 + t,
+      chord: { root, quality: 'maj' },
+      confidence: 0.9,
+      source: 'mic',
+    });
+    level(0, 0.3);
+    emit(chord(0.5, 0));
+    // quiet for 4 s: "Can't hear much"
+    level(1, 0.01);
+    level(5.1, 0.01);
+    expect(jamStore.getState().quiet).toBe(true);
+    emit(chord(6, 7));
+    emit(chord(7, 9));
+    expect(jamStore.getState().timeline.map((r) => r.chord?.root)).toEqual([0]);
+    expect(session.onAnalysisEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ t: t0 + 6 }),
+    );
+    // two seconds of sound: the chord playing now comes back, once
+    level(8, 0.3);
+    expect(jamStore.getState().quiet).toBe(true);
+    level(10.1, 0.3);
+    expect(jamStore.getState().quiet).toBe(false);
+    expect(jamStore.getState().timeline.map((r) => r.chord?.root)).toEqual([0, 9]);
+    expect(jamStore.getState().timeline[1].t).toBeCloseTo(10.1);
     await input.stop();
   });
 

@@ -70,10 +70,16 @@ export function useJamInput() {
     }
   }, [mock, stopDemo]);
 
-  /** "New song": the live key is re-found from what comes next (the demo is scripted). */
-  const newSong = useCallback(() => {
-    if (!mock) liveInput().newSong();
-  }, [mock]);
+  /**
+   * "New song": the live key is re-found from what comes next and labels the song from `from`
+   * (session seconds, where the mark landed). The demo is scripted.
+   */
+  const newSong = useCallback(
+    (from?: number) => {
+      if (!mock) liveInput().newSong(from);
+    },
+    [mock],
+  );
 
   return { start, stop, startLive, startDemo, newSong, mock, saving, finished, saved, saveError };
 }

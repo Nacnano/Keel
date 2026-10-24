@@ -11,8 +11,9 @@ const TONE: Record<ToastTone, string> = {
 const SHELL = 'material min-h-9 rounded-full text-footnote font-medium shadow-elevated anim-rise';
 
 /**
- * Renders queued toasts at the top of the content column, just under the screen header, so
- * they never sit on the footer text or the controls at the bottom of the Listen screen.
+ * Renders queued toasts. Compact widths (tab bar): bottom-centre, just above the tab bar, the
+ * iOS place, clear of the large title. Wide widths (sidebar): top of the content column, below
+ * the page header (top bar, large title and a subtitle line), never on the title.
  * Mount once inside the app shell's (relatively positioned) content area. Plain toasts are
  * status text that taps pass straight through; only toasts with an action take taps.
  */
@@ -22,7 +23,8 @@ export function Toaster() {
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none absolute inset-x-0 top-[4.25rem] z-50 flex flex-col items-center gap-2 px-4 sm:top-[5.25rem]"
+      data-testid="toaster"
+      className="pointer-events-none absolute inset-x-0 bottom-3 z-50 flex flex-col items-center gap-2 px-4 lg:top-[8.5rem] lg:bottom-auto"
     >
       {toasts.map((t) => {
         const action = t.action;
