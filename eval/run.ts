@@ -17,7 +17,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { format, resolveConfig } from 'prettier';
-import { createAnalysisEngine } from '@/analysis';
+import { createAnalysisEngine, effectiveVocabLevel } from '@/analysis';
 import { createChromaPipeline, type PipelineConfig } from '@/audio/pipeline';
 import { DEFAULT_ANALYSIS_CONFIG } from '@/core/constants';
 import type { AnalysisConfig, ChromaFrame, JamMode, VocabLevel } from '@/core/types';
@@ -213,7 +213,8 @@ async function main() {
               session.key,
               chords,
               keys,
-              cfg.vocabLevel,
+              // room mode names triads only: score it against the chords it can name
+              effectiveVocabLevel(cfg),
               session.durationSec,
             );
             record(condId, cfg, sr, session, st);
