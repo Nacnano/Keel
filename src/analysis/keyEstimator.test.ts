@@ -236,3 +236,29 @@ describe('keyEstimator: since and reset', () => {
     expect(events[0].since).toBe(0);
   });
 });
+
+describe('keyEstimator: dominant tonality and lead', () => {
+  const C7 = ['C3', 'C4', 'E4', 'G4', 'Bb4'];
+  const F7 = ['F2', 'F3', 'A3', 'C4', 'Eb4'];
+  const withSevenths = (notes: string[]): Chord => {
+    if (notes === C7) return { root: 0, quality: '7' };
+    if (notes === F7) return { root: 5, quality: '7' };
+    return chordOf(notes);
+  };
+
+  it('a tonic heard as a dominant seventh makes a dominant tonality (♭3 / ♭7 in key)', () => {
+    const { est } = runWithChords(steps([C7, F7, C7, C7, F7, F7, C7, C7]), withSevenths);
+    expect(est.dominantTonic({ tonic: 0, mode: 'major' })).toBe(true);
+    expect(est.dominantTonic({ tonic: 5, mode: 'major' })).toBe(true);
+    expect(est.dominantTonic({ tonic: 7, mode: 'major' })).toBe(false);
+    expect(est.dominantTonic({ tonic: 0, mode: 'minor' })).toBe(false);
+    const plain = runWithChords(steps([C, F, G, C, F, G]), chordOf).est;
+    expect(plain.dominantTonic({ tonic: 0, mode: 'major' })).toBe(false);
+  });
+
+  it('lead: how far the current key is ahead of the best other key', () => {
+    expect(createKeyEstimator().lead()).toBe(0);
+    const { est } = runWithChords(steps([C, F, G, C, F, G, C]), chordOf);
+    expect(est.lead()).toBeGreaterThan(0.1);
+  });
+});
