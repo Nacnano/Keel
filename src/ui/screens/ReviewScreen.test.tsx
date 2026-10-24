@@ -67,7 +67,8 @@ describe('ReviewScreen', () => {
     expect(screen.getByRole('radiogroup', { name: 'Playback speed' })).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'Piano sound' })).toBeChecked();
     expect(screen.getByTestId('clock-source')).toHaveTextContent('Piano playback');
-    expect(screen.getAllByTestId('summary-progression')[0]).toHaveTextContent('vi');
+    // The folded chart shows the loops; there is no separate "Top progressions" list.
+    expect(screen.queryByText('Top progressions')).toBeNull();
   });
 
   it('leads with the chord chart and shares it as text (copy without a share sheet)', async () => {
@@ -130,6 +131,25 @@ describe('ReviewScreen', () => {
     );
   });
 
+  it('fixing a chord changes every chord of that root and quality by default', async () => {
+    await seed();
+    renderAt(`/review/${ID}`);
+    const chips = await screen.findAllByTestId('lane-chord');
+    const ams = (await db.chords.toArray()).filter((c) => c.chord?.root === 9).length;
+    expect(ams).toBeGreaterThan(1);
+    fireEvent.contextMenu(chips[2]); // Am at 3.0 s
+    const dialog = await screen.findByRole('dialog', { name: /Edit chord at/ });
+    const d = within(dialog);
+    const all = d.getByRole('switch', { name: 'Change every Am in this session' });
+    expect(all).toBeChecked();
+    fireEvent.click(d.getByRole('radio', { name: 'maj' }));
+    fireEvent.click(d.getByRole('button', { name: 'Save chord' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const rows = await db.chords.toArray();
+    expect(rows.filter((c) => c.chord?.root === 9 && c.chord.quality === 'maj')).toHaveLength(ams);
+    expect(rows.filter((c) => c.chord?.root === 9 && c.chord.quality === 'min')).toHaveLength(0);
+  });
+
   it('the picker can set "no chord" and filters qualities by level', async () => {
     await seed();
     renderAt(`/review/${ID}`);
@@ -173,9 +193,23 @@ describe('ReviewScreen', () => {
     await seed();
     renderAt(`/review/${ID}`);
     await screen.findAllByTestId('lane-chord');
-    fireEvent.change(screen.getByLabelText('Add section marker at playhead'), {
-      target: { value: 'chorus' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'Mark' }));
+    const menu = screen.getByRole('menu', { name: 'Mark' });
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((m) => m.textContent),
+    ).toEqual([
+      'Bookmark',
+      'Intro',
+      'Verse',
+      'Pre-chorus',
+      'Chorus',
+      'Bridge',
+      'Outro',
+      'New song',
+    ]);
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Chorus' }));
     const pin = await markerLane().findByRole('button', { name: 'Chorus at 0:00' });
     await waitFor(async () => expect(await db.markers.count()).toBe(4));
     fireEvent.keyDown(pin, { key: 'Delete' });
@@ -209,7 +243,7 @@ describe('ReviewScreen', () => {
     renderAt(`/review/${ID}`);
     await screen.findByDisplayValue('Evening idea in C');
     fireEvent.click(screen.getByRole('button', { name: /Reharmonize/ }));
-    expect(screen.getByRole('button', { name: 'Top 1 ×12' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Loop 1 ×4' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );

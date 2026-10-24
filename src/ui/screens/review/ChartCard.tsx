@@ -4,6 +4,7 @@ import { ChordChart } from '../../components/ChordChart';
 import { cx } from '../../lib/cx';
 
 export interface ChartCardProps {
+  /** Chords, keys and markers (a `SessionFull` also lends its duration). */
   full: ChartInput;
   spellingFollowsKey: boolean;
   showSlash: boolean;
@@ -26,7 +27,18 @@ export function ChartCard({
   previewRows = 8,
   className,
 }: ChartCardProps) {
-  const chart = useMemo(() => buildChart(full), [full]);
+  const chart = useMemo(
+    () =>
+      buildChart(
+        full.durationSec === undefined && 'session' in full
+          ? {
+              ...full,
+              durationSec: (full as { session: { durationSec: number } }).session.durationSec,
+            }
+          : full,
+      ),
+    [full],
+  );
   if (!chart.parts.some((p) => p.type === 'section')) return null;
   return (
     <div data-testid="review-chart" className={cx('rounded-card bg-surface px-4 py-3', className)}>
