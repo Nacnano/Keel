@@ -1,7 +1,6 @@
 # Chord detector regression benchmark
 
-The benchmark protects live chord accuracy **and** display stability. It does not change the
-detector. A green regression check means the measured behavior has not deteriorated; it does
+The benchmark protects live chord accuracy **and** display stability. A green regression check means the measured behavior has not deteriorated; it does
 not mean that speech, vacuum cleaners or every guitar voicing are already handled correctly.
 
 ## Run it
@@ -19,11 +18,11 @@ historical report; it is not the CI gate and its online sample fallback is never
 
 ## What runs where
 
-Every pull request, main push and merge-queue run executes the compact **78-case** suite.
-The extended suite contains **395 cases** across 18 source fixtures and generated controls. The benchmark
+Every pull request, main push, merge-queue and scheduled run executes the full **437-case** suite.
+The local quick suite contains **86 cases**; both use 22 source fixtures and generated controls. The benchmark
 job is a dependency of the existing required **CI** check, so failure blocks that check.
 Every Monday at 04:17 UTC, and through **Actions → Keel CI → Run workflow → full**, the
-extended suite runs. A manual `ci` run is also available.
+full suite runs. A manual quick `ci` run is also available.
 
 GitHub publishes the per-case summary and retains the JSON, Markdown and console log as the
 `keel-audio-benchmark` artifact for 30 days, including failed runs. The benchmark has no
@@ -39,9 +38,12 @@ license, conversion, annotation provenance and original labels where available. 
 - Six sampled-piano performances with independently known written progressions: block chords,
   arpeggios, pedal overlap/fast changes, minor-key playing, melody over chords and jazz shells.
   These are **rendered performances using real piano samples**, not recordings of musicians.
-- Five **recorded acoustic-guitar accompaniment performances**, by five GuitarSet players,
+- Seven **recorded acoustic-guitar accompaniment performances**, by six GuitarSet players,
   covering rock, singer-songwriter, jazz and bossa nova. The references come from GuitarSet's
   performed-chord track with manual verification, not Keel predictions or the backing chart.
+- Two independently annotated **recorded piano-and-voice duets** from the Schubert Winterreise
+  Dataset (HU33), testing accompaniment under a singer and historical recording noise. These
+  are performed classical excerpts, not contemporary rehearsal captures.
 - An actual piano performance by Kimiko Ishizaka. This excerpt is deliberately **unannotated**:
   it tests activity and stability, and is never included in chord-accuracy denominators.
 - A **recorded live NINJAM ensemble** excerpt, with separate license and credits. It is
@@ -50,7 +52,8 @@ license, conversion, annotation provenance and original labels where available. 
   white/pink noise at two levels, a fan starting after silence, typing-like bursts and 50/60 Hz hum.
 - Hybrid scenarios: recorded nuisances mixed with music at 10 dB SNR; bass/drums behind piano
   and recorded guitar in both listening modes; a simulated sung line; brief audio dropouts;
-  immediate quiet playing; a slightly sharp guitar; and music stopping into continuing noise.
+  immediate quiet playing; sharp/flat guitars from three players; and music stopping into continuing white noise,
+  recorded speech or a vacuum cleaner.
 - Extended conditions: 44.1/48 kHz, sensitivity 0/0.5/1, two noise seeds, reverb, a laptop-like
   response, distant speaker playback, quiet playing and electrical hum.
 
@@ -89,6 +92,8 @@ case starts with fresh pipeline and engine state.
   explicitly music-free intervals. False key events are counted on wholly music-free cases.
 - **Release:** time until a displayed chord clears after music stops into noise. Chord and
   note coverage also prevent an always-silent or disabled-display implementation passing.
+  Explicit no-music intervals are excluded from these activity minima in mixed clips: clearing
+  noise must not be penalized as lost musical coverage. Unknown music stays activity-only.
 
 Per-case JSON also retains annotated duration and coverage. No global average can hide a
 regression in one recording. Runtime is informational; noisy hosted-runner timing is not a
@@ -115,9 +120,10 @@ release within 3 s, and no false chords/keys in noise (at most 100 ms false note
 All unmet targets are listed in the report even if regression gates pass. A target met in the
 baseline is also a gate: it cannot become a new quality gap within the numerical tolerance.
 
-The initial corpus exposes existing problems: the recorded vacuum can produce false chords,
-speech/coughs can produce highlights, and fast/extended or detuned guitar performances can
-score poorly. These examples are retained. Their frozen measurements prevent deterioration;
+The initial corpus exposed false chords from the recorded vacuum and highlights from speech
+and coughs. The updated detector removes those startup false positives in the bundled tests.
+Fast/extended and some detuned guitar performances still score poorly. Music stopping into
+recorded noise also exposes display-release delay. These examples are retained. Their frozen measurements prevent deterioration;
 the visible targets specify the improvement still needed. Do not interpret the initial
 baseline as acceptance of those behaviors for a finished detector.
 
@@ -181,3 +187,49 @@ per-case values and both suite inventories in the baseline. Record why a baselin
 the PR; improvements should tighten it. Do not regenerate merely to make a failing PR green.
 For a corpus change, evaluate both the base detector and candidate detector on the same new
 inputs so changed audio cannot masquerade as a detection improvement.
+
+## Detector update — 2026-10-24
+
+The DSP now combines spectral concentration, narrow peaks and a shared pitch-grid offset.
+It admits short attacks, retains musical evidence through brief masking, and rejects
+sustained spectra without that evidence. This is amplitude-independent; the existing
+sensitivity control still governs the energy gate. Exact MIDI bypasses this audio path.
+
+Guitar tuning is calibrated only when the first two seconds of a phrase supply at least
+12 confident observations over 500 ms, a tight offset distribution, and a shared offset
+of 30–45 cents relative to configured A4. Mains contamination inhibits calibration. Once
+accepted, the correction is frozen until a stream/phrase reset or configuration change.
+Small offsets, ambiguous evidence and late voicing changes leave configured tuning alone.
+Continuously adapting the tuning estimate failed additional guitar tests and was rejected.
+
+At 48 kHz and default sensitivity, comparing the same inputs against detector `8adce49`:
+
+| Case                                             |        Before | After |
+| ------------------------------------------------ | ------------: | ----: |
+| Recorded vacuum: false chord / highlight seconds | 2.048 / 4.139 | 0 / 0 |
+| Recorded speech: false highlight seconds         |         2.261 |     0 |
+| Recorded cough: false highlight seconds          |         0.597 |     0 |
+| Rock guitar 00, +25 cents: chord accuracy        |         19.8% | 54.7% |
+
+All 437 cases pass the existing per-case regression tolerances on the expanded corpus.
+These are development measurements, not independent field-accuracy estimates. Silence,
+quiet starts, fast pedal changes, arpeggios, mixed speech and additional guitar detunings
+remain in the gate. The additional player 03 and piano/voice recordings were evaluated
+with both the original and candidate detectors before accepting the change.
+
+The mixed-clip coverage metric was corrected to exclude explicitly labeled no-music time;
+previously, correctly removing noise highlights could incorrectly fail musical coverage.
+The original measurements were converted with the same formula before comparison, and
+all accuracy, latency, flicker and false-positive gates remain unchanged.
+
+The acceptance baseline ratchets each metric to the stronger of the original and accepted
+measurements. `detectorCommit` identifies the accepted implementation, `ratchetFrom` the
+original detector; individual limits can retain stronger original measurements. Neither
+per-case tolerances nor quality targets were relaxed. Reports always contain actual
+measurements, not these combined acceptance bounds.
+
+Remaining limits: sustained pitched machinery can resemble music; an instrument cannot be
+separated from competing music by these heuristics; extended/fast guitar voicings remain
+uneven. After music stops into recorded noise, a held chord can take about 2–3.2 seconds to
+clear. The unannotated full-band recording remains a stability test, and contemporary
+rehearsal-room recordings with musician-reviewed labels are still needed for field claims.

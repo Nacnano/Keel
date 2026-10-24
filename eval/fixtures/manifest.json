@@ -870,6 +870,392 @@
         }
       ],
       "tail": "unknown"
+    },
+    {
+      "id": "swd-hu33-01-piano-voice",
+      "file": "swd-hu33-01-piano-voice.wav.gz",
+      "sha256": "672a5ad9ec367a193f26a94296b25b852a5ae430754d086c9d6a11c95f300d26",
+      "group": "band",
+      "provenance": "recorded",
+      "instrument": "piano",
+      "source": "https://zenodo.org/records/5139893",
+      "license": "Public Domain Mark 1.0 (HU33 audio); CC-BY-3.0 (SWD annotations)",
+      "attribution": "Franz Schubert, Winterreise; Gerhard H\u00fcsch (baritone), Hanns Udo M\u00fcller (piano), 1933. SWD v2.0: Christof Wei\u00df, Frank Zalkow, Vlora Arifi-M\u00fcller, Meinard M\u00fcller, Hendrik Vincent Koops, Anja Volk and Harald G. Grohganz.",
+      "annotation": "SWD ann_audio_chord timed score-based reference; shorthand projected to supported major/minor triads for room mode; diminished and ambiguous harmony unknown. Independent of Keel.",
+      "annotationSha256": "49a0fed4a518884a1cb24476dd76fa682c9804171122ab7efa7b6b5572773475",
+      "sourceFile": "01_RawData/audio_wav/Schubert_D911-01_HU33.wav",
+      "sourceSha256": "074adc8f5899d326f10dfb2ff8b1c72312e9755ed41727c3ce7da2def18e7f60",
+      "conversion": "First 24 seconds of HU33 mono recording; 22050 to 44100 Hz via ffmpeg; PCM16 lossless gzip; no gain normalization. Song 01 source includes a dataset-added repeat later in the performance, outside this excerpt.",
+      "durationSec": 24,
+      "spans": [
+        {
+          "start": 1.26,
+          "end": 4.74,
+          "label": "Cm",
+          "original": "C:min"
+        },
+        {
+          "start": 4.74,
+          "end": 5.34,
+          "label": "unknown",
+          "original": "B:dim7/C"
+        },
+        {
+          "start": 5.34,
+          "end": 6.74,
+          "label": "Cm",
+          "original": "C:min"
+        },
+        {
+          "start": 6.74,
+          "end": 7.3,
+          "label": "unknown",
+          "original": "B:dim7/C"
+        },
+        {
+          "start": 7.3,
+          "end": 8.8,
+          "label": "Cm",
+          "original": "C:min"
+        },
+        {
+          "start": 8.8,
+          "end": 9.38,
+          "label": "Fm",
+          "original": "F:min"
+        },
+        {
+          "start": 9.38,
+          "end": 10.3,
+          "label": "Cm",
+          "original": "C:min/G"
+        },
+        {
+          "start": 10.3,
+          "end": 11.24,
+          "label": "Fm",
+          "original": "F:min7/G#"
+        },
+        {
+          "start": 11.24,
+          "end": 12.3,
+          "label": "Cm",
+          "original": "C:min/G"
+        },
+        {
+          "start": 12.3,
+          "end": 13.4,
+          "label": "G",
+          "original": "G"
+        },
+        {
+          "start": 13.4,
+          "end": 15.78,
+          "label": "Cm",
+          "original": "C:min"
+        },
+        {
+          "start": 15.78,
+          "end": 17.76,
+          "label": "Cm",
+          "original": "C:min"
+        },
+        {
+          "start": 17.76,
+          "end": 19.84,
+          "label": "unknown",
+          "original": "D:hdim7/C"
+        },
+        {
+          "start": 19.84,
+          "end": 20.92,
+          "label": "Cm",
+          "original": "C:min"
+        },
+        {
+          "start": 20.92,
+          "end": 21.42,
+          "label": "Cm",
+          "original": "C:min/G"
+        },
+        {
+          "start": 21.42,
+          "end": 21.96,
+          "label": "G",
+          "original": "G:7"
+        },
+        {
+          "start": 21.96,
+          "end": 24,
+          "label": "Cm",
+          "original": "C:min"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "swd-hu33-02-piano-voice",
+      "file": "swd-hu33-02-piano-voice.wav.gz",
+      "sha256": "8cae1c7534c39cc5dc44370fa7a29346c78aac8a0417d9311368d94d6106f64b",
+      "group": "band",
+      "provenance": "recorded",
+      "instrument": "piano",
+      "source": "https://zenodo.org/records/5139893",
+      "license": "Public Domain Mark 1.0 (HU33 audio); CC-BY-3.0 (SWD annotations)",
+      "attribution": "Franz Schubert, Winterreise; Gerhard H\u00fcsch (baritone), Hanns Udo M\u00fcller (piano), 1933. SWD v2.0: Christof Wei\u00df, Frank Zalkow, Vlora Arifi-M\u00fcller, Meinard M\u00fcller, Hendrik Vincent Koops, Anja Volk and Harald G. Grohganz.",
+      "annotation": "SWD ann_audio_chord timed score-based reference; shorthand projected to supported major/minor triads for room mode; diminished and ambiguous harmony unknown. Independent of Keel.",
+      "annotationSha256": "3818c35edf3cc4871e0d2186b4a1ddf68f452143dcd4a3609ff6bc3f8d3f1593",
+      "sourceFile": "01_RawData/audio_wav/Schubert_D911-02_HU33.wav",
+      "sourceSha256": "82df858661d662f162ab3bd3066925dc0faefeb3429584c152bc7b5e91c4e0d2",
+      "conversion": "First 24 seconds of HU33 mono recording; 22050 to 44100 Hz via ffmpeg; PCM16 lossless gzip; no gain normalization. Song 01 source includes a dataset-added repeat later in the performance, outside this excerpt.",
+      "durationSec": 24,
+      "spans": [
+        {
+          "start": 0.3,
+          "end": 1.56,
+          "label": "Gm",
+          "original": "G:min"
+        },
+        {
+          "start": 1.56,
+          "end": 2.32,
+          "label": "unknown",
+          "original": "D:(b9)"
+        },
+        {
+          "start": 2.32,
+          "end": 3.16,
+          "label": "Gm",
+          "original": "G:min"
+        },
+        {
+          "start": 3.16,
+          "end": 3.9,
+          "label": "unknown",
+          "original": "D:(b9)"
+        },
+        {
+          "start": 3.9,
+          "end": 4.78,
+          "label": "Dm",
+          "original": "D:min7"
+        },
+        {
+          "start": 4.78,
+          "end": 9.82,
+          "label": "Gm",
+          "original": "G:min"
+        },
+        {
+          "start": 9.82,
+          "end": 11.6,
+          "label": "D",
+          "original": "D:7"
+        },
+        {
+          "start": 11.6,
+          "end": 14.2,
+          "label": "Gm",
+          "original": "G:min"
+        },
+        {
+          "start": 14.2,
+          "end": 14.62,
+          "label": "A",
+          "original": "A:7/C#"
+        },
+        {
+          "start": 14.62,
+          "end": 17.42,
+          "label": "D",
+          "original": "D:maj"
+        },
+        {
+          "start": 17.42,
+          "end": 19.26,
+          "label": "D",
+          "original": "D:7/C"
+        },
+        {
+          "start": 19.26,
+          "end": 20.1,
+          "label": "A#",
+          "original": "A#:maj"
+        },
+        {
+          "start": 20.1,
+          "end": 21.0,
+          "label": "unknown",
+          "original": "A:dim/A#"
+        },
+        {
+          "start": 21.0,
+          "end": 22.66,
+          "label": "A#",
+          "original": "A#:maj"
+        },
+        {
+          "start": 22.66,
+          "end": 23.52,
+          "label": "Gm",
+          "original": "G:min7"
+        },
+        {
+          "start": 23.52,
+          "end": 24,
+          "label": "Dm",
+          "original": "D:min/A"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "guitarset-03_Jazz1-130-D",
+      "file": "guitarset-03_Jazz1-130-D.wav.gz",
+      "sha256": "bf6ba9676806acd53f3a751355f7115776689f7b6273573ef9728bfbbf7e4018",
+      "sourceFile": "03_Jazz1-130-D_comp_mic.wav",
+      "sourceSha256": "c02e73454f0cfcc2fb7c1a3eba799627ee3787964385041fb1ccd847c735903c",
+      "durationSec": 22.14721088435374,
+      "conversion": "First excerpt, mono PCM16 44.1 kHz via ffmpeg; lossless gzip; no gain normalization",
+      "group": "guitar",
+      "provenance": "recorded",
+      "instrument": "guitar",
+      "source": "https://zenodo.org/records/3371780",
+      "license": "CC-BY-4.0",
+      "attribution": "Qingyang Xi, Rachel M. Bittner, Johan Pauwels, Xuzhou Ye and Juan P. Bello. GuitarSet v1.1.0 (2019).",
+      "annotation": "GuitarSet performed chord track (semi-automatic transcription with manual verification). Root/base quality projection; slash bass and added tones ignored; ambiguous alterations explicitly unknown. Not detector predictions.",
+      "annotationSha256": "0700f585fc0461d7a4d64379c3ad8acaa0961fc93f6960627552bed5ed0a79bc",
+      "spans": [
+        {
+          "start": 0.0,
+          "end": 7.384615384615385,
+          "label": "unknown",
+          "original": "D:(5,2,b7,4)/4"
+        },
+        {
+          "start": 7.384615384615385,
+          "end": 11.076923076923077,
+          "label": "unknown",
+          "original": "G:maj6(*5)/1"
+        },
+        {
+          "start": 11.076923076923077,
+          "end": 14.76923076923077,
+          "label": "unknown",
+          "original": "D:9(*1)/b7"
+        },
+        {
+          "start": 14.76923076923077,
+          "end": 16.615384615384617,
+          "label": "A7",
+          "original": "A:7(13,*1,*5)/b7"
+        },
+        {
+          "start": 16.615384615384617,
+          "end": 18.461538461538463,
+          "label": "unknown",
+          "original": "G:9(13,*1,*5)/b7"
+        },
+        {
+          "start": 18.461538461538463,
+          "end": 22.147199999999998,
+          "label": "unknown",
+          "original": "D:9/1"
+        }
+      ],
+      "tail": "unknown"
+    },
+    {
+      "id": "guitarset-03_Rock3-117-Bb",
+      "file": "guitarset-03_Rock3-117-Bb.wav.gz",
+      "sha256": "2e4e423877c44a4cb5c16d6836e6f88a0f71d87b501f2a330026616f737aa8ef",
+      "sourceFile": "03_Rock3-117-Bb_comp_mic.wav",
+      "sourceSha256": "75d81c0b546d9dea445f81b448d3956c065f7d9f302780951287b6494a9c9030",
+      "durationSec": 24.0,
+      "conversion": "First excerpt, mono PCM16 44.1 kHz via ffmpeg; lossless gzip; no gain normalization",
+      "group": "guitar",
+      "provenance": "recorded",
+      "instrument": "guitar",
+      "source": "https://zenodo.org/records/3371780",
+      "license": "CC-BY-4.0",
+      "attribution": "Qingyang Xi, Rachel M. Bittner, Johan Pauwels, Xuzhou Ye and Juan P. Bello. GuitarSet v1.1.0 (2019).",
+      "annotation": "GuitarSet performed chord track (semi-automatic transcription with manual verification). Root/base quality projection; slash bass and added tones ignored; ambiguous alterations explicitly unknown. Not detector predictions.",
+      "annotationSha256": "90c90c8c7c8ea803aeed0ef9c0df97e269bad2c97e78dc92e391c256841699d2",
+      "spans": [
+        {
+          "start": 0.0,
+          "end": 2.051282051282051,
+          "label": "A#",
+          "original": "A#:maj/5"
+        },
+        {
+          "start": 2.051282051282051,
+          "end": 4.102564102564102,
+          "label": "F",
+          "original": "F:maj/1"
+        },
+        {
+          "start": 4.102564102564102,
+          "end": 6.153846153846153,
+          "label": "Gm",
+          "original": "G:min/1"
+        },
+        {
+          "start": 6.153846153846153,
+          "end": 8.205128205128204,
+          "label": "Dm",
+          "original": "D:min/1"
+        },
+        {
+          "start": 8.205128205128204,
+          "end": 10.256410256410255,
+          "label": "D#",
+          "original": "D#:maj/1"
+        },
+        {
+          "start": 10.256410256410255,
+          "end": 12.307692307692307,
+          "label": "unknown",
+          "original": "A#:maj6/1"
+        },
+        {
+          "start": 12.307692307692307,
+          "end": 14.358974358974358,
+          "label": "D#",
+          "original": "D#:maj(#9)/1"
+        },
+        {
+          "start": 14.358974358974358,
+          "end": 16.41025641025641,
+          "label": "F",
+          "original": "F:maj/1"
+        },
+        {
+          "start": 16.41025641025641,
+          "end": 18.46153846153846,
+          "label": "A#",
+          "original": "A#:maj/5"
+        },
+        {
+          "start": 18.46153846153846,
+          "end": 20.51282051282051,
+          "label": "F",
+          "original": "F:maj/1"
+        },
+        {
+          "start": 20.51282051282051,
+          "end": 22.564102564102562,
+          "label": "Gm",
+          "original": "G:min/1"
+        },
+        {
+          "start": 22.564102564102562,
+          "end": 24.0,
+          "label": "Dm",
+          "original": "D:min/1"
+        }
+      ],
+      "tail": "unknown"
     }
   ]
 }

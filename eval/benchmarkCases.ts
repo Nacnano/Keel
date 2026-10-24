@@ -291,5 +291,50 @@ export function buildBenchmarkCases(suite: 'ci' | 'full'): BenchmarkCase[] {
     samples: detuned,
     truth: guitar.truth.map((g) => ({ ...g, start: g.start / ratio, end: g.end / ratio })),
   });
+  // Continuing recorded room noise after playing tests release as well as noise-only startup.
+  for (const id of ['pop-C-block-90', 'guitarset-01_SS3-98-C']) {
+    const base = get(id);
+    const end = base.truth.filter((g) => g.chord && g.chord !== 'unknown').at(-1)!.end;
+    const n = Math.floor(end * base.sampleRate);
+    for (const nuisance of ['room-vacuum', 'room-speech']) {
+      const noise = get(nuisance).samples;
+      const samples = new Float32Array(n + base.sampleRate * 5);
+      samples.set(base.samples.subarray(0, n));
+      for (let i = n; i < samples.length; i++) samples[i] = noise[(i - n) % noise.length];
+      add({
+        ...base,
+        id: `${base.id}/stop-into-${nuisance}`,
+        provenance: 'hybrid',
+        samples,
+        truth: [
+          ...trimTruth(base.truth, n / base.sampleRate),
+          { start: n / base.sampleRate, end: samples.length / base.sampleRate, chord: null },
+        ],
+      });
+    }
+  }
+  if (suite === 'full') {
+    for (const id of ['guitarset-01_SS3-98-C', 'guitarset-03_Rock3-117-Bb']) {
+      const base = get(id);
+      for (const cents of [-25, 20, 25]) {
+        const ratio = 2 ** (cents / 1200);
+        const samples = new Float32Array(Math.floor(base.samples.length / ratio));
+        for (let i = 0; i < samples.length; i++) {
+          const p = i * ratio,
+            j = Math.floor(p);
+          samples[i] =
+            base.samples[j] * (1 - (p - j)) +
+            base.samples[Math.min(j + 1, base.samples.length - 1)] * (p - j);
+        }
+        add({
+          ...base,
+          id: `${base.id}/detune${cents}cents`,
+          provenance: 'hybrid',
+          samples,
+          truth: base.truth.map((g) => ({ ...g, start: g.start / ratio, end: g.end / ratio })),
+        });
+      }
+    }
+  }
   return cases;
 }

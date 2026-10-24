@@ -30,6 +30,8 @@ import { INSTRUMENT_PROFILES } from './profiles';
 import { createRoomProcessor } from './room';
 import { isMainsHum, tonalEnergyRatio } from './tonality';
 import { amplitudeScale, hann } from './window';
+import { createMusicalGate, spectralEvidence } from './musicalEvidence';
+import { createTuningTracker } from './tuning';
 
 export interface PipelineConfig {
   sampleRate: number;
@@ -134,6 +136,8 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
   let lastChroma = new Float32Array(12);
   let lastBass: PitchClass | null = null;
   let energyOut = 0;
+  const musicalGate = createMusicalGate();
+  const tuning = createTuningTracker();
 
   function makeGate(): AdaptiveGate {
     if (cfg.gateDb !== undefined) {
@@ -178,6 +182,8 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
     lastChroma = new Float32Array(12);
     lastBass = null;
     energyOut = 0;
+    musicalGate.reset();
+    tuning.reset();
   }
 
   function build() {
@@ -225,6 +231,7 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
     const on = onset.update(shortMag, t, open);
 
     if (!open) {
+      musicalGate.close();
       room.reset();
       lastChroma = new Float32Array(12);
       lastBass = null;
@@ -251,7 +258,12 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
     });
     // Loud broadband room noise can open an energy gate, especially during startup or
     // after a fan switches on. Require actual tonal energy before normalising its peaks.
-    if (tonalEnergyRatio(longMag, peaks, sampleRate, frameSize) < 0.55 || isMainsHum(peaks)) {
+    const tonal = tonalEnergyRatio(longMag, peaks, sampleRate, frameSize);
+    const evidence = spectralEvidence(peaks, a4);
+    if (
+      !musicalGate.accepts(t, tonal, evidence.concentration, evidence.narrowFraction) ||
+      isMainsHum(peaks)
+    ) {
       room.reset();
       lastChroma = new Float32Array(12);
       lastBass = null;
@@ -265,8 +277,18 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
         exact: false,
       };
     }
+    const offset =
+      cfg.instrument === 'guitar'
+        ? tuning.update(
+            t,
+            evidence.cents,
+            tonal > 0.85 ? evidence.concentration : 0,
+            evidence.hasMains,
+          )
+        : 0;
+    const tunedA4 = a4 * 2 ** (offset / 1200);
     const bassEst = detectBass(peaks, {
-      a4,
+      a4: tunedA4,
       minHz: BASS_MIN_HZ,
       maxHz: BASS_MAX_HZ,
       relativeThreshold: profile.bassRelativeThreshold,
@@ -275,7 +297,7 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
     const room_ = cfg.mode === 'room';
     const chromaPeaks = room_ ? room.deemphasize(peaks) : peaks;
     let chroma = computeChroma(chromaPeaks, {
-      a4,
+      a4: tunedA4,
       harmonics: profile.harmonics,
       magnitudeExponent: profile.peakExponent,
     });
@@ -328,12 +350,17 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
         next.frameSize !== cfg.frameSize ||
         next.hopSize !== cfg.hopSize;
       const instrumentChanged = next.instrument !== cfg.instrument;
+      const tuningChanged = instrumentChanged || next.a4 !== cfg.a4 || next.mode !== cfg.mode;
       const prevGateDb = cfg.gateDb;
       if ('gateDb' in patch && patch.gateDb === undefined) delete next.gateDb;
       cfg = next;
       if (rebuild) build();
       else {
         if (instrumentChanged) onset = makeOnset();
+        if (tuningChanged) {
+          tuning.reset();
+          musicalGate.reset();
+        }
         if ('gateDb' in patch && patch.gateDb !== prevGateDb) gate = makeGate();
         else if (patch.sensitivity !== undefined) gate.setSensitivity(cfg.sensitivity);
         if (patch.mode !== undefined) room.reset();
