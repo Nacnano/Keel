@@ -125,6 +125,11 @@ export interface AnalysisEngine {
   configure(patch: Partial<AnalysisConfig>): void;
   push(frame: ChromaFrame): void;
   reset(): void;
+  /**
+   * Forget the key history and estimate the key from scratch on what comes next ("New song"),
+   * leaving the chord state alone. The next `key` event arrives after the usual first-key delay.
+   */
+  resetKey(): void;
   subscribe(cb: (e: AnalysisEvent) => void): () => void;
 }
 

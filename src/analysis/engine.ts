@@ -14,8 +14,11 @@ import type {
   Chord,
   ChromaFrame,
   InputSource,
+  Key,
   PitchClass,
+  VocabLevel,
 } from '@/core';
+import { chordFamily, isDiatonic } from '@/theory';
 import { applyBass, createBassResolver } from './bassResolver';
 import { exactPitchClasses, identifyExact, scoreChroma } from './chordScorer';
 import { createKeyEstimator } from './keyEstimator';
@@ -69,6 +72,61 @@ export const MIN_RUN = 3;
 
 const TIME_RING = 64;
 
+/**
+ * Room mode ("With a band") names triads only (vocabulary level 1: major, minor, diminished),
+ * whatever the chord-detail level: sevenths and sus chords over a band are mostly the other
+ * instruments' notes.
+ */
+export const ROOM_VOCAB_LEVEL: VocabLevel = 1;
+
+/**
+ * Room mode: similarity bonus for chords that belong to the current key, so that when two
+ * chords score about the same the in-key one wins (C, not Cm, in a plain C-major song).
+ */
+export const ROOM_IN_KEY_BONUS = 0.03;
+
+/** The vocabulary level the engine decodes with for a config. */
+export function effectiveVocabLevel(cfg: Pick<AnalysisConfig, 'vocabLevel' | 'mode'>): VocabLevel {
+  return cfg.mode === 'room'
+    ? (Math.min(cfg.vocabLevel, ROOM_VOCAB_LEVEL) as VocabLevel)
+    : cfg.vocabLevel;
+}
+
+/** In the key's scale, or (minor keys) in harmonic minor: V and vii° count as in key. */
+function inKey(chord: Chord, key: Key): boolean {
+  return isDiatonic(chord, key) || (key.mode === 'minor' && isDiatonic(chord, key, 'harmonic'));
+}
+
+/**
+ * Reading of a detected (mic) chord in the current key, for the chords a chroma template
+ * confuses with their neighbours:
+ * - minor key: a diminished triad (or m7♭5) on the tonic is the tonic minor chord with a
+ *   blurred fifth (Ddim → Dm in D minor), and the diminished triad on scale degree 2 is the
+ *   half-diminished ii of a minor ii-V (Edim → Em7♭5) when the vocabulary has sevenths;
+ * - major key: a minor chord on the tonic is the tonic with a blue (or passing) third: Cm → C,
+ *   and Cm7 → C7 (the blue third over a ♭7 is the blues I7) when the vocabulary has sevenths;
+ * - major-key blues (`blues`): the tonic triad is the I7 (C → C7) when the vocabulary has
+ *   sevenths: the ♭7 of a blues tonic is often in the left hand's shell, too quiet to score.
+ * Exact (MIDI) chords are never re-read: what was played is what is shown.
+ */
+export function keyReading(chord: Chord, key: Key | null, level: VocabLevel, blues = false): Chord {
+  if (!key) return chord;
+  const degree = (chord.root - key.tonic + 12) % 12;
+  const family = chordFamily(chord.quality);
+  if (key.mode === 'minor') {
+    if (degree === 0 && chord.quality === 'dim') return { ...chord, quality: 'min' };
+    if (degree === 0 && chord.quality === 'm7b5')
+      return { ...chord, quality: level >= 2 ? 'min7' : 'min' };
+    if (degree === 2 && chord.quality === 'dim' && level >= 2) return { ...chord, quality: 'm7b5' };
+    return chord;
+  }
+  if (degree === 0 && (family === 'min' || family === 'maj') && blues && level >= 2)
+    return { ...chord, quality: '7' };
+  if (degree === 0 && family === 'min') return { ...chord, quality: 'maj' };
+  if (degree === 0 && family === 'min7') return { ...chord, quality: level >= 2 ? '7' : 'maj' };
+  return chord;
+}
+
 export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): AnalysisEngine {
   let cfg: AnalysisConfig = { ...DEFAULT_ANALYSIS_CONFIG, ...config };
   const emitter = createEmitter<AnalysisEvent>();
@@ -77,7 +135,8 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
   /** Frame times indexed by the smoother's own frame counter (mic frames only). */
   const times = new Float64Array(TIME_RING);
 
-  let bank: TemplateBank = buildTemplates(cfg.vocabLevel);
+  let level: VocabLevel = effectiveVocabLevel(cfg);
+  let bank: TemplateBank = buildTemplates(level);
   let sims = new Float32Array(bank.size + 1);
   let smoother: Smoother = createSmoother({ numStates: bank.size + 1, stability: cfg.stability });
 
@@ -93,20 +152,45 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
   let pending: { chord: Chord; t0: number; confidence: number } | null = null;
   /** Decoded-frame time of the last confident chord. */
   let lastSureT = -Infinity;
+  /** Current key (as last emitted), and the room-mode in-key bonus per template. */
+  let key: Key | null = null;
+  let inKeyBonus: Float32Array | null = null;
+  /** Time of the last key event, so a backdated change never goes before it. */
+  let lastKeyT = -Infinity;
+  let lastSource: InputSource = 'mic';
+  let lastConfidence = 0;
+
+  function updateInKey() {
+    if (cfg.mode !== 'room' || !key) {
+      inKeyBonus = null;
+      return;
+    }
+    const k = key;
+    inKeyBonus = new Float32Array(bank.size);
+    for (let i = 0; i < bank.size; i++) {
+      const chord: Chord = { root: bank.roots[i] as PitchClass, quality: bank.qualities[i] };
+      if (inKey(chord, k)) inKeyBonus[i] = ROOM_IN_KEY_BONUS;
+    }
+  }
 
   function rebuild() {
-    bank = buildTemplates(cfg.vocabLevel);
+    level = effectiveVocabLevel(cfg);
+    bank = buildTemplates(level);
     sims = new Float32Array(bank.size + 1);
     smoother = createSmoother({ numStates: bank.size + 1, stability: cfg.stability });
     lastDecodedFrame = -1;
     heldSims = null;
     pending = null;
+    updateInKey();
   }
 
   /** Emit on a real change only: a new bass note or added tone over the same chord is not one. */
   function emitChord(t: number, chord: Chord | null, confidence: number, source: InputSource) {
     if (sameChordFamily(chord, lastChord)) return;
     lastChord = chord;
+    lastSource = source;
+    lastConfidence = confidence;
+    keys.observeChord(t, chord && confidence >= MIN_DISPLAY_CONFIDENCE ? chord : null);
     emitter.emit({ type: 'chord', t, chord, confidence, source });
   }
 
@@ -153,7 +237,7 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
   function pushExact(frame: ChromaFrame) {
     const pcs = exactPitchClasses(frame.chroma);
     emitNotes(frame.t, pcs);
-    const best = identifyExact(pcs, frame.bass, cfg.vocabLevel)[0];
+    const best = identifyExact(pcs, frame.bass, level)[0];
     const chord = best ? applyBass(best.chord, best.chord.bass ?? null, cfg.showSlashChords) : null;
     emitChord(frame.t, chord, best ? Math.min(1, best.score) : 1, 'midi');
   }
@@ -163,7 +247,10 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     // attacks and in arpeggios).
     const stableBass = frame.bass !== null && frame.bass === prevBass ? frame.bass : null;
     prevBass = frame.bass;
-    const silent = scoreChroma(frame.chroma, frame.energy, bank, sims, stableBass);
+    const silent = scoreChroma(frame.chroma, frame.energy, bank, sims, stableBass, {
+      majorTonic: key?.mode === 'major' ? key.tonic : null,
+    });
+    if (!silent && inKeyBonus) for (let i = 0; i < bank.size; i++) sims[i] += inKeyBonus[i];
     if (!silent) {
       lastSoundT = frame.t;
       heldSims = Float32Array.from(sims);
@@ -191,10 +278,12 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     const tEnd = times[(decoded.frame + decoded.run - 1) % TIME_RING];
     let chord: Chord | null = null;
     if (decoded.state < bank.size) {
-      const raw: Chord = {
-        root: bank.roots[decoded.state] as PitchClass,
-        quality: bank.qualities[decoded.state],
-      };
+      const raw = keyReading(
+        { root: bank.roots[decoded.state] as PitchClass, quality: bank.qualities[decoded.state] },
+        key,
+        level,
+        keys.blues(),
+      );
       chord = applyBass(raw, bass.stableAt(delay), cfg.showSlashChords);
     }
     gate(t, tEnd, chord, decoded.confidence, quiet[decoded.frame % TIME_RING] === 1);
@@ -204,18 +293,45 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     configure(patch) {
       const prev = cfg;
       cfg = { ...cfg, ...patch };
-      if (cfg.vocabLevel !== prev.vocabLevel) rebuild();
-      else if (cfg.stability !== prev.stability) smoother.setStability(cfg.stability);
+      if (effectiveVocabLevel(cfg) !== level) rebuild();
+      else {
+        if (cfg.stability !== prev.stability) smoother.setStability(cfg.stability);
+        if (cfg.mode !== prev.mode) updateInKey();
+      }
     },
     push(frame) {
       emitter.emit({ type: 'level', t: frame.t, energy: frame.energy });
       if (frame.exact) pushExact(frame);
       else pushMic(frame);
-      const key = keys.push(frame);
-      if (key) emitter.emit({ type: 'key', t: frame.t, key });
+      const next = keys.push(frame);
+      if (next) {
+        key = { tonic: next.tonic, mode: next.mode };
+        updateInKey();
+        // The key is drawn from where its evidence started, so the chords that led to it are
+        // spelled and numbered in it (never before the previous key event, never in the future).
+        const t = Math.min(frame.t, Math.max(lastKeyT, keys.since() ?? frame.t));
+        lastKeyT = t;
+        emitter.emit({ type: 'key', t, key: next });
+        // The chord on screen is re-read in the new key (the first chord, heard before the key,
+        // is a Cm that the key C major reads as C).
+        if (lastChord && lastSource === 'mic') {
+          const reread = keyReading(lastChord, key, level, keys.blues());
+          if (!sameChordFamily(reread, lastChord))
+            emitChord(frame.t, reread, lastConfidence, 'mic');
+        }
+      }
+    },
+    resetKey() {
+      keys.reset();
+      key = null;
+      lastKeyT = -Infinity;
+      updateInKey();
     },
     reset() {
       keys.reset();
+      key = null;
+      lastKeyT = -Infinity;
+      inKeyBonus = null;
       bass.reset();
       rebuild();
       lastChord = null;

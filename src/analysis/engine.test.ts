@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { NOTE_NAMES_SHARP } from '@/core';
 import type { AnalysisConfig, AnalysisEvent, Chord, ChromaFrame, PitchClass } from '@/core';
 import { frameFromNotes, midiChord } from '@/core/testing/midi';
-import { createAnalysisEngine, dwellSeconds } from './engine';
+import {
+  ROOM_VOCAB_LEVEL,
+  createAnalysisEngine,
+  dwellSeconds,
+  effectiveVocabLevel,
+  keyReading,
+} from './engine';
 import { CHORD_VOCAB, chordTones, qualitiesForLevel } from './templates';
 import { FPS, chromaFromNotes, progressionFrames } from './testing/chromaFromNotes';
 import type { Step } from './testing/chromaFromNotes';
@@ -279,6 +285,135 @@ describe('mic path', () => {
     engine.reset();
     for (const f of frames) engine.push(f);
     expect(after).toEqual(expected);
+  });
+});
+
+describe('key-aware reading', () => {
+  const Dminor = { tonic: 2 as PitchClass, mode: 'minor' as const };
+  const Cmajor = { tonic: 0 as PitchClass, mode: 'major' as const };
+
+  it('minor key: a diminished tonic folds into i, the ii° reads iiø7 when 7ths are allowed', () => {
+    expect(keyReading({ root: 2, quality: 'dim' }, Dminor, 2)).toEqual({ root: 2, quality: 'min' });
+    expect(keyReading({ root: 2, quality: 'm7b5' }, Dminor, 2).quality).toBe('min7');
+    expect(keyReading({ root: 4, quality: 'dim' }, Dminor, 2).quality).toBe('m7b5');
+    expect(keyReading({ root: 4, quality: 'dim' }, Dminor, 1).quality).toBe('dim');
+    // the leading-tone chord stays diminished
+    expect(keyReading({ root: 1, quality: 'dim' }, Dminor, 2).quality).toBe('dim');
+  });
+
+  it('major key: a minor tonic is the tonic with a blue third (Cm → C, Cm7 → C7)', () => {
+    expect(keyReading({ root: 0, quality: 'min' }, Cmajor, 2).quality).toBe('maj');
+    expect(keyReading({ root: 0, quality: 'min7' }, Cmajor, 2).quality).toBe('7');
+    expect(keyReading({ root: 0, quality: 'min7' }, Cmajor, 1).quality).toBe('maj');
+    // other minor chords are untouched (ii, iii, vi, and the borrowed iv)
+    expect(keyReading({ root: 5, quality: 'min' }, Cmajor, 2).quality).toBe('min');
+  });
+
+  it('major-key blues: the tonic triad reads as I7 when 7ths are allowed', () => {
+    expect(keyReading({ root: 0, quality: 'maj' }, Cmajor, 2, true).quality).toBe('7');
+    expect(keyReading({ root: 0, quality: 'maj' }, Cmajor, 1, true).quality).toBe('maj');
+    expect(keyReading({ root: 0, quality: 'maj' }, Cmajor, 2, false).quality).toBe('maj');
+  });
+
+  it('reads Cm as C on the mic path once the key is C major', () => {
+    const Cm = ['C3', 'C4', 'Eb4', 'G4'];
+    const { chords } = runFrames(progressionFrames(steps([C, F, G, C, F, G, C, Cm, Cm, C], 1.5)));
+    const after = chords.filter((c) => c.t > 6).map((c) => label(c.chord));
+    expect(after).not.toContain('Cmin');
+  });
+
+  it('a diminished tonic in D minor shows as Dm', () => {
+    const Dm = ['D3', 'D4', 'F4', 'A4'];
+    const Gm = ['G2', 'G3', 'Bb3', 'D4'];
+    const A7 = ['A2', 'A3', 'C#4', 'G4'];
+    const Ddim = ['D3', 'D4', 'F4', 'Ab4'];
+    const { labels } = runFrames(
+      progressionFrames(steps([A7, Dm, Gm, A7, Dm, Gm, A7, Ddim, Ddim])),
+    );
+    expect(labels.slice(4)).not.toContain('Ddim');
+  });
+});
+
+describe('room mode (With a band)', () => {
+  it('decodes triads only, whatever the chord-detail level', () => {
+    expect(effectiveVocabLevel({ mode: 'room', vocabLevel: 3 })).toBe(ROOM_VOCAB_LEVEL);
+    expect(effectiveVocabLevel({ mode: 'solo', vocabLevel: 3 })).toBe(3);
+    const sevenths = [
+      ['G2', 'G3', 'B3', 'D4', 'F4'],
+      ['C3', 'C4', 'E4', 'G4', 'B4'],
+      ['D3', 'D4', 'F4', 'A4', 'C5'],
+      ['C3', 'C4', 'F4', 'G4'],
+    ];
+    const l1 = new Set(qualitiesForLevel(1));
+    for (const vocabLevel of [2, 3] as const) {
+      const { chords } = runFrames(progressionFrames(steps(sevenths)), {
+        mode: 'room',
+        vocabLevel,
+      });
+      expect(chords.length).toBeGreaterThan(0);
+      for (const c of chords)
+        if (c.chord) expect(l1.has(c.chord.quality), label(c.chord)).toBe(true);
+    }
+  });
+
+  it('switching mode at runtime rebuilds the vocabulary', () => {
+    const c7 = ['C3', 'C4', 'E4', 'G4', 'Bb4'];
+    const engine = createAnalysisEngine({ vocabLevel: 2 });
+    const labels: string[] = [];
+    engine.subscribe((e) => e.type === 'chord' && labels.push(label(e.chord)));
+    for (const f of progressionFrames(steps([c7]))) engine.push(f);
+    engine.configure({ mode: 'room' });
+    for (const f of progressionFrames(steps([C, c7]), { t0: 2 })) engine.push(f);
+    expect(labels[0]).toBe('C7');
+    expect(labels.slice(1)).not.toContain('C7');
+  });
+
+  it('prefers the in-key chord when two triads score about the same', () => {
+    // C–E♭–E–G with the two thirds equally loud: in C major the band reading is C, not Cm.
+    const ambiguous = ['C3', 'C4', 'Eb4', 'E4', 'G4'];
+    const prog = steps([C, F, G, C, F, G, ambiguous, ambiguous, ambiguous], 1.5);
+    const { chords } = runFrames(progressionFrames(prog), { mode: 'room' });
+    const late = chords.filter((c) => c.t > 9).map((c) => label(c.chord));
+    expect(late).not.toContain('Cmin');
+  });
+});
+
+describe('key events', () => {
+  it('the first key is dated from the first sound, before the first chord', () => {
+    const { events } = runFrames(progressionFrames(steps([C, Am, F, G])));
+    const key = events.find((e) => e.type === 'key')!;
+    const chord = events.find((e) => e.type === 'chord' && e.chord)!;
+    expect(key.t).toBeLessThanOrEqual(chord.t);
+    // but it is emitted only once there is evidence
+    expect(key.frame / FPS).toBeGreaterThanOrEqual(1.4);
+  });
+
+  it('resetKey() forgets the key and estimates it again from what follows', () => {
+    const Ab = ['Ab2', 'Ab3', 'C4', 'Eb4'];
+    const Db = ['Db3', 'Db4', 'F4', 'Ab4'];
+    const Eb = ['Eb3', 'Eb4', 'G4', 'Bb4'];
+    const Fm = ['F2', 'F3', 'Ab3', 'C4'];
+    const engine = createAnalysisEngine();
+    const keys: Array<{ t: number; tonic: number; mode: string }> = [];
+    const chords: Array<{ t: number; label: string }> = [];
+    engine.subscribe((e) => {
+      if (e.type === 'key') keys.push({ t: e.t, tonic: e.key.tonic, mode: e.key.mode });
+      if (e.type === 'chord') chords.push({ t: e.t, label: label(e.chord) });
+    });
+    for (const f of progressionFrames(steps([C, G, Am, F, C, G, Am, F, C, G, Am, F])))
+      engine.push(f);
+    expect(keys.at(-1)).toMatchObject({ tonic: 0, mode: 'major' });
+    const before = chords.length;
+    engine.resetKey();
+    const t0 = 18;
+    for (const f of progressionFrames(steps([Ab, Db, Eb, Ab, Fm, Db, Eb, Ab]), { t0 }))
+      engine.push(f);
+    const after = keys.filter((k) => k.t >= t0);
+    expect(after[0]).toMatchObject({ tonic: 8, mode: 'major' });
+    // the first key of the new song arrives about as fast as at the start of a jam
+    expect(after[0].t - t0).toBeLessThan(1);
+    // the chord display carries on (no reset of the chord state)
+    expect(chords.length).toBeGreaterThan(before);
   });
 });
 
