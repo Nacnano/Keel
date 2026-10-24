@@ -151,12 +151,13 @@ also rejects isolated 50/60 Hz harmonic buzz when its fundamental is present and
 its harmonic series accounts for over 90% of prominent-peak power. The level
 meter still reports actual microphone volume.
 
-Piano keys follow the chord chroma except on frames that are clearly not an
-instrument: spectral flatness above 0.45, or an inharmonic ring whose peaks do
-not share a pitch-grid offset. Played piano and guitar keep a harmonic series,
-including under room noise, so this does not blank keys during a chord. Partials
-are also checked for phase lock (`2πf` per hop) when measuring that ring. A
-chord label can still remain briefly after playing stops.
+Piano keys are the fundamentals that still own their energy after harmonic
+attribution and that have at least one partial in the analysis band. A single
+tone lights that key only, not every octave of its pitch class, and a partial
+already explained by a lower note stays dark. Spectral flatness above 0.45, or
+an inharmonic ring, lights nothing. A chord label can still remain briefly
+after playing stops. A sustained sung note or a vacuum can still look harmonic;
+those do not light a key unless the tone holds long enough to confirm.
 
 The analysis engine holds an already confirmed chord across a short pause, but
 does not replay a new candidate's evidence during silence. Separate short sounds

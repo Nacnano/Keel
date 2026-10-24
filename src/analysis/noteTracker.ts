@@ -6,6 +6,48 @@ export const NOTE_RELEASE_THRESHOLD = 0.06;
 export const NOTE_ATTACK_SEC = 0.12;
 export const NOTE_RELEASE_SEC = 0.24;
 
+/**
+ * Same attack and release as {@link createNoteTracker}, for exact MIDI keys.
+ * Display only. Chord scoring does not use it.
+ */
+export function createPlayedNoteTracker() {
+  const active = new Set<number>();
+  const pending = new Map<number, number>();
+  let lastT = -Infinity;
+
+  function reset() {
+    active.clear();
+    pending.clear();
+    lastT = -Infinity;
+  }
+
+  return {
+    reset,
+    push(t: number, notes: readonly number[], silent = false): number[] {
+      if (t < lastT || t - lastT > 0.5) reset();
+      lastT = t;
+      const want = new Set<number>(silent ? [] : notes);
+      for (const note of pending.keys()) {
+        if (want.has(note) === active.has(note)) pending.delete(note);
+      }
+      for (const note of want) {
+        if (!active.has(note) && !pending.has(note)) pending.set(note, t);
+      }
+      for (const note of active) {
+        if (!want.has(note) && !pending.has(note)) pending.set(note, t);
+      }
+      for (const [note, since] of pending) {
+        const dwell = active.has(note) ? NOTE_RELEASE_SEC : NOTE_ATTACK_SEC;
+        if (t - since + 1e-6 < dwell) continue;
+        if (active.has(note)) active.delete(note);
+        else active.add(note);
+        pending.delete(note);
+      }
+      return [...active].sort((a, b) => a - b);
+    },
+  };
+}
+
 /** Display-only smoothing. Chord/key scoring and exact MIDI notes bypass this tracker. */
 export function createNoteTracker() {
   const active = new Uint8Array(12);

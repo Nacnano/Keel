@@ -95,6 +95,7 @@ export function createHeldNotes(): HeldNotes {
         bass: sounding.size > 0 ? ((lowest % 12) as PitchClass) : null,
         onset,
         exact: true,
+        midiNotes: [...sounding.keys()].sort((a, b) => a - b),
       };
     },
     reset() {

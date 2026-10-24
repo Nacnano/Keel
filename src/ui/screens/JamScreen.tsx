@@ -98,6 +98,7 @@ export function JamScreen() {
       markers: s.markers,
       activePitchClasses: s.activePitchClasses,
       activeMidiNotes: s.activeMidiNotes,
+      exactKeys: s.exactKeys,
       level: s.level,
       recordAudio: s.recordAudio,
       sessionStart: s.sessionStart,
@@ -457,7 +458,7 @@ export function JamScreen() {
               {pianoVisible && listening && !phone && !halfIdeas && (
                 <Piano
                   keys={wide ? 88 : 61}
-                  activePitchClasses={jam.activePitchClasses}
+                  activePitchClasses={jam.exactKeys ? [] : jam.activePitchClasses}
                   activeMidiNotes={jam.activeMidiNotes}
                   className="mt-8 w-full"
                 />

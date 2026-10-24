@@ -38,6 +38,7 @@ import {
   randomNoiseFrame,
   spectralEvidence,
 } from './musicalEvidence';
+import { estimatePlayedMidiNotes } from './pianoNotes';
 import { createTuningTracker } from './tuning';
 
 export interface PipelineConfig {
@@ -257,6 +258,7 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
         bass: null,
         onset: false,
         exact: false,
+        midiNotes: [],
       };
     }
 
@@ -310,6 +312,7 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
         bass: null,
         onset: on.onset,
         exact: false,
+        midiNotes: [],
       };
     }
     const offset =
@@ -347,13 +350,17 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
       lastChroma = Float32Array.from(chroma);
       lastBass = bass;
     }
-    // Chord chroma stays available for the smoother. Keys ignore this frame when it is
-    // hiss, a click or an inharmonic ring, so those peaks are not normalised into lit notes.
+    // Chord chroma stays available for the smoother. Keys follow exact fundamentals,
+    // not every octave of a pitch class. Hiss, a click or an inharmonic ring lights nothing.
     const noteChroma = randomNoiseFrame(noiseFeatures) ? new Float32Array(12) : undefined;
+    const midiNotes = noteChroma
+      ? []
+      : estimatePlayedMidiNotes(chromaPeaks, tunedA4, profile.harmonics, profile.peakExponent);
     return {
       t,
       chroma,
       ...(noteChroma ? { noteChroma } : {}),
+      midiNotes,
       energy: energyOut,
       bass,
       onset: on.onset,

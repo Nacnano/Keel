@@ -52,6 +52,8 @@ export interface JamData {
   timeline: ChordRecord[];
   activePitchClasses: PitchClass[];
   activeMidiNotes: MidiNote[];
+  /** Microphone frames named exact keys, so the keyboard must not light every octave. */
+  exactKeys: boolean;
   level: number;
   /** Clock seconds (same timeline as AnalysisEvent.t) at which the session started. */
   sessionStart: number | null;
@@ -126,6 +128,7 @@ const EMPTY_SESSION = {
   timeline: [],
   activePitchClasses: [],
   activeMidiNotes: [],
+  exactKeys: false,
   markers: [],
   lastT: 0,
   quiet: false,
@@ -213,6 +216,7 @@ export const useJamStore = create<JamState>()((set, get) => ({
             ...base,
             activePitchClasses: e.pitchClasses,
             activeMidiNotes: e.midiNotes ?? [],
+            exactKeys: e.midiNotes !== undefined,
           };
         case 'level':
           return { ...base, level: e.energy };
@@ -235,7 +239,14 @@ export const useJamStore = create<JamState>()((set, get) => ({
   },
 
   stopSession() {
-    set({ status: 'idle', activePitchClasses: [], activeMidiNotes: [], level: 0, quiet: false });
+    set({
+      status: 'idle',
+      activePitchClasses: [],
+      activeMidiNotes: [],
+      exactKeys: false,
+      level: 0,
+      quiet: false,
+    });
   },
 
   reset() {
