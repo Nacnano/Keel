@@ -18,8 +18,8 @@ historical report; it is not the CI gate and its online sample fallback is never
 
 ## What runs where
 
-Every pull request, main push, merge-queue and scheduled run executes the full **437-case** suite.
-The local quick suite contains **86 cases**; both use 22 source fixtures and generated controls. The benchmark
+Every pull request, main push, merge-queue and scheduled run executes the full **461-case** suite.
+The local quick suite contains **98 cases**; both use 22 source fixtures and generated controls. The benchmark
 job is a dependency of the existing required **CI** check, so failure blocks that check.
 Every Monday at 04:17 UTC, and through **Actions → Keel CI → Run workflow → full**, the
 full suite runs. A manual quick `ci` run is also available.
@@ -100,6 +100,53 @@ regression in one recording. Runtime is informational; noisy hosted-runner timin
 quality gate. This harness models the analysis events consumed by the UI; browser scheduling,
 physical microphone response and the UI's additional quiet-state behavior need browser/device QA.
 
+## Exact MIDI highlight protocol (additive)
+
+Baseline schema **2** adds `exactNotes.protocol = 1`; legacy chord and confirmed pitch-class
+metrics above retain their previous definitions and tolerances. The MIDI arrays in each notes
+event are sampled after the same hop: confirmed, tentative, and their deduplicated union.
+A tentative false note is a visible error. Preview chord/key events are ephemeral and are not
+counted as published chord/key events by this protocol.
+
+Only independently known `TruthSpan.midiNotes` are exact note references. A missing field is
+unknown, including recorded/rendered chord-labeled music; chord tones are never substituted for
+performed notes or octaves. Explicit `chord: null` implies no sounding notes. The new 12 quick /
+24 full exact-note cases are deterministic harmonic oscillators with generator-known MIDI notes,
+not sampled instruments or field recordings. Both rates and instrument profiles run; the full
+suite also runs both listening modes. Cases include noise before/during/after playing, a fan-like
+noise switching on with changing levels, and immediate quiet attacks. Their code is the source
+and annotation provenance; no external audio or new redistribution license is involved.
+
+Each channel reports:
+
+- **Precision / recall:** true displayed note-seconds divided by displayed / expected note-seconds
+  in exact-annotated intervals. Three simultaneous false notes count three note-seconds per second.
+  No predictions means null precision, never perfect precision; no expected notes means null recall.
+- **False note / octave error seconds:** false note-seconds, and the subset sharing a pitch class
+  with a sounding reference in another octave. Painting every octave therefore fails.
+- **False visible seconds:** time with at least one false exact highlight, including tentative
+  highlights in the union. Unknown notes contribute neither false nor correct counts.
+- **Activity coverage:** any visible notes during music/unknown intervals, excluding labeled noise;
+  on wholly noise-only clips this is raw activity. This guards unannotated musical recordings.
+- **Onset p90 / missed onsets:** first arrival of each exact note in its reference run; adjoining
+  references holding the same note merge into one run. Misses are separate from latency.
+- **Release:** maximum time to clear a reference note after its run ends into independently known
+  absence. Offsets followed by unknown notes are unscored; a failure to clear is capped by the known
+  absence interval and remains visible as false note time.
+
+Both **confirmed and union** precision, recall and activity may decrease by at most 2 percentage
+points; onset p90 and release may increase by at most 100 ms; false note/visible time by at most
+50 ms. Missed onsets and octave-error note-seconds may not increase. Confirmed metrics prevent
+moving every genuine detection into tentative from manufacturing a pass; union metrics prevent
+hiding errors in tentative. Tentative-only metrics are reported, not given a minimum activity.
+Deterministic music-free controls require strictly zero confirmed **or tentative** highlights.
+All historical chord, pitch-class activity and change/latency gates still apply.
+
+The protocol cannot infer exact note accuracy on existing chord-only recordings. Actual fan,
+AC, electrical/computer hum and traffic recordings across laptop/iPad microphones are still
+missing, as are independently reviewed exact note-on/off references for recorded piano/guitar,
+pedal and quiet attacks. Synthetic changes do not establish field improvement.
+
 ## Regression gates and quality targets
 
 `benchmark-baseline.json` freezes measured results for the exact corpus. Default tolerances:
@@ -171,7 +218,29 @@ The importer refuses overwrites and invalid labels. For an unannotated performan
 an `unknown` span and document that it is a stability-only case. Changing the corpus correctly
 invalidates the existing baseline until the new inputs and measurements are reviewed.
 
+## Held-out field procedure
+
+Before tuning, reserve new complete recordings by performer, room, microphone/device and source;
+never split random windows from one take across development and holdout. Keep private recordings
+local unless redistribution is authorized. Independently annotate sounding MIDI notes, timing and
+uncertainty (unknown spans stay unknown), including noise startup, noise switching during music,
+quiet attacks, low notes near hum, guitar decay/pedal sustain, and stopping into continued noise.
+Keep competing musical sources labeled as music. Freeze detector settings and metric definitions,
+run the holdout once, and report per-condition precision, recall, union errors and latency with
+music activity. A holdout used to tune thresholds becomes development data and needs replacement.
+Laptop built-in mic and iPad Safari acceptance remain separate actual-device checks.
+
 ## Update baselines deliberately
+
+Schema 1 baselines are deliberately rejected by schema 2. For this migration, first run the
+expanded frozen harness against the **unchanged c062e58 detector**, compare all 437 overlapping
+cases against the checked-in baseline, then use that unchanged-detector candidate for the additive
+metrics. Preserve the existing legacy baseline values when an older checked-in baseline was
+measured on another revision; do not reset even tolerated regressions during this migration. Do not generate it from the new detector: that would hide regressions. Preserve source
+revision, corpus hash and all original/new metric evidence. The parent owns reviewing and copying
+`benchmark-baseline.json`; candidate generation never changes that checked-in file. An archived
+source tree can supply `--detector-commit=<verified-sha>` so git discovery does not mislabel it
+with an enclosing checkout’s HEAD. Verify archived detector files independently before using it.
 
 ```sh
 pnpm eval:benchmark:full --candidate --output=eval/.cache/candidate

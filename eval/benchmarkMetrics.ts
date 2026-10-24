@@ -1,6 +1,7 @@
 import type { Chord, PitchClass } from '@/core/types';
 import type { BenchmarkMetrics, DisplayFrame, TruthSpan } from './benchmarkTypes';
 import { quantile } from './util';
+import { scoreExactNotes } from './exactNoteMetrics';
 
 export const chordId = (c: Chord | null) => (c ? `${c.root}:${c.quality}` : '-');
 const matches = (a: Chord | null, b: Chord | null | 'unknown') =>
@@ -118,6 +119,7 @@ export function scoreBenchmark(
     releases.push(clear ? clear.wall - g.start : g.end - g.start);
   }
   return {
+    exactNotes: scoreExactNotes(truth, frames, duration),
     durationSec: duration,
     musicSec,
     noiseSec,
