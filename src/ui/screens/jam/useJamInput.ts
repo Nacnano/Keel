@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { liveInput } from '@/app/live/liveInput';
+import { jamStore } from '@/state/jamStore';
 import { isDemoRunning, isMockMode, useMockInput } from './useMockInput';
 
 export function useJamInput() {
@@ -57,6 +58,11 @@ export function useJamInput() {
       setFinished(true);
       return;
     }
+    if (jamStore.getState().status === 'starting') {
+      await liveInput().stop();
+      prepare();
+      return;
+    }
     setSaving(true);
     try {
       // The finished screen confirms the save, so no extra toast.
@@ -68,7 +74,7 @@ export function useJamInput() {
     } finally {
       setSaving(false);
     }
-  }, [mock, stopDemo]);
+  }, [mock, stopDemo, prepare]);
 
   /**
    * "New song": the live key is re-found from what comes next and labels the song from `from`

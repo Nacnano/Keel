@@ -98,6 +98,8 @@ export class AudioInputError extends Error {
   }
 }
 
+export const MIC_START_TIMEOUT_MS = 20_000;
+
 type AudioContextCtor = typeof AudioContext;
 
 function getAudioContextCtor(): AudioContextCtor | undefined {
@@ -169,6 +171,8 @@ export function createMicInput(): MicInput {
   let deviceId: string | undefined;
   let running = false;
   let starting: Promise<void> | null = null;
+  let generation = 0;
+  let cancelStart: ((error: Error) => void) | null = null;
 
   function postToWorker(msg: ToDspWorker, transfer?: Transferable[]) {
     worker?.postMessage(msg, transfer ?? []);
@@ -187,12 +191,12 @@ export function createMicInput(): MicInput {
     });
   }
 
-  async function openStream(id?: string): Promise<MediaStream> {
+  async function openStream(id?: string, current = () => true): Promise<MediaStream> {
     try {
       return await navigator.mediaDevices.getUserMedia(audioConstraints(id));
     } catch (err) {
       const name = (err as { name?: string })?.name;
-      if (id && (name === 'OverconstrainedError' || name === 'NotFoundError')) {
+      if (current() && id && (name === 'OverconstrainedError' || name === 'NotFoundError')) {
         // The saved device is gone (unplugged): fall back to the default mic.
         console.warn('[audio] device not available, falling back to default', id);
         try {
@@ -208,7 +212,7 @@ export function createMicInput(): MicInput {
   function attachStream(s: MediaStream) {
     if (!ctx || !node) return;
     source?.disconnect();
-    stream?.getTracks().forEach((t) => t.stop());
+    if (stream !== s) stream?.getTracks().forEach((t) => t.stop());
     stream = s;
     source = ctx.createMediaStreamSource(s);
     source.connect(node);
@@ -231,8 +235,13 @@ export function createMicInput(): MicInput {
     node?.disconnect();
     sink?.disconnect();
     stream?.getTracks().forEach((t) => t.stop());
-    worker?.terminate();
+    if (worker) {
+      worker.onmessage = null;
+      worker.onerror = null;
+      worker.terminate();
+    }
     const c = ctx;
+    if (c) c.onstatechange = null;
     source = null;
     node = null;
     sink = null;
@@ -241,10 +250,11 @@ export function createMicInput(): MicInput {
     ctx = null;
     status = idleStatus;
     clock.attachAudioContext(null);
-    return c && c.state !== 'closed' ? c.close().catch(() => undefined) : Promise.resolve();
+    // Native close may itself stall; capture is already disconnected and tracks stopped.
+    if (c && c.state !== 'closed') void c.close().catch(() => undefined);
   }
 
-  async function doStart(opts: MicStartOptions): Promise<void> {
+  async function doStart(opts: MicStartOptions, token: number): Promise<void> {
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
       throw new AudioInputError(
         'unsupported',
@@ -270,7 +280,15 @@ export function createMicInput(): MicInput {
 
     try {
       const [s] = await Promise.all([
-        openStream(opts.deviceId),
+        openStream(opts.deviceId, () => token === generation).then((s) => {
+          if (token !== generation) {
+            s.getTracks().forEach((track) => track.stop());
+            throw new DOMException('Microphone setup cancelled.', 'AbortError');
+          }
+          // Own tracks immediately, even if native worklet loading never settles.
+          stream = s;
+          return s;
+        }),
         c.audioWorklet.addModule(captureWorkletUrl).catch((err: unknown) => {
           throw new AudioInputError('worklet', 'Could not load the audio capture worklet.', {
             cause: err,
@@ -279,6 +297,7 @@ export function createMicInput(): MicInput {
         resumed,
       ]);
 
+      if (token !== generation) return;
       worker = new Worker(new URL('./worker/dsp.worker.ts', import.meta.url), {
         type: 'module',
         name: 'keel-dsp',
@@ -327,7 +346,10 @@ export function createMicInput(): MicInput {
       };
       running = true;
     } catch (err) {
-      await teardown();
+      if (token === generation && ctx === c) {
+        ++generation;
+        teardown();
+      }
       throw err;
     }
   }
@@ -350,29 +372,55 @@ export function createMicInput(): MicInput {
         ...(opts.mode !== undefined ? { mode: opts.mode } : {}),
         ...(opts.sensitivity !== undefined ? { sensitivity: opts.sensitivity } : {}),
       };
-      if (starting) await starting.catch(() => undefined);
+      if (starting) return starting;
       if (running) {
         sendConfig();
         if (opts.deviceId !== undefined && opts.deviceId !== deviceId) {
           // Switch device in place, keeping the context (no new gesture needed).
-          const s = await openStream(opts.deviceId);
+          const token = generation;
+          const s = await openStream(opts.deviceId, () => token === generation);
+          if (token !== generation) {
+            s.getTracks().forEach((track) => track.stop());
+            return;
+          }
           attachStream(s);
           deviceId = opts.deviceId;
           postToWorker({ type: 'reset' });
         }
         return;
       }
-      starting = doStart(opts);
-      try {
-        await starting;
-      } finally {
-        starting = null;
-      }
+      const token = ++generation;
+      let rejectCancelled!: (error: Error) => void;
+      const cancelled = new Promise<void>((_resolve, reject) => {
+        rejectCancelled = reject;
+      });
+      const cancelAttempt = (error: Error) => {
+        if (token !== generation) return;
+        ++generation;
+        teardown();
+        rejectCancelled(error);
+      };
+      cancelStart = cancelAttempt;
+      const timer = setTimeout(() => {
+        cancelAttempt(new AudioInputError('unknown', 'Microphone setup timed out. Try again.'));
+      }, MIC_START_TIMEOUT_MS);
+      const pending = Promise.race([doStart(opts, token), cancelled]).finally(() => {
+        clearTimeout(timer);
+        if (starting === pending) {
+          starting = null;
+          cancelStart = null;
+        }
+      });
+      starting = pending;
+      return pending;
     },
 
     async stop() {
-      if (starting) await starting.catch(() => undefined);
-      await teardown();
+      cancelStart?.(new DOMException('Microphone setup cancelled.', 'AbortError'));
+      ++generation;
+      starting = null;
+      cancelStart = null;
+      teardown();
     },
 
     isRunning: () => running,
