@@ -112,7 +112,7 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Run deterministic audio regression gates
         env:
-          FULL_SUITE: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.benchmark_suite == 'full') }}
+          FULL_SUITE: ${{ github.event_name != 'workflow_dispatch' || inputs.benchmark_suite == 'full' }}
         run: |
           set -o pipefail
           mkdir -p eval/.cache/benchmark

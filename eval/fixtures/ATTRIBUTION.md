@@ -78,3 +78,32 @@ Seconds 20–44, mixed to mono and converted to PCM16. Only the beginning of the
 needed to decode this excerpt was downloaded; the manifest distinguishes the locally hashed
 prefix from the publisher's full-file checksum. No independent chord annotation is available,
 so this is a real ensemble stability/activity stress test, not an accuracy benchmark.
+
+## Additional performed guitar and piano with voice (October 2026)
+
+GuitarSet v1.1.0, [Zenodo 3371780](https://zenodo.org/records/3371780), CC-BY-4.0:
+`03_Jazz1-130-D_comp_mic.wav` and `03_Rock3-117-Bb_comp_mic.wav` (player 03).
+Credits and conversion are the same as the other GuitarSet excerpts. Corresponding performed
+chord JAMS annotations are pinned separately. The jazz excerpt has many altered voicings
+outside our supported projection; its low annotated fraction is visible, not scored as success.
+
+Schubert Winterreise Dataset v2.0,
+[Zenodo 5139893](https://zenodo.org/records/5139893): the first 24 seconds of
+`01_RawData/audio_wav/Schubert_D911-01_HU33.wav` and `Schubert_D911-02_HU33.wav`.
+Franz Schubert, performed by **Gerhard Hüsch (baritone) and Hanns-Udo Müller (piano), 1933**.
+The HU33 audio is marked [Public Domain Mark 1.0](https://creativecommons.org/publicdomain/mark/1.0/)
+in the dataset's `03_ExtraMaterial/license_HU33.txt`. Only HU33 audio is used here.
+The SC06 performance has a no-derivatives restriction and is **not included**.
+
+Chord annotations: **Christof Weiß, Frank Zalkow, Vlora Arifi-Müller, Meinard Müller,
+Hendrik Vincent Koops, Anja Volk and Harald G. Grohganz**, _Schubert Winterreise Dataset:
+A Multimodal Scenario for Music Analysis_, 2021;
+[CC-BY-3.0](https://creativecommons.org/licenses/by/3.0/).
+References come from `02_Annotations/ann_audio_chord`, projected from the shorthand
+labels to supported major/minor triads for room mode. Diminished/ambiguous chords remain
+unknown. Original labels and annotation hashes are retained in the manifest.
+
+Changes: trimmed to 24 seconds, upsampled from mono 22.05 kHz to 44.1 kHz with ffmpeg,
+PCM16 and lossless gzip, no gain normalization. The song 01 source contains a dataset-added
+repeat later in the recording; the excerpt does not reach it. These are historical performed
+piano-and-voice duets, not contemporary rehearsal-room captures or a full-band accuracy test.

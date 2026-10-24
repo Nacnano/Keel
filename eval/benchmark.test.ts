@@ -108,6 +108,19 @@ describe('benchmark scoring and gates', () => {
     const quiet = scoreBenchmark([{ start: 0, end: 4, chord: null }], [frame(0, null)], 4, 0);
     expect(regressionFailures(result(quiet), noisy)).toEqual([]);
   });
+  it('does not reward noise highlights after genuine playing stops', () => {
+    const mixed: TruthSpan[] = [
+      { start: 0, end: 2, chord: C },
+      { start: 2, end: 4, chord: null },
+    ];
+    const noisy = scoreBenchmark(mixed, [frame(0.5, C)], 4, 0);
+    const quiet = scoreBenchmark(mixed, [frame(0.5, C), frame(2, null)], 4, 0);
+    expect(quiet.coverage).toBe(noisy.coverage);
+    expect(quiet.noteCoverage).toBe(noisy.noteCoverage);
+    expect(quiet.noteCoverage).toBe(0.75);
+    expect(quiet.falseNoteSec).toBe(0);
+    expect(regressionFailures(result(quiet), noisy)).toEqual([]);
+  });
   it('fails changed corpora, missing baselines, deleted cases and invalid metrics', () => {
     const baseline: BenchmarkBaseline = {
       version: 1,

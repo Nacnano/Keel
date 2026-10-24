@@ -124,8 +124,14 @@ export function scoreBenchmark(
     annotatedFraction: (musicSec + noiseSec) / duration,
     accuracy: musicSec ? correct / musicSec : null,
     steadyAccuracy: steady ? steadyCorrect / steady : null,
-    coverage: visible / duration,
-    noteCoverage: noteVisible / duration,
+    // Noise suppression must never lower the musical-activity score in mixed clips.
+    // Unknown music remains an activity-only test; wholly noisy cases retain raw activity.
+    coverage:
+      noiseSec < duration ? (visible - falseChordSec) / (duration - noiseSec) : visible / duration,
+    noteCoverage:
+      noiseSec < duration
+        ? (noteVisible - falseNoteSec) / (duration - noiseSec)
+        : noteVisible / duration,
     missedChanges,
     expectedChanges: music.length,
     latencyP90Sec: latencies.length ? quantile(latencies, 0.9) : null,
