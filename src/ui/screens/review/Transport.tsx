@@ -1,6 +1,5 @@
-import { useId } from 'react';
 import { Pause, Play } from 'lucide-react';
-import { Button, Segmented, Slider, Switch } from '../../kit';
+import { Button, Segmented, Slider } from '../../kit';
 import type { ClockSource, PianoStatus } from './playback';
 import { clockLabel } from './timeline';
 
@@ -11,36 +10,26 @@ export interface TransportProps {
   rate: number;
   source: ClockSource;
   hasMidi: boolean;
-  hasAudio: boolean;
-  pianoOn: boolean;
   piano: PianoStatus;
   onToggle(): void;
   onSeek(t: number): void;
   onRate(rate: number): void;
-  onPiano(on: boolean): void;
 }
 
 const RATES = [0.5, 0.75, 1] as const;
 const RATE_OPTIONS = RATES.map((r) => ({ value: r, label: `${r}×`, title: `Speed ${r}×` }));
 const SKIP_SEC = 5;
 
-const SOURCE_LABEL: Record<ClockSource, string> = {
-  audio: 'Recorded audio',
-  midi: 'Piano playback',
-  timer: 'Chord chart only · no audio recording',
-};
-
 /**
- * One row: play/pause, skip, time, seek slider, speed and (with MIDI) the piano-sound switch.
- * A caption underneath says what is driving the clock. Fully keyboard operable.
+ * One row: play/pause, skip, time, seek slider and speed. A caption underneath appears only
+ * while the piano sound loads or when it failed. Fully keyboard operable.
  */
 export function Transport(p: TransportProps) {
-  const pianoLabel = useId();
   // The MIDI clock waits for the samples: show that instead of a pause button stuck at 0:00.
   const pianoLoading = p.piano === 'loading' && p.source === 'midi';
-  // The Piano sound switch says what it does; the caption only reports trouble.
-  const pianoNote =
-    p.piano === 'loading'
+  const pianoNote = !p.hasMidi
+    ? null
+    : p.piano === 'loading'
       ? 'Loading piano sound…'
       : p.piano === 'error'
         ? 'Piano sound unavailable (offline?)'
@@ -111,19 +100,8 @@ export function Transport(p: TransportProps) {
           value={p.rate as (typeof RATES)[number]}
           onChange={p.onRate}
         />
-        {p.hasMidi && (
-          <span className="flex items-center gap-2 pl-2">
-            <span id={pianoLabel} className="text-subhead text-label">
-              Piano sound
-            </span>
-            <Switch checked={p.pianoOn} onChange={p.onPiano} aria-labelledby={pianoLabel} />
-          </span>
-        )}
       </div>
-      <p className="text-caption text-label-3">
-        <span data-testid="clock-source">{SOURCE_LABEL[p.source]}</span>
-        {p.hasMidi && pianoNote && <span> · {pianoNote}</span>}
-      </p>
+      {pianoNote && <p className="text-caption text-label-3">{pianoNote}</p>}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { KeyboardEvent, PointerEvent } from 'react';
+import type { KeyboardEvent, PointerEvent, ReactNode } from 'react';
 import type { Marker, MarkerKind } from '@/core';
 import { cx } from '../lib/cx';
 import { MARKER_LABEL, SECTION_KINDS } from '../lib/markers';
@@ -166,6 +166,8 @@ export interface MarkerToolbarProps {
   onDelete(id: string): void;
   onChangeKind(id: string, kind: MarkerKind): void;
   onDeselect(): void;
+  /** More playhead actions next to Mark (Review's Edit chord). */
+  children?: ReactNode;
   className?: string;
 }
 
@@ -177,11 +179,13 @@ export function MarkerToolbar({
   onDelete,
   onChangeKind,
   onDeselect,
+  children,
   className,
 }: MarkerToolbarProps) {
   return (
     <div className={cx('flex flex-wrap items-center gap-2', className)}>
       <MarkMenu onMark={(choice) => onAdd(choice, time)} />
+      {children}
 
       {selected && (
         <div

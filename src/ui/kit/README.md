@@ -27,7 +27,7 @@ primitives and tokens; no raw `zinc-*`/`violet-*` classes, no ad-hoc borders.
 
 ## Rules
 
-- **One page shell.** Every page is a `Page`: a 768 px column (Review: `wide`, 1104 px), a top
+- **One page shell.** Every page is a `Page`: a 768 px column (Review's lanes scroll inside it), a top
   bar row with the back link and actions, and the large title under it at the same place on
   every page.
 - **Hierarchy first.** One large title per page, one primary action per

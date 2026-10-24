@@ -1,6 +1,6 @@
 import { memo, useMemo, useRef } from 'react';
 import type { KeyboardEvent, PointerEvent } from 'react';
-import type { ChordRecord, KeyRecord } from '@/core';
+import type { ChordRecord, Key } from '@/core';
 import { keyLabel, pretty } from '../lib/chordLabel';
 import { cx } from '../lib/cx';
 import { chordText, keyAtTime } from '../screens/review/chordText';
@@ -16,8 +16,8 @@ import {
 export interface ChordLaneProps {
   /** Sorted by `t`. */
   chords: readonly ChordRecord[];
-  /** Key changes, sorted by `t`. */
-  keys: readonly KeyRecord[];
+  /** Key changes, sorted by `t` (Review passes the chart's keys, so the lane agrees with it). */
+  keys: ReadonlyArray<{ t: number; key: Key }>;
   duration: number;
   viewport: TimeViewport;
   width: number;
