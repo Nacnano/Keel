@@ -53,6 +53,8 @@ export interface JamActions {
   /** Clears timeline, key history and markers. Keeps status, source and current key. */
   reset(): void;
   addMarker(kind: MarkerKind, label?: string, t?: number): Marker | null;
+  /** Forget the current key (New song); the timeline and key history stay. */
+  clearKey(): void;
   setStatus(status: JamStatus, error?: string): void;
   setSource(source: InputSource | null): void;
   toggleRecordAudio(): void;
@@ -179,6 +181,10 @@ export const useJamStore = create<JamState>()((set, get) => ({
     const marker: Marker = { id: uuid(), sessionId, t: at, kind, ...(label ? { label } : {}) };
     set({ markers: [...s.markers, marker] });
     return marker;
+  },
+
+  clearKey() {
+    set({ key: null });
   },
 
   setStatus(status, error) {

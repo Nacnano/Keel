@@ -13,6 +13,7 @@
 import { clock } from '@/core/clock';
 import type {
   AnalysisConfig,
+  AnalysisEngine,
   AnalysisEvent,
   ChromaFrame,
   Marker,
@@ -52,6 +53,11 @@ export interface LiveInputController {
   /** Stop listening and save the session. */
   stop(opts?: StopOptions): Promise<void>;
   isRunning(): boolean;
+  /**
+   * "New song" from the Mark menu: forget the key so it re-locks from what is played next.
+   * The marker itself is added by the caller.
+   */
+  newSong(): void;
   /** Re-read audio + MIDI device lists into the input store. */
   refreshDevices(): Promise<void>;
   /** Exposed for the audition helper (shares the AudioContext). */
@@ -145,7 +151,10 @@ function createWakeLock() {
 export function createLiveInput(): LiveInputController {
   const mic = createMicInput();
   const midi = createMidiInput();
-  const engine = createAnalysisEngine(analysisConfigFrom(settingsStore.getState()));
+  // `resetKey` is optional until every engine build has it.
+  const engine: AnalysisEngine & { resetKey?: () => void } = createAnalysisEngine(
+    analysisConfigFrom(settingsStore.getState()),
+  );
 
   let running = false;
   let stopping: Promise<void> | null = null;
@@ -332,7 +341,10 @@ export function createLiveInput(): LiveInputController {
     ];
 
     const stream = mic.getStream();
-    if (jam.recordAudio && micOk && stream && isAudioRecordingSupported()) {
+    const canRecord = micOk && Boolean(stream) && isAudioRecordingSupported();
+    // The header says "Recording" only while audio is really being kept.
+    if (jam.recordAudio && !canRecord) jam.setRecordAudio(false);
+    if (jam.recordAudio && canRecord && stream) {
       try {
         audioRec = createAudioRecorder(stream, {
           onWarning: ({ remainingSec }) =>
@@ -344,6 +356,7 @@ export function createLiveInput(): LiveInputController {
       } catch (err) {
         toast(`Audio recording unavailable: ${describeError(err)}`, { tone: 'error' });
         audioRec = null;
+        jam.setRecordAudio(false);
       }
     }
 
@@ -430,10 +443,17 @@ export function createLiveInput(): LiveInputController {
     return stopping;
   }
 
+  function newSong() {
+    if (!running || !engine.resetKey) return;
+    engine.resetKey();
+    jamStore.getState().clearKey();
+  }
+
   return {
     start,
     stop,
     isRunning: () => running,
+    newSong,
     refreshDevices,
     getAudioContext: () => mic.getContext(),
     mic,

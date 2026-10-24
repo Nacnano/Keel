@@ -103,16 +103,19 @@ export function ChordDisplay({
           )}
         </span>
       </div>
-      <div
-        data-testid="chord-numeral"
-        className={cx(
-          'mt-3 font-medium text-accent',
-          // In the focused jam view the numeral stays below the key line in the hierarchy.
-          details ? 'h-12 text-4xl sm:text-5xl' : 'min-h-7 text-headline sm:text-title-3',
-        )}
-      >
-        {numeral}
-      </div>
+      {/* No row before the key is known: an empty numeral slot read as "C ()". */}
+      {keyContext && (
+        <div
+          data-testid="chord-numeral"
+          className={cx(
+            'mt-3 font-medium text-accent',
+            // In the focused jam view the numeral stays below the key line in the hierarchy.
+            details ? 'h-12 text-4xl sm:text-5xl' : 'min-h-7 text-headline sm:text-title-3',
+          )}
+        >
+          {numeral}
+        </div>
+      )}
       {details && (
         <div className="mt-3 flex h-7 items-center gap-5 text-body text-label-2">
           {shown ? (
