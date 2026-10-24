@@ -143,6 +143,32 @@ describe('chroma pipeline', () => {
     for (const f of frames) expect(f.chroma[0] + f.chroma[4] + f.chroma[7]).toBeGreaterThan(0.6);
   });
 
+  it('resumes after rejected noise when frames are transferred out of the worker', () => {
+    const sr = 48000;
+    const pipeline = createChromaPipeline({ sampleRate: sr });
+    let seed = 17;
+    let tonalFrames = 0;
+    for (let h = 0; h < 360; h++) {
+      const samples = new Float32Array(HOP_SIZE);
+      for (let i = 0; i < samples.length; i++) {
+        const t = (h * HOP_SIZE + i) / sr;
+        seed = (1664525 * seed + 1013904223) >>> 0;
+        samples[i] =
+          h % 24 < 10
+            ? ((seed / 0xffffffff) * 2 - 1) * 0.005
+            : [130.8128, 329.6276, 391.9954].reduce(
+                (sum, f) => sum + 0.1 * Math.sin(2 * Math.PI * f * t),
+                0,
+              );
+      }
+      const frame = pipeline.process(samples, (h * HOP_SIZE) / sr)!;
+      // The real worker transfers ownership to the main thread on every hop.
+      const received = structuredClone(frame, { transfer: [frame.chroma.buffer] });
+      if (received.chroma.some((v: number) => v > 0)) tonalFrames++;
+    }
+    expect(tonalFrames).toBeGreaterThan(150);
+  });
+
   it('accepts blocks that are not hop-sized', () => {
     const sr = 48000;
     const x = synthChord({ notes: notes('C4', 'E4', 'G4'), sampleRate: sr, seconds: 0.5 });
