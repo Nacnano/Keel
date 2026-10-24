@@ -23,12 +23,12 @@ import type {
   Marker,
   MarkerKind,
   Session,
-  SessionSummary,
 } from '@/core/session';
 import type { AnalysisEvent, Instrument, JamMode, MidiEvent, VocabLevel } from '@/core/types';
 import { db as defaultDb, sessionRange, type KeelDB } from './db';
 import { keyName, prettyAccidentals } from '@/theory';
 import { chordKey } from './chordSymbol';
+import { buildChart, songKeys, type Chart } from './export';
 import { computeSummary } from './summary';
 
 export const FLUSH_INTERVAL_MS = 2000;
@@ -93,10 +93,15 @@ export interface StopOptions {
 /** Placeholder name while the session runs; the date is shown next to the name, not in it. */
 export const DEFAULT_SESSION_NAME = 'Jam';
 
-/** "Jam in C major" from the key heard longest, or "Jam" when no key was found. */
-export function sessionName(summary: SessionSummary | null): string {
-  const key = summary?.keys[0]?.key;
-  return key ? `Jam in ${prettyAccidentals(keyName(key))}` : DEFAULT_SESSION_NAME;
+/**
+ * "Jam in C major" from the chart's key by time (the same key the chart heads with), or
+ * "Jam in C major · A♭ major" for a set split by New song; "Jam" when no key was found.
+ */
+export function sessionName(chart: Pick<Chart, 'songs'>): string {
+  const keys = songKeys(chart);
+  return keys.length
+    ? `Jam in ${keys.map((k) => prettyAccidentals(keyName(k))).join(' · ')}`
+    : DEFAULT_SESSION_NAME;
 }
 
 const round3 = (x: number) => Math.round(x * 1000) / 1000;
@@ -363,7 +368,16 @@ export function startSession(meta: SessionMeta): SessionHandle {
           // Name it after the key unless it was named up front or renamed while running.
           const current = (await database.sessions.get(id))?.name ?? session.name;
           final.name =
-            !meta.name?.trim() && current === DEFAULT_SESSION_NAME ? sessionName(summary) : current;
+            !meta.name?.trim() && current === DEFAULT_SESSION_NAME
+              ? sessionName(
+                  buildChart({
+                    chords: allChords,
+                    keys: allKeys,
+                    markers: allMarkers,
+                    durationSec,
+                  }),
+                )
+              : current;
           await database.sessions.update(id, final);
         });
         Object.assign(session, final);

@@ -10,3 +10,4 @@ export { Popover, type PopoverProps } from './Popover';
 export { Meter, type MeterProps } from './Meter';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { Badge, type BadgeTone } from './Badge';
+export { useFlash } from './useFlash';

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { AudioLines, CloudOff, Copy, FileQuestion, TriangleAlert } from 'lucide-react';
+import { AudioLines, Check, CloudOff, Copy, FileQuestion, TriangleAlert } from 'lucide-react';
 import { buildChart, formatTime, fromJSON } from '@/data/export';
 import { isSyncConfigured } from '@/sync/client';
 import { fetchShare, type SharedChart } from '@/sync/share';
 import { keyName, prettyAccidentals } from '@/theory';
 import { ChordChart } from '../components/ChordChart';
-import { Button, Group, Page } from '../kit';
+import { Button, Group, Page, useFlash } from '../kit';
 import { FILLED_LINK, GRAY_LINK } from './library/linkStyles';
 import { PageState } from './share/PageState';
 
@@ -74,6 +74,7 @@ function SharedChartView({ code }: { code: string }) {
   const [attempt, setAttempt] = useState(0);
   const [importing, setImporting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [copied, flashCopied] = useFlash();
 
   useEffect(() => {
     if (!isSyncConfigured()) return;
@@ -184,7 +185,7 @@ function SharedChartView({ code }: { code: string }) {
   const copyChart = async () => {
     try {
       await navigator.clipboard.writeText(payload.text);
-      setNotice('Chord chart copied');
+      flashCopied();
     } catch {
       setNotice('Copy is not available in this browser');
     }
@@ -234,10 +235,16 @@ function SharedChartView({ code }: { code: string }) {
                 variant="gray"
                 round
                 size="lg"
-                leading={<Copy className="size-4" aria-hidden />}
+                leading={
+                  copied ? (
+                    <Check className="size-4" aria-hidden />
+                  ) : (
+                    <Copy className="size-4" aria-hidden />
+                  )
+                }
                 onClick={() => void copyChart()}
               >
-                Copy chart
+                {copied ? 'Copied' : 'Copy chart'}
               </Button>
             </div>
             {notice && (

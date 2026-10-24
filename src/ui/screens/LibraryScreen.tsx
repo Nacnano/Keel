@@ -204,7 +204,7 @@ export function LibraryScreen() {
                   placeholder="Search name, tag, key or date"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="h-9 w-full min-w-0 rounded-control bg-fill-3 pr-3 pl-8 text-body text-label placeholder:text-label-3"
+                  className="h-9 w-full min-w-0 rounded-control bg-fill-3 pr-3 pl-8 text-body text-label placeholder:text-label-3 pointer-coarse:h-11"
                 />
               </label>
               <Segmented<LibrarySort>
@@ -377,7 +377,7 @@ function TagChip({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className="group flex min-h-11 shrink-0 items-center focus-visible:outline-none"
+      className="group flex min-h-11 min-w-11 shrink-0 items-center justify-center focus-visible:outline-none"
     >
       <span
         className={cx(

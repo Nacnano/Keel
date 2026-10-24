@@ -49,7 +49,7 @@ export function NameField({ value, onCommit, label = 'Session name', className }
       size={Math.max(8, Math.min(40, shown.length + 1))}
       title="Rename"
       className={cx(
-        'min-h-9 max-w-full min-w-0 truncate rounded-[8px] bg-transparent px-2 text-label [field-sizing:content]',
+        'min-h-9 max-w-full min-w-0 truncate rounded-[8px] pointer-coarse:min-h-11 bg-transparent px-2 text-label [field-sizing:content]',
         'transition-colors duration-100 hover:bg-fill-4 focus:bg-fill-3',
         className,
       )}

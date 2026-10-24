@@ -32,7 +32,9 @@ function shortDate(ms: number, now = Date.now()): string {
 
 /** The first row of the session's folded chart, loaded once per edit of the session. */
 function useChartPreview(id: string, updatedAt: number) {
-  const [preview, setPreview] = useState<{ row: ChartRow; key: Key | null } | null>(null);
+  const [preview, setPreview] = useState<{ row: ChartRow; key: Key | null; keys: Key[] } | null>(
+    null,
+  );
   useEffect(() => {
     let alive = true;
     getChartPreview(id).then(
@@ -59,8 +61,9 @@ export function SessionRow({
 }: SessionRowProps) {
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState(s.name);
-  const home = s.summary?.keys[0]?.key ?? null;
   const preview = useChartPreview(s.id, s.updatedAt);
+  // The chart's keys once loaded (no wobbles, one per song), the summary's until then.
+  const homeKeys = preview?.keys ?? (s.summary?.keys[0] ? [s.summary.keys[0].key] : []);
 
   const commit = async () => {
     setRenaming(false);
@@ -71,7 +74,9 @@ export function SessionRow({
 
   const meta = [
     shortDate(s.createdAt),
-    home ? pretty(keyLabel(home, { spellingFollowsKey })) : null,
+    homeKeys.length
+      ? homeKeys.map((k) => pretty(keyLabel(k, { spellingFollowsKey }))).join(' · ')
+      : null,
     clockLabel(s.durationSec),
     s.hasAudio ? 'Audio' : null,
     s.hasMidi ? 'MIDI' : null,
@@ -104,10 +109,11 @@ export function SessionRow({
             className="relative z-10 -mx-2 h-9 w-full rounded-[8px] bg-fill-3 px-2 text-headline text-label outline-none focus-visible:outline-2 focus-visible:outline-accent"
           />
         ) : (
-          <h3 className="truncate text-headline text-label">
+          <h3 className="text-headline text-label">
+            {/* The whole row is the link (after:inset-0); its own box is 44 pt tall for touch. */}
             <Link
               to={`/review/${s.id}`}
-              className="after:absolute after:inset-0 focus-visible:outline-none"
+              className="-my-[11px] block truncate py-[11px] after:absolute after:inset-0 focus-visible:outline-none"
             >
               {s.name}
             </Link>
