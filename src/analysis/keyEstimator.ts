@@ -60,6 +60,8 @@ export interface KeyEstimatorOptions {
   /** Blues: decayed seconds of IV7 shown, and the blue-note level (see `blueness`). */
   bluesIV7: number;
   bluesNotes: number;
+  /** Decayed seconds of a dominant seventh on the tonic for a dominant tonality (`dominantTonic`). */
+  bluesI7: number;
   /**
    * Score bonus × the share of recent chord time on the tonic chords of the key's relative pair
    * (A♭ and Fm for A♭ major): a key whose tonic is hardly played is a poor reading.
@@ -91,6 +93,7 @@ export const DEFAULT_KEY_OPTIONS: KeyEstimatorOptions = {
   tonicBonus: 0.4,
   bluesIV7: 1,
   bluesNotes: 0.45,
+  bluesI7: 1,
   minorPenalty: 0.1,
   relativeMargin: 0.3,
 };
@@ -108,10 +111,20 @@ export interface KeyEstimator {
    */
   since(): number | null;
   /**
-   * The current key is a major-key blues: its IV7 has been shown recently and the ♭3 / ♭7 blue
-   * notes are strong in the histogram. The tonic triad then reads as I7.
+   * `key` (default: the current key) is a major-key blues: its IV7 has been heard recently and
+   * the ♭3 / ♭7 blue notes are strong in the histogram. The tonic triad then reads as I7.
    */
-  blues(): boolean;
+  blues(key?: Key | null): boolean;
+  /**
+   * `key` (default: the current key) is major and its tonic has recently sounded as a dominant
+   * seventh (C7 in C major): a dominant tonality, whose ♭3 and ♭7 count as in key.
+   */
+  dominantTonic(key?: Key | null): boolean;
+  /**
+   * How far the current key's relative pair leads the best other pair (adjusted scores, the
+   * same units as `switchMargin`); 0 before the first key.
+   */
+  lead(): number;
   /** Pearson correlation for all 24 keys: index = tonic (major) or 12 + tonic (minor). */
   scores(): Float64Array;
   reset(): void;
@@ -268,14 +281,19 @@ export function createKeyEstimator(options: Partial<KeyEstimatorOptions> = {}): 
    * Blue-note level of a major key: the ♭3 and ♭7 in the long histogram relative to the mean
    * scale tone (0 for minor keys or before a key).
    */
-  function blueness(): number {
-    if (currentIdx < 0 || currentIdx >= 12) return 0;
-    const t = currentIdx;
+  function blueness(t: number): number {
+    if (t < 0 || t >= 12) return 0;
     let scale = 0;
     for (const d of [0, 2, 4, 5, 7, 9, 11]) scale += hist[(t + d) % 12];
     scale /= 7;
     if (scale <= 0) return 0;
     return (hist[(t + 3) % 12] + hist[(t + 10) % 12]) / 2 / scale;
+  }
+
+  /** Tonic of `key` (default: the current key) when it is major, else -1. */
+  function majorTonic(key: Key | null | undefined): number {
+    if (key === undefined) return currentIdx >= 0 && currentIdx < 12 ? currentIdx : -1;
+    return key && key.mode === 'major' ? key.tonic : -1;
   }
 
   function estimate(): KeyEstimate {
@@ -461,11 +479,22 @@ export function createKeyEstimator(options: Partial<KeyEstimatorOptions> = {}): 
     observeChord,
     current: () => (currentIdx < 0 ? null : estimate()),
     since: () => (currentIdx < 0 ? null : currentSince),
-    blues: () =>
-      currentIdx >= 0 &&
-      currentIdx < 12 &&
-      domTime[(currentIdx + 5) % 12] >= opts.bluesIV7 &&
-      blueness() >= opts.bluesNotes,
+    blues(key) {
+      const t = majorTonic(key);
+      return t >= 0 && domTime[(t + 5) % 12] >= opts.bluesIV7 && blueness(t) >= opts.bluesNotes;
+    },
+    dominantTonic(key) {
+      const t = majorTonic(key);
+      return t >= 0 && domTime[t] >= opts.bluesI7;
+    },
+    lead() {
+      if (currentIdx < 0) return 0;
+      const own = strength(score, currentIdx);
+      const pair = currentIdx < 12 ? currentIdx : relativeIndex(currentIdx);
+      let other = -Infinity;
+      for (let k = 0; k < 12; k++) if (k !== pair) other = Math.max(other, strength(score, k));
+      return own - other;
+    },
     scores: () => score.slice(),
     reset() {
       hist.fill(0);

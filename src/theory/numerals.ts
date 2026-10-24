@@ -159,7 +159,8 @@ function targetNumeral(target: PitchClass, key: Key, style: MinorNumeralStyle): 
 
 /**
  * Roman numeral of `chord` in `key`: "IV", "V7", "ii7", "IVmaj7", "vii°", "bVII", "iv",
- * "#iv°", "V7/vi", "V/V", "vii°7/V", "I7" (a dominant on a major tonic). Minor keys default to
+ * "#iv°", "V7/vi", "V/V", "vii°7/V", "I7" (a dominant on a major tonic). A major triad reads
+ * like its seventh chord: D in D minor is "V/iv" (D7 is "V7/iv"), D in C is "V/V". Minor keys default to
  * the pop convention (i, bIII, bVI, bVII; V and vii° from harmonic minor count as diatonic).
  * The numeral names the basic quality (G13 → "V7", Dm9 → "ii7", Cadd9 → "I") unless
  * `extensions` is set. The slash bass is not part of the numeral; see `bassDegree` /
@@ -174,14 +175,15 @@ export function romanNumeral(chord: Chord, key: Key, opts: NumeralOptions = {}):
     return `I${NUMERAL_SUFFIX[quality]}`;
   }
   if (opts.secondary !== false && !inKey({ root, quality }, key)) {
-    // secondary dominant: a dominant-type chord a fifth above a diatonic major / minor chord
+    // secondary dominant: a dominant-type chord a fifth above a diatonic major / minor chord.
+    // A major triad gets the function its dominant seventh would get (D before Gm in D minor
+    // is V/iv, as D7 is V7/iv), except IV in minor, which is the dorian IV.
     const isTriad = quality === 'maj';
     if (isDominantQuality(quality) || isTriad) {
       const target = mod12(root + 5);
       const subtonic = key.mode === 'minor' && mod12(target - key.tonic) === 10;
       const t = targetNumeral(target, key, style);
-      // a major triad on the tonic is a Picardy / parallel I, and IV in minor is dorian
-      if (t && !(isTriad && (root === key.tonic || subtonic))) {
+      if (t && !(isTriad && subtonic)) {
         return `V${NUMERAL_SUFFIX[quality]}/${t}`;
       }
     }

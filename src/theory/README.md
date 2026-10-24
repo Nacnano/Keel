@@ -40,8 +40,8 @@ Enharmonic keys: Db, Gb major; C#, F#, G#, Eb minor.
 `V7`, `vii°` counted as diatonic); `{ minorStyle: 'natural' }` gives `III VI VII`. Secondary
 dominants (`V7/vi`, `V/V`) are any non-diatonic dominant-type chord a fifth above a diatonic
 major / minor chord other than the tonic; dim7 chords a semitone below one read `vii°7/x`. A
-major triad on the tonic of a minor key reads `I` and a major IV in minor reads `IV` (not
-`V/bVII`). The slash bass is never part of the numeral: use `bassDegree` ('3' for C/E in C)
+major triad reads like its dominant seventh: the major tonic of a minor key is `V/iv` (D before
+Gm in D minor, as D7 is `V7/iv`); only a major IV in minor stays `IV` (dorian, not `V/bVII`). The slash bass is never part of the numeral: use `bassDegree` ('3' for C/E in C)
 or `inversionFigure` ('6', '64', '65', '43', '42').
 
 **Identification** (`identifyChord`) is exact set matching for MIDI. Score =
@@ -73,12 +73,12 @@ per degree from the root (falling back to the key spelling for odd enharmonics),
 scales with `spell(pc, key)`.
 
 **Voicings.** Styles `pop | close | spread | shell | drop2 | rootlessA | rootlessB`. Hands split
-at middle C (`splitHands`): left-hand bass in C2–B2 (shells may drop to A1 / G#1 to stay below
-C4), right hand in C4–C6 centred on `register` (`low` C4, `mid` G4 default, `high` D5, or a MIDI
+at middle C (`splitHands`): left-hand bass in C2–B2, right hand in C4–C6 centred on `register` (`low` C4, `mid` G4 default, `high` D5, or a MIDI
 note). Below C3 no two neighbouring notes are closer than a minor third. Pop = right-hand triad
 (the upper three tones on a seventh chord) over the root in octaves; spread = left-hand root +
-fifth (root + octave when the fifth is altered) with the rest in the right hand; shell = 1-3-7 and
-1-7-3 in the left hand (triads use the fifth, add9 the ninth); drop2 keeps the top three voices in
+fifth (root + octave when the fifth is altered) with the rest in the right hand; shell = root in C2–B2
+with the guide tones 1-3-7 and 1-7-3 from C3 up, the lower one in C3–B3 (C2 E3 B♭3 and C2 B♭3 E4
+for C7; triads use the fifth, add9 the ninth); drop2 keeps the top three voices in
 the right hand; rootless A starts on the 3rd and B on the 7th, in the right hand (a left-hand
 comping shape around middle C in the `low` register), with a 9 / 13 added when the chord has no
 colour tone. Chords with more than four tones drop the fifth first (`omittableTones`); an 11 chord

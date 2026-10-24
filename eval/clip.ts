@@ -75,7 +75,7 @@ interface Shown {
   chord: Chord | null;
 }
 const shown: Shown[] = [];
-const keys: Array<{ wall: number; t: number; key: Key }> = [];
+const keys: Array<{ wall: number; t: number; key: Key; id?: number; supersedes?: number }> = [];
 let wall = 0;
 let currentKey: Key | null = null;
 engine.subscribe((e) => {
@@ -84,7 +84,13 @@ engine.subscribe((e) => {
     shown.push({ wall, chord: c });
   } else if (e.type === 'key') {
     currentKey = e.key;
-    keys.push({ wall, t: e.t, key: { tonic: e.key.tonic, mode: e.key.mode } });
+    keys.push({
+      wall,
+      t: e.t,
+      key: { tonic: e.key.tonic, mode: e.key.mode },
+      id: e.id,
+      supersedes: e.supersedes,
+    });
   }
 });
 
@@ -163,8 +169,13 @@ for (let i = 0; i < shown.length; i++) {
 }
 const playing = firstChord === null ? 0 : total - firstChord;
 const top = [...time.entries()].sort((a, b) => b[1] - a[1]);
+// "E major @8.9 (from 0.6, withdraws #1)": shown at wall time 8.9, drawn from 0.6
 const keyPath = keys
-  .map((k) => `${prettyAccidentals(keyName(k.key))} @${k.wall.toFixed(1)}`)
+  .map(
+    (k) =>
+      `${prettyAccidentals(keyName(k.key))} @${k.wall.toFixed(1)} (from ${k.t.toFixed(1)}` +
+      `${k.supersedes ? `, withdraws #${k.supersedes}` : ''})`,
+  )
   .join(' → ');
 
 if (!flags.has('quiet')) for (const l of lines) console.log(l);

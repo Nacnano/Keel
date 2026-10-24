@@ -354,7 +354,8 @@ const borrowed: RuleFn = (chords, key) => {
       }
       if (o === 0 && i === chords.length - 1 && chords.length > 1) {
         const I: Chord = { root: c.root, quality: seventh ? 'maj7' : 'maj' };
-        push(i, 1, [I], `${num(I, key)}: Picardy third, end on major`, 0.5);
+        // the major tonic of a minor key numbers as V/iv elsewhere; at the end it is the I
+        push(i, 1, [I], `${seventh ? 'Imaj7' : 'I'}: Picardy third, end on major`, 0.5);
       }
     }
   });

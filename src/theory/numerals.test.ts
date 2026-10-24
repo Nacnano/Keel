@@ -155,8 +155,8 @@ describe('romanNumeral: minor keys', () => {
       'G#dim': 'vii°',
       'G#dim7': 'vii°7',
       D: 'IV',
-      A: 'I',
-      // in a minor key a dominant on the tonic still leads to iv
+      // in a minor key a dominant on the tonic leads to iv, and its triad reads the same way
+      A: 'V/iv',
       A7: 'V7/iv',
       B7: 'V7/v',
       D7: 'V7/bVII',
