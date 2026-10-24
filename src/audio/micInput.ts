@@ -84,7 +84,7 @@ export interface MicInput extends AudioInput {
   getInputStatus(): InputStatus;
   /** Input status updates (≈ 3× per second while running). */
   onStatus(cb: (s: InputStatus) => void): () => void;
-  /** Runtime errors after start (track ended, worker crash, …). */
+  /** Runtime failures: no-device/worklet AudioInputError is fatal; generic DSP warnings are recoverable. */
   onError(cb: (e: Error) => void): () => void;
   getSampleRate(): number | null;
 }
@@ -230,6 +230,7 @@ export function createMicInput(): MicInput {
     if (node) {
       node.port.postMessage({ type: 'stop' });
       node.port.onmessage = null;
+      node.onprocessorerror = null;
     }
     source?.disconnect();
     node?.disconnect();
@@ -313,7 +314,7 @@ export function createMicInput(): MicInput {
         } else if (msg.type === 'error') errors.emit(new Error(`[dsp] ${msg.message}`));
       };
       worker.onerror = (e) => {
-        errors.emit(new Error(`[dsp] worker error: ${e.message}`));
+        errors.emit(new AudioInputError('worklet', `Audio processing stopped: ${e.message}`));
       };
       sendConfig();
 
@@ -326,6 +327,11 @@ export function createMicInput(): MicInput {
         channelInterpretation: 'speakers',
         processorOptions: { hopSize: HOP_SIZE },
       });
+      const captureNode = node;
+      node.onprocessorerror = () => {
+        if (node === captureNode && running)
+          errors.emit(new AudioInputError('worklet', 'Audio capture stopped unexpectedly.'));
+      };
       node.port.onmessage = (e: MessageEvent<HopMessage>) => {
         const msg = e.data;
         if (msg?.type === 'hop') postToWorker(msg, [msg.samples.buffer as ArrayBuffer]);

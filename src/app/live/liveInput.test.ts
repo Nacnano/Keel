@@ -1,6 +1,13 @@
+import { resetDb } from '@/data/testing/setup';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
-import type { AnalysisEvent, PitchClass } from '@/core';
+import type { AnalysisEvent, ChromaFrame, PitchClass } from '@/core';
 import { jamStore, initialJamData } from '@/state/jamStore';
+import { clock } from '@/core/clock';
+import { db } from '@/data/db';
+import { startSession as recordSession } from '@/data/sessionRecorder';
+import type { SessionMeta } from '@/data/sessionRecorder';
+import { AudioInputError } from '@/audio';
+import { C_MAJOR_KEY } from '@/core/mocks';
 import { settingsStore } from '@/state/settingsStore';
 
 const mocks = vi.hoisted(() => ({
@@ -30,14 +37,23 @@ const mocks = vi.hoisted(() => ({
     subscribe: vi.fn((_cb: (e: AnalysisEvent) => void) => () => {}),
     push: vi.fn(),
   },
+  engineFactory: vi.fn(),
   startSession: vi.fn(),
 }));
 vi.mock('@/audio', () => ({
   createMicInput: () => mocks.mic,
-  AudioInputError: class extends Error {},
+  AudioInputError: class extends Error {
+    code: string;
+    constructor(code: string, message: string) {
+      super(message);
+      this.code = code;
+    }
+  },
 }));
 vi.mock('@/midi', () => ({ createMidiInput: () => mocks.midi }));
-vi.mock('@/analysis', () => ({ createAnalysisEngine: () => mocks.engine }));
+vi.mock('@/analysis', () => ({
+  createAnalysisEngine: () => mocks.engineFactory() ?? mocks.engine,
+}));
 vi.mock('@/data', () => ({
   startSession: mocks.startSession,
   isAudioRecordingSupported: () => false,
@@ -58,6 +74,7 @@ function deferred() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.engineFactory.mockReset();
   settingsStore.getState().resetSettings();
   jamStore.setState(initialJamData());
   mocks.midi.isSupported.mockReturnValue(false);
@@ -143,11 +160,16 @@ describe('live input lifecycle', () => {
     mocks.mic.isRunning.mockReturnValue(false);
     const input = createLiveInput();
     const oldStart = input.start();
+    const oldError = (
+      mocks.mic.onError.mock.calls.at(-1) as unknown as [(error: Error) => void]
+    )[0];
     await input.stop();
     await oldStart;
     expect(mocks.mic.stop).toHaveBeenCalledOnce();
 
     const retry = input.start();
+    oldError(new AudioInputError('worklet', 'old attempt failure'));
+    expect(jamStore.getState().inputIssue).toBeNull();
     oldPermission.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -347,4 +369,231 @@ describe('source transition readout', () => {
     expect(jamStore.getState().quiet).toBe(true);
     await input.stop();
   });
+});
+
+function runtimeFrame(t: number, exact = false, midiNotes: number[] = [60]): ChromaFrame {
+  const chroma = new Float32Array(12);
+  for (const note of midiNotes) chroma[note % 12] = 1 / midiNotes.length;
+  return {
+    t,
+    exact,
+    chroma,
+    midiNotes,
+    energy: midiNotes.length ? 0.3 : 0,
+    bass: null,
+    onset: false,
+  };
+}
+
+function runtimeCallbacks() {
+  return {
+    micFrame: (mocks.mic.onFrame.mock.calls.at(-1) as unknown as [(frame: ChromaFrame) => void])[0],
+    error: (mocks.mic.onError.mock.calls.at(-1) as unknown as [(error: Error) => void])[0],
+  };
+}
+
+describe('persistent capture interruption', () => {
+  it.each(['no-device', 'worklet'] as const)(
+    'keeps history, rejects queued mic frames, and allows finish/restart after %s',
+    async (code) => {
+      const input = createLiveInput();
+      await input.start();
+      const { micFrame, error } = runtimeCallbacks();
+      micFrame(runtimeFrame(1));
+      const s = jamStore.getState();
+      s.applyEvent({
+        type: 'chord',
+        t: 1,
+        chord: { root: 0, quality: 'maj' },
+        confidence: 0.9,
+        source: 'mic',
+      });
+      s.applyEvent({ type: 'key', t: 1, key: C_MAJOR_KEY });
+      s.applyEvent({
+        type: 'notes',
+        t: 1,
+        pitchClasses: [0],
+        midiNotes: [60],
+        tentativeMidiNotes: [64],
+      });
+      s.addMarker('verse', 'Verse', 1);
+      s.setQuiet(true);
+      const before = jamStore.getState();
+      error(new AudioInputError(code, 'capture unavailable'));
+      const issue = jamStore.getState().inputIssue;
+      expect(issue).toContain('Finish & save, then start again.');
+      expect(jamStore.getState()).toMatchObject({
+        status: 'listening',
+        quiet: false,
+        currentChord: null,
+        key: null,
+        activeMidiNotes: [],
+        tentativeMidiNotes: [],
+        timeline: before.timeline,
+        keyHistory: before.keyHistory,
+        markers: before.markers,
+        sessionId: before.sessionId,
+      });
+      const pushes = mocks.engine.push.mock.calls.length;
+      micFrame(runtimeFrame(10));
+      expect(mocks.engine.push).toHaveBeenCalledTimes(pushes);
+      error(new AudioInputError('worklet', 'duplicate failure'));
+      expect(jamStore.getState().inputIssue).toBe(issue);
+      expect(mocks.mic.stop).not.toHaveBeenCalled();
+      const session = mocks.startSession.mock.results.at(-1)!.value;
+      await input.stop({ onSaved: vi.fn() });
+      expect(session.stop).toHaveBeenCalledOnce();
+      expect(jamStore.getState().inputIssue).toBeNull();
+      await input.start();
+      const afterRestart = mocks.engine.push.mock.calls.length;
+      runtimeCallbacks().micFrame(runtimeFrame(20));
+      expect(mocks.engine.push).toHaveBeenCalledTimes(afterRestart + 1);
+      expect(jamStore.getState().inputIssue).toBeNull();
+      await input.stop({ onSaved: vi.fn() });
+    },
+  );
+
+  it('accepts following microphone frames after a recoverable DSP warning', async () => {
+    const input = createLiveInput();
+    await input.start();
+    const { micFrame, error } = runtimeCallbacks();
+    error(new Error('one malformed hop'));
+    expect(jamStore.getState().inputIssue).toBeNull();
+    expect(toast).toHaveBeenCalledWith('Audio processing warning: one malformed hop', {
+      tone: 'error',
+    });
+    const pushes = mocks.engine.push.mock.calls.length;
+    micFrame(runtimeFrame(1));
+    expect(mocks.engine.push).toHaveBeenCalledTimes(pushes + 1);
+    await input.stop({ onSaved: vi.fn() });
+  });
+
+  it('keeps active MIDI readout and subsequent exact input when the microphone fails', async () => {
+    settingsStore.getState().update({ midiDeviceId: 'keyboard' });
+    mocks.midi.isSupported.mockReturnValue(true);
+    mocks.midi.connect.mockResolvedValue(undefined);
+    mocks.midi.onFrame.mockReturnValue(() => {});
+    mocks.midi.onEvent.mockReturnValue(() => {});
+    const input = createLiveInput();
+    await input.start();
+    const midiFrame = mocks.midi.onFrame.mock.calls.at(-1)![0] as (frame: ChromaFrame) => void;
+    midiFrame(runtimeFrame(1, true, [60, 64, 67]));
+    jamStore
+      .getState()
+      .applyEvent({ type: 'notes', t: 1, pitchClasses: [0, 4, 7], midiNotes: [60, 64, 67] });
+    jamStore.getState().applyEvent({
+      type: 'chord',
+      t: 1,
+      chord: { root: 0, quality: 'maj' },
+      confidence: 1,
+      source: 'midi',
+    });
+    const { error, micFrame } = runtimeCallbacks();
+    const resets = mocks.engine.reset.mock.calls.length;
+    const session = mocks.startSession.mock.results.at(-1)!.value;
+    const recordedEvents = session.onAnalysisEvent.mock.calls.length;
+    error(new AudioInputError('no-device', 'track ended'));
+    expect(mocks.engine.reset).toHaveBeenCalledTimes(resets);
+    expect(session.onAnalysisEvent).toHaveBeenCalledTimes(recordedEvents);
+    expect(jamStore.getState()).toMatchObject({
+      source: 'midi',
+      activeMidiNotes: [60, 64, 67],
+      currentChord: { root: 0, quality: 'maj' },
+      quiet: false,
+    });
+    expect(jamStore.getState().inputIssue).toContain('Microphone stopped');
+    const pushes = mocks.engine.push.mock.calls.length;
+    micFrame(runtimeFrame(10)); // Beyond the normal MIDI priority timeout: still rejected.
+    expect(mocks.engine.push).toHaveBeenCalledTimes(pushes);
+    const next = runtimeFrame(11, true, [62, 65, 69]);
+    midiFrame(next);
+    expect(mocks.engine.push).toHaveBeenLastCalledWith(next);
+    expect(jamStore.getState().source).toBe('midi');
+    expect(mocks.mic.stop).not.toHaveBeenCalled();
+    await input.stop({ onSaved: vi.fn() });
+  });
+});
+
+it('persists the failure-time no-chord boundary and New song cannot resurrect stale harmony', async () => {
+  await resetDb();
+  const realAnalysis = await vi.importActual<typeof import('@/analysis')>('@/analysis');
+  const engine = realAnalysis.createAnalysisEngine();
+  mocks.engineFactory.mockReturnValueOnce(engine);
+  mocks.startSession.mockImplementationOnce((meta: SessionMeta) => recordSession(meta));
+  const now = vi.spyOn(clock, 'now').mockReturnValue(0);
+  const input = createLiveInput();
+  try {
+    await input.start();
+    const session = mocks.startSession.mock.results.at(-1)!.value;
+    await session.ready;
+    const { micFrame, error } = runtimeCallbacks();
+    for (let i = 0; i < 60; i++) micFrame(runtimeFrame(i * 0.04, false, [60, 64, 67]));
+    expect(jamStore.getState().currentChord).not.toBeNull();
+    now.mockReturnValue(10);
+    error(new AudioInputError('no-device', 'track ended'));
+    expect(jamStore.getState().currentChord).toBeNull();
+    input.newSong();
+    expect(jamStore.getState().currentChord).toBeNull();
+    now.mockReturnValue(30);
+    await input.stop({ onSaved: vi.fn() });
+    const saved = await db.sessions.get(session.id);
+    const chords = await db.chords.where('sessionId').equals(session.id).sortBy('t');
+    expect(saved?.durationSec).toBe(30);
+    expect(chords.some((row) => row.chord !== null)).toBe(true);
+    expect(chords.at(-1)).toMatchObject({ t: 10, chord: null, source: 'mic' });
+    expect(chords.filter((row) => row.t > 10)).toEqual([]);
+  } finally {
+    await input.stop({ onSaved: vi.fn() });
+    now.mockRestore();
+    await resetDb();
+  }
+});
+
+it('observes fatal microphone loss during pending MIDI setup and continues with MIDI only', async () => {
+  const connected = deferred();
+  settingsStore.getState().update({ midiDeviceId: 'keyboard' });
+  mocks.midi.isSupported.mockReturnValue(true);
+  mocks.midi.connect.mockReturnValueOnce(connected.promise);
+  mocks.midi.onFrame.mockReturnValue(() => {});
+  mocks.midi.onEvent.mockReturnValue(() => {});
+  const input = createLiveInput();
+  const started = input.start();
+  await vi.waitFor(() => expect(mocks.midi.connect).toHaveBeenCalled());
+  const error = (mocks.mic.onError.mock.calls.at(-1) as unknown as [(error: Error) => void])[0];
+  error(new AudioInputError('no-device', 'disconnected during MIDI setup'));
+  connected.resolve();
+  await started;
+  expect(jamStore.getState()).toMatchObject({ status: 'listening', source: 'midi' });
+  expect(jamStore.getState().inputIssue).toContain('Microphone stopped');
+  expect(mocks.mic.onFrame).not.toHaveBeenCalled();
+  expect(mocks.midi.onFrame).toHaveBeenCalledOnce();
+  expect(mocks.mic.stop).not.toHaveBeenCalled();
+  await input.stop({ onSaved: vi.fn() });
+});
+
+it('releases early failed capture when MIDI setup also fails, before exposing retry', async () => {
+  const connection = deferred();
+  settingsStore.getState().update({ midiDeviceId: 'keyboard' });
+  mocks.midi.isSupported.mockReturnValue(true);
+  mocks.midi.connect.mockImplementationOnce(async () => {
+    await connection.promise;
+    throw new Error('MIDI unavailable');
+  });
+  const unsubscribe = vi.fn();
+  mocks.mic.onError.mockReturnValueOnce(unsubscribe);
+  const input = createLiveInput();
+  const started = input.start();
+  await vi.waitFor(() => expect(mocks.midi.connect).toHaveBeenCalled());
+  const error = (mocks.mic.onError.mock.calls.at(-1) as unknown as [(error: Error) => void])[0];
+  error(new AudioInputError('no-device', 'disconnected during MIDI setup'));
+  connection.resolve();
+  await started;
+  expect(mocks.mic.stop).toHaveBeenCalledOnce();
+  expect(unsubscribe).toHaveBeenCalledOnce();
+  expect(mocks.startSession).not.toHaveBeenCalled();
+  expect(jamStore.getState().status).toBe('error');
+  expect(input.isRunning()).toBe(false);
+  const issue = jamStore.getState().inputIssue;
+  error(new AudioInputError('worklet', 'stale callback'));
+  expect(jamStore.getState().inputIssue).toBe(issue);
 });

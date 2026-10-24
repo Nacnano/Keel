@@ -108,6 +108,7 @@ export function JamScreen() {
       recordAudio: s.recordAudio,
       sessionStart: s.sessionStart,
       quiet: s.quiet,
+      inputIssue: s.inputIssue,
     })),
   );
   const settings = useSettings(
@@ -136,15 +137,17 @@ export function JamScreen() {
   const starting = jam.status === 'starting';
   const elapsed = useElapsed(listening, jam.sessionStart);
   // "Can't hear much" is decided by the live input, which also keeps those chords out.
-  const quiet = listening && !input.mock && jam.quiet;
+  const inputStopped = listening && !!jam.inputIssue && jam.source !== 'midi';
+  const quiet = listening && !input.mock && !jam.inputIssue && jam.quiet;
+  const readoutBlocked = quiet || inputStopped;
   const stopped = input.finished && !listening && !starting;
   // While the input is too quiet a chord (and the key built from it) would be a guess.
   const previewChord =
-    !quiet && jam.previewChord && jam.previewConfidence >= MIN_DISPLAY_CONFIDENCE
+    !readoutBlocked && jam.previewChord && jam.previewConfidence >= MIN_DISPLAY_CONFIDENCE
       ? jam.previewChord
       : null;
   const committedChord =
-    !quiet && jam.confidence >= MIN_DISPLAY_CONFIDENCE ? jam.currentChord : null;
+    !readoutBlocked && jam.confidence >= MIN_DISPLAY_CONFIDENCE ? jam.currentChord : null;
   const tentativeHero = !committedChord && !!previewChord;
   const shownChord = committedChord ?? previewChord;
   const shownConfidence = committedChord ? jam.confidence : jam.previewConfidence;
@@ -160,7 +163,7 @@ export function JamScreen() {
       ? jam.previewKey
       : null;
   const candidateLabel =
-    !quiet && !starting
+    !readoutBlocked && !starting
       ? candidateChord
         ? `Tentative: ${pretty(
             chordSymbol(candidateChord, jam.keyEstimate, {
@@ -179,7 +182,8 @@ export function JamScreen() {
   const finishRow = useRef<HTMLDivElement>(null);
   useIdeasSheetHeight(halfIdeas && live, finishRow);
   // Red dot and "Recording" only while audio is really being kept.
-  const recording = listening && !input.mock && jam.recordAudio && jam.source === 'mic';
+  const recording =
+    listening && !jam.inputIssue && !input.mock && jam.recordAudio && jam.source === 'mic';
   const inputLabel =
     jam.source === 'midi' && listening
       ? 'USB MIDI'
@@ -294,7 +298,15 @@ export function JamScreen() {
                   <>
                     {/* The dot means one thing: audio is being kept. */}
                     {recording && <span className="size-2 rounded-full bg-live" aria-hidden />}
-                    <span>{starting ? 'Connecting…' : recording ? 'Recording' : 'Listening'}</span>
+                    <span>
+                      {inputStopped
+                        ? 'Input stopped'
+                        : starting
+                          ? 'Connecting…'
+                          : recording
+                            ? 'Recording'
+                            : 'Listening'}
+                    </span>
                   </>
                 )
               )}
@@ -316,12 +328,21 @@ export function JamScreen() {
                       <Mic className="size-4 shrink-0" aria-hidden />
                     )}
                     <span className="min-w-0 truncate">{inputLabel}</span>
-                    <Meter level={jam.level} active={listening} bars={7} />
+                    <Meter
+                      level={jam.inputIssue ? 0 : jam.level}
+                      active={listening && !jam.inputIssue}
+                      bars={7}
+                    />
                   </>
                 )}
               </div>
             )}
           </div>
+        )}
+        {listening && jam.inputIssue && jam.source === 'midi' && (
+          <p role="status" className="py-3 text-center text-subhead text-label-2">
+            {jam.inputIssue}
+          </p>
         )}
         {!listening && !starting && !stopped && !input.saving ? (
           <>
@@ -473,24 +494,28 @@ export function JamScreen() {
                   />
                 </>
               ) : (
-                <div className="max-w-md text-center" role={quiet ? 'status' : undefined}>
+                <div className="max-w-md text-center" role={readoutBlocked ? 'status' : undefined}>
                   <h2 className="text-title-1 font-semibold tracking-tight">
-                    {starting
-                      ? 'Connecting your instrument…'
-                      : quiet
-                        ? 'Can’t hear much.'
-                        : 'Play a chord.'}
+                    {inputStopped
+                      ? 'Input stopped'
+                      : starting
+                        ? 'Connecting your instrument…'
+                        : quiet
+                          ? 'Can’t hear much.'
+                          : 'Play a chord.'}
                   </h2>
                   <p className="mt-3 text-body leading-relaxed text-label-2">
-                    {starting
-                      ? 'Allow microphone access if your browser asks.'
-                      : quiet
-                        ? 'Move closer to your instrument, or raise sensitivity in Listening options.'
-                        : 'Hold it briefly. Your chord and key will appear here.'}
+                    {inputStopped
+                      ? jam.inputIssue
+                      : starting
+                        ? 'Allow microphone access if your browser asks.'
+                        : quiet
+                          ? 'Move closer to your instrument, or raise sensitivity in Listening options.'
+                          : 'Hold it briefly. Your chord and key will appear here.'}
                   </p>
                 </div>
               )}
-              {!quiet && !starting && (hasChord || jam.previewKey || jam.keyEstimate) && (
+              {!readoutBlocked && !starting && (hasChord || jam.previewKey || jam.keyEstimate) && (
                 <KeyBadge
                   primaryOnly
                   keyEstimate={primaryKey}
@@ -507,7 +532,7 @@ export function JamScreen() {
               >
                 <span className="truncate">{candidateLabel}</span>
               </div>
-              {pianoVisible && listening && !phone && !halfIdeas && (
+              {pianoVisible && listening && !inputStopped && !phone && !halfIdeas && (
                 <div className="mt-8 w-full">
                   <Piano
                     keys={wide ? 88 : 61}

@@ -293,3 +293,31 @@ describe('provisional live results', () => {
     expect(jamStore.getState().keyHistory).toHaveLength(1);
   });
 });
+
+describe('persistent capture issues', () => {
+  it('preserves session history and the issue through live-readout and history clearing', () => {
+    const s = jamStore.getState();
+    s.startSession(0);
+    s.applyEvent(chord(1, C));
+    s.applyEvent({ type: 'key', t: 1, key: C_MAJOR_KEY });
+    s.addMarker('verse', 'Verse', 1);
+    const before = jamStore.getState();
+    s.setInputIssue('Microphone stopped. Finish & save, then start again.');
+    s.clearLiveReadout();
+    expect(jamStore.getState()).toMatchObject({
+      status: 'listening',
+      timeline: before.timeline,
+      keyHistory: before.keyHistory,
+      markers: before.markers,
+      sessionId: before.sessionId,
+      inputIssue: 'Microphone stopped. Finish & save, then start again.',
+    });
+    s.reset();
+    expect(jamStore.getState().inputIssue).toContain('Microphone stopped');
+    s.stopSession();
+    expect(jamStore.getState().inputIssue).toBeNull();
+    s.setInputIssue('old issue');
+    s.startSession(10);
+    expect(jamStore.getState().inputIssue).toBeNull();
+  });
+});

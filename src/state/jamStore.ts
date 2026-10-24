@@ -43,6 +43,8 @@ export interface KeyHistoryEntry {
 export interface JamData {
   status: JamStatus;
   error?: string;
+  /** Persistent runtime capture failure; the current session can still be finished and saved. */
+  inputIssue: string | null;
   source: InputSource | null;
   currentChord: Chord | null;
   confidence: number;
@@ -92,6 +94,7 @@ export interface JamActions {
    */
   clearKey(from?: number): void;
   setQuiet(quiet: boolean): void;
+  setInputIssue(issue: string | null): void;
   setStatus(status: JamStatus, error?: string): void;
   setSource(source: InputSource | null): void;
   toggleRecordAudio(): void;
@@ -142,6 +145,7 @@ const EMPTY_SESSION = {
   markers: [],
   lastT: 0,
   quiet: false,
+  inputIssue: null,
   keyFrom: 0,
   keyChangedAt: 0,
 } satisfies Partial<JamData>;
@@ -265,6 +269,7 @@ export const useJamStore = create<JamState>()((set, get) => ({
       exactKeys: false,
       level: 0,
       quiet: false,
+      inputIssue: null,
     });
   },
 
@@ -291,6 +296,7 @@ export const useJamStore = create<JamState>()((set, get) => ({
     const listening = s.status === 'listening';
     set({
       ...EMPTY_SESSION,
+      inputIssue: s.inputIssue,
       keyHistory: s.key ? [{ t: 0, key: s.key }] : [],
       sessionStart: listening ? clock.now() : null,
       sessionId: listening ? uuid() : null,
@@ -315,6 +321,10 @@ export const useJamStore = create<JamState>()((set, get) => ({
 
   setQuiet(quiet) {
     if (get().quiet !== quiet) set({ quiet });
+  },
+
+  setInputIssue(inputIssue) {
+    set({ inputIssue });
   },
 
   setStatus(status, error) {
