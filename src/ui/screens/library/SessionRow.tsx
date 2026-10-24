@@ -86,7 +86,7 @@ export function SessionRow({
     <li
       data-testid="session-card"
       className={cx(
-        'relative flex min-h-16 items-center gap-1 py-2.5 pr-2 pl-4 transition-colors duration-100',
+        'relative flex min-h-16 items-center gap-1 py-4 pr-2 pl-4 transition-colors duration-100',
         !renaming && 'hover:bg-fill-4 active:bg-fill-3',
         'has-[a:focus-visible]:shadow-[inset_0_0_0_2px_var(--jk-accent)]',
       )}

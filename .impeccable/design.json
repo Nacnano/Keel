@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-22T19:25:30.953647+00:00",
+  "generatedAt": "2026-10-24T06:46:17.094Z",
   "title": "Design System: Keel",
   "extensions": {
     "colorMeta": {
@@ -8,28 +8,42 @@
         "role": "neutral",
         "displayName": "Bg",
         "tonalRamp": [
-          "oklch(15% 0.0026 286.35)",
-          "oklch(26% 0.0026 286.35)",
-          "oklch(38% 0.0026 286.35)",
-          "oklch(49% 0.0026 286.35)",
-          "oklch(61% 0.0026 286.35)",
-          "oklch(72% 0.0026 286.35)",
-          "oklch(84% 0.0026 286.35)",
-          "oklch(95% 0.0026 286.35)"
+          "oklch(15% 0.0027 286.35)",
+          "oklch(26% 0.0027 286.35)",
+          "oklch(38% 0.0027 286.35)",
+          "oklch(49% 0.0027 286.35)",
+          "oklch(61% 0.0027 286.35)",
+          "oklch(72% 0.0027 286.35)",
+          "oklch(84% 0.0027 286.35)",
+          "oklch(95% 0.0027 286.35)"
+        ]
+      },
+      "bg-2": {
+        "role": "neutral",
+        "displayName": "Bg 2",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
         ]
       },
       "bg-3": {
         "role": "neutral",
         "displayName": "Bg 3",
         "tonalRamp": [
-          "oklch(15% 0.0066 286.27)",
-          "oklch(26% 0.0066 286.27)",
-          "oklch(38% 0.0066 286.27)",
-          "oklch(49% 0.0066 286.27)",
-          "oklch(61% 0.0066 286.27)",
-          "oklch(72% 0.0066 286.27)",
-          "oklch(84% 0.0066 286.27)",
-          "oklch(95% 0.0066 286.27)"
+          "oklch(15% 0.0040 286.32)",
+          "oklch(26% 0.0040 286.32)",
+          "oklch(38% 0.0040 286.32)",
+          "oklch(49% 0.0040 286.32)",
+          "oklch(61% 0.0040 286.32)",
+          "oklch(72% 0.0040 286.32)",
+          "oklch(84% 0.0040 286.32)",
+          "oklch(95% 0.0040 286.32)"
         ]
       },
       "surface": {
@@ -64,14 +78,14 @@
         "role": "neutral",
         "displayName": "Label",
         "tonalRamp": [
-          "oklch(15% 0.0000 0.00)",
-          "oklch(26% 0.0000 0.00)",
-          "oklch(38% 0.0000 0.00)",
-          "oklch(49% 0.0000 0.00)",
-          "oklch(61% 0.0000 0.00)",
-          "oklch(72% 0.0000 0.00)",
-          "oklch(84% 0.0000 0.00)",
-          "oklch(95% 0.0000 0.00)"
+          "oklch(15% 0.0038 286.10)",
+          "oklch(26% 0.0038 286.10)",
+          "oklch(38% 0.0038 286.10)",
+          "oklch(49% 0.0038 286.10)",
+          "oklch(61% 0.0038 286.10)",
+          "oklch(72% 0.0038 286.10)",
+          "oklch(84% 0.0038 286.10)",
+          "oklch(95% 0.0038 286.10)"
         ]
       },
       "label-2": {
@@ -86,6 +100,20 @@
           "oklch(72% 0.0126 285.94)",
           "oklch(84% 0.0126 285.94)",
           "oklch(95% 0.0126 285.94)"
+        ]
+      },
+      "label-3": {
+        "role": "neutral",
+        "displayName": "Label 3",
+        "tonalRamp": [
+          "oklch(15% 0.0077 286.14)",
+          "oklch(26% 0.0077 286.14)",
+          "oklch(38% 0.0077 286.14)",
+          "oklch(49% 0.0077 286.14)",
+          "oklch(61% 0.0077 286.14)",
+          "oklch(72% 0.0077 286.14)",
+          "oklch(84% 0.0077 286.14)",
+          "oklch(95% 0.0077 286.14)"
         ]
       },
       "accent": {
@@ -187,48 +215,50 @@
         ]
       },
       "fill-3": {
-        "role": "semantic",
-        "displayName": "Fill 3"
+        "role": "neutral",
+        "displayName": "Fill 3",
+        "tonalRamp": [
+          "oklch(15% 0.0121 286.01)",
+          "oklch(26% 0.0121 286.01)",
+          "oklch(38% 0.0121 286.01)",
+          "oklch(49% 0.0121 286.01)",
+          "oklch(61% 0.0121 286.01)",
+          "oklch(72% 0.0121 286.01)",
+          "oklch(84% 0.0121 286.01)",
+          "oklch(95% 0.0121 286.01)"
+        ]
       },
       "separator": {
-        "role": "semantic",
-        "displayName": "Separator"
+        "role": "neutral",
+        "displayName": "Separator",
+        "tonalRamp": [
+          "oklch(15% 0.0120 285.78)",
+          "oklch(26% 0.0120 285.78)",
+          "oklch(38% 0.0120 285.78)",
+          "oklch(49% 0.0120 285.78)",
+          "oklch(61% 0.0120 285.78)",
+          "oklch(72% 0.0120 285.78)",
+          "oklch(84% 0.0120 285.78)",
+          "oklch(95% 0.0120 285.78)"
+        ]
       },
       "material": {
-        "role": "semantic",
-        "displayName": "Material"
+        "role": "neutral",
+        "displayName": "Material",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
       },
       "bg-dark": {
         "role": "neutral",
         "displayName": "Bg Dark",
-        "tonalRamp": [
-          "oklch(15% 0.0039 286.05)",
-          "oklch(26% 0.0039 286.05)",
-          "oklch(38% 0.0039 286.05)",
-          "oklch(49% 0.0039 286.05)",
-          "oklch(61% 0.0039 286.05)",
-          "oklch(72% 0.0039 286.05)",
-          "oklch(84% 0.0039 286.05)",
-          "oklch(95% 0.0039 286.05)"
-        ]
-      },
-      "bg-3-dark": {
-        "role": "neutral",
-        "displayName": "Bg 3 Dark",
-        "tonalRamp": [
-          "oklch(15% 0.0056 285.98)",
-          "oklch(26% 0.0056 285.98)",
-          "oklch(38% 0.0056 285.98)",
-          "oklch(49% 0.0056 285.98)",
-          "oklch(61% 0.0056 285.98)",
-          "oklch(72% 0.0056 285.98)",
-          "oklch(84% 0.0056 285.98)",
-          "oklch(95% 0.0056 285.98)"
-        ]
-      },
-      "surface-dark": {
-        "role": "neutral",
-        "displayName": "Surface Dark",
         "tonalRamp": [
           "oklch(15% 0.0038 286.09)",
           "oklch(26% 0.0038 286.09)",
@@ -238,6 +268,48 @@
           "oklch(72% 0.0038 286.09)",
           "oklch(84% 0.0038 286.09)",
           "oklch(95% 0.0038 286.09)"
+        ]
+      },
+      "bg-2-dark": {
+        "role": "neutral",
+        "displayName": "Bg 2 Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0038 286.12)",
+          "oklch(26% 0.0038 286.12)",
+          "oklch(38% 0.0038 286.12)",
+          "oklch(49% 0.0038 286.12)",
+          "oklch(61% 0.0038 286.12)",
+          "oklch(72% 0.0038 286.12)",
+          "oklch(84% 0.0038 286.12)",
+          "oklch(95% 0.0038 286.12)"
+        ]
+      },
+      "bg-3-dark": {
+        "role": "neutral",
+        "displayName": "Bg 3 Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0037 286.15)",
+          "oklch(26% 0.0037 286.15)",
+          "oklch(38% 0.0037 286.15)",
+          "oklch(49% 0.0037 286.15)",
+          "oklch(61% 0.0037 286.15)",
+          "oklch(72% 0.0037 286.15)",
+          "oklch(84% 0.0037 286.15)",
+          "oklch(95% 0.0037 286.15)"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Surface Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0036 286.18)",
+          "oklch(26% 0.0036 286.18)",
+          "oklch(38% 0.0036 286.18)",
+          "oklch(49% 0.0036 286.18)",
+          "oklch(61% 0.0036 286.18)",
+          "oklch(72% 0.0036 286.18)",
+          "oklch(84% 0.0036 286.18)",
+          "oklch(95% 0.0036 286.18)"
         ]
       },
       "surface-2-dark": {
@@ -280,6 +352,20 @@
           "oklch(72% 0.0114 286.12)",
           "oklch(84% 0.0114 286.12)",
           "oklch(95% 0.0114 286.12)"
+        ]
+      },
+      "label-3-dark": {
+        "role": "neutral",
+        "displayName": "Label 3 Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0102 286.13)",
+          "oklch(26% 0.0102 286.13)",
+          "oklch(38% 0.0102 286.13)",
+          "oklch(49% 0.0102 286.13)",
+          "oklch(61% 0.0102 286.13)",
+          "oklch(72% 0.0102 286.13)",
+          "oklch(84% 0.0102 286.13)",
+          "oklch(95% 0.0102 286.13)"
         ]
       },
       "accent-dark": {
@@ -353,16 +439,46 @@
         ]
       },
       "fill-3-dark": {
-        "role": "semantic",
-        "displayName": "Fill 3 Dark"
+        "role": "neutral",
+        "displayName": "Fill 3 Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0121 286.01)",
+          "oklch(26% 0.0121 286.01)",
+          "oklch(38% 0.0121 286.01)",
+          "oklch(49% 0.0121 286.01)",
+          "oklch(61% 0.0121 286.01)",
+          "oklch(72% 0.0121 286.01)",
+          "oklch(84% 0.0121 286.01)",
+          "oklch(95% 0.0121 286.01)"
+        ]
       },
       "separator-dark": {
-        "role": "semantic",
-        "displayName": "Separator Dark"
+        "role": "neutral",
+        "displayName": "Separator Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0087 286.17)",
+          "oklch(26% 0.0087 286.17)",
+          "oklch(38% 0.0087 286.17)",
+          "oklch(49% 0.0087 286.17)",
+          "oklch(61% 0.0087 286.17)",
+          "oklch(72% 0.0087 286.17)",
+          "oklch(84% 0.0087 286.17)",
+          "oklch(95% 0.0087 286.17)"
+        ]
       },
       "material-dark": {
-        "role": "semantic",
-        "displayName": "Material Dark"
+        "role": "neutral",
+        "displayName": "Material Dark",
+        "tonalRamp": [
+          "oklch(15% 0.0038 286.09)",
+          "oklch(26% 0.0038 286.09)",
+          "oklch(38% 0.0038 286.09)",
+          "oklch(49% 0.0038 286.09)",
+          "oklch(61% 0.0038 286.09)",
+          "oklch(72% 0.0038 286.09)",
+          "oklch(84% 0.0038 286.09)",
+          "oklch(95% 0.0038 286.09)"
+        ]
       }
     },
     "shadows": [
@@ -386,7 +502,7 @@
       {
         "name": "button-transition",
         "value": "150ms",
-        "purpose": "Background, color, filter and press feedback."
+        "purpose": "Background, color and brightness feedback; no button scaling."
       }
     ],
     "breakpoints": [
@@ -397,12 +513,50 @@
       {
         "name": "lg",
         "value": "1024px"
+      },
+      {
+        "name": "ideas-side",
+        "value": "1440px"
       }
     ],
     "notes": [
       "Tonal ramps are synthesized display metadata, not shipped CSS tokens.",
       "Compact legacy target sizes are excluded from new-surface guidance."
-    ]
+    ],
+    "typographyMeta": {
+      "title-1": {
+        "displayName": "title 1",
+        "purpose": "Compact state headings; live key at wider widths."
+      },
+      "title-3": {
+        "displayName": "title 3",
+        "purpose": "Persistent toolbar and empty-state titles; live numeral at wider widths."
+      },
+      "headline": {
+        "displayName": "headline",
+        "purpose": "Shared utility text hierarchy."
+      },
+      "title-2": {
+        "displayName": "title 2",
+        "purpose": "Shared utility text hierarchy."
+      },
+      "body": {
+        "displayName": "body",
+        "purpose": "Shared utility text hierarchy."
+      },
+      "subhead": {
+        "displayName": "subhead",
+        "purpose": "Shared utility text hierarchy."
+      },
+      "footnote": {
+        "displayName": "footnote",
+        "purpose": "Shared utility text hierarchy."
+      },
+      "caption": {
+        "displayName": "caption",
+        "purpose": "Shared utility text hierarchy."
+      }
+    }
   },
   "components": [
     {
@@ -410,15 +564,23 @@
       "kind": "button",
       "refersTo": "button-primary",
       "description": "Shipped medium primary button treatment.",
-      "html": "<button class=\"ds-btn-primary\">Listening options</button>",
-      "css": ".ds-btn-primary{height:44px;padding:0 16px;border:0;border-radius:var(--radius-control,10px);background:var(--jk-action);color:var(--jk-accent-fg);font-family:var(--font-sans);font-size:15px;font-weight:600;transition:background-color 150ms,color 150ms,filter 150ms,transform 150ms}.ds-btn-primary:hover{filter:brightness(1.1)}.ds-btn-primary:active{filter:brightness(.95);transform:scale(.98)}.ds-btn-primary:disabled{opacity:.4;pointer-events:none}.ds-btn-primary:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
+      "html": "<button class=\"ds-btn-primary\">Save changes</button>",
+      "css": ".ds-btn-primary{height:44px;padding:0 16px;border:0;border-radius:var(--radius-control,10px);background:var(--jk-action);color:var(--jk-accent-fg);font-family:var(--font-sans);font-size:15px;font-weight:600;transition:background-color 150ms,color 150ms,filter 150ms ease-out}.ds-btn-primary:hover{filter:brightness(1.1)}.ds-btn-primary:active{filter:brightness(.95)}.ds-btn-primary:disabled{opacity:.4;pointer-events:none}.ds-btn-primary:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
+    },
+    {
+      "name": "Large primary button",
+      "kind": "button",
+      "refersTo": "button-primary-large",
+      "description": "48px rectangular listening action with 10px corners.",
+      "html": "<button class=\"ds-btn-large\">Start listening</button>",
+      "css": ".ds-btn-large{height:48px;padding:0 24px;border:0;border-radius:var(--radius-control,10px);background:var(--jk-action);color:var(--jk-accent-fg);font-family:var(--font-sans);font-size:17px;font-weight:600;transition:background-color 150ms,color 150ms,filter 150ms ease-out}.ds-btn-large:hover{filter:brightness(1.1)}.ds-btn-large:active{filter:brightness(.95)}.ds-btn-large:disabled{opacity:.4;pointer-events:none}.ds-btn-large:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
     },
     {
       "name": "Tinted button",
       "kind": "button",
       "description": "Shipped medium tinted button treatment.",
       "html": "<button class=\"ds-btn-tinted\">Listening options</button>",
-      "css": ".ds-btn-tinted{height:44px;padding:0 16px;border:0;border-radius:var(--radius-control,10px);background:color-mix(in srgb,var(--jk-accent) 15%,transparent);color:var(--jk-accent);font-family:var(--font-sans);font-size:15px;font-weight:600;transition:background-color 150ms,color 150ms,filter 150ms,transform 150ms}.ds-btn-tinted:hover{background:color-mix(in srgb,var(--jk-accent) 22%,transparent)}.ds-btn-tinted:active{background:color-mix(in srgb,var(--jk-accent) 28%,transparent);transform:scale(.98)}.ds-btn-tinted:disabled{opacity:.4;pointer-events:none}.ds-btn-tinted:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
+      "css": ".ds-btn-tinted{height:44px;padding:0 16px;border:0;border-radius:var(--radius-control,10px);background:color-mix(in srgb,var(--jk-accent) 15%,transparent);color:var(--jk-accent);font-family:var(--font-sans);font-size:15px;font-weight:600;transition:background-color 150ms,color 150ms,filter 150ms ease-out}.ds-btn-tinted:hover{background:color-mix(in srgb,var(--jk-accent) 22%,transparent)}.ds-btn-tinted:active{background:color-mix(in srgb,var(--jk-accent) 28%,transparent)}.ds-btn-tinted:disabled{opacity:.4;pointer-events:none}.ds-btn-tinted:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
     },
     {
       "name": "Gray button",
@@ -426,14 +588,14 @@
       "refersTo": "button-gray",
       "description": "Shipped medium gray button treatment.",
       "html": "<button class=\"ds-btn-gray\">Listening options</button>",
-      "css": ".ds-btn-gray{height:44px;padding:0 16px;border:0;border-radius:var(--radius-control,10px);background:var(--jk-fill-3);color:var(--jk-label);font-family:var(--font-sans);font-size:15px;font-weight:500;transition:background-color 150ms,color 150ms,filter 150ms,transform 150ms}.ds-btn-gray:hover{background:var(--jk-fill-2)}.ds-btn-gray:active{background:var(--jk-fill);transform:scale(.98)}.ds-btn-gray:disabled{opacity:.4;pointer-events:none}.ds-btn-gray:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
+      "css": ".ds-btn-gray{height:44px;padding:0 16px;border:0;border-radius:var(--radius-control,10px);background:var(--jk-fill-3);color:var(--jk-label);font-family:var(--font-sans);font-size:15px;font-weight:500;transition:background-color 150ms,color 150ms,filter 150ms ease-out}.ds-btn-gray:hover{background:var(--jk-fill-2)}.ds-btn-gray:active{background:var(--jk-fill)}.ds-btn-gray:disabled{opacity:.4;pointer-events:none}.ds-btn-gray:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
     },
     {
       "name": "Plain button",
       "kind": "button",
       "description": "Shipped medium plain button treatment.",
       "html": "<button class=\"ds-btn-plain\">Listening options</button>",
-      "css": ".ds-btn-plain{height:44px;padding:0 16px;border:0;border-radius:var(--radius-control,10px);background:transparent;color:var(--jk-accent);font-family:var(--font-sans);font-size:15px;font-weight:500;transition:background-color 150ms,color 150ms,filter 150ms,transform 150ms}.ds-btn-plain:hover{background:var(--jk-fill-4)}.ds-btn-plain:active{background:var(--jk-fill-3);transform:scale(.98)}.ds-btn-plain:disabled{opacity:.4;pointer-events:none}.ds-btn-plain:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
+      "css": ".ds-btn-plain{height:44px;padding:0 16px;border:0;border-radius:var(--radius-control,10px);background:transparent;color:var(--jk-accent);font-family:var(--font-sans);font-size:15px;font-weight:500;transition:background-color 150ms,color 150ms,filter 150ms ease-out}.ds-btn-plain:hover{background:var(--jk-fill-4)}.ds-btn-plain:active{background:var(--jk-fill-3)}.ds-btn-plain:disabled{opacity:.4;pointer-events:none}.ds-btn-plain:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
     },
     {
       "name": "Native select",
@@ -445,9 +607,9 @@
     {
       "name": "Sidebar navigation",
       "kind": "nav",
-      "description": "Three primary destinations; active state is semantic as well as colored.",
-      "html": "<nav aria-label=\"Sections\"><a class=\"ds-nav\" href=\"#listen\" aria-current=\"page\">Listen</a><a class=\"ds-nav\" href=\"#library\">Library</a><a class=\"ds-nav\" href=\"#tools\">Tools</a></nav>",
-      "css": ".ds-nav{display:flex;align-items:center;min-height:44px;padding:0 12px;border-radius:10px;text-decoration:none;font-family:var(--font-sans);font-size:15px;font-weight:500;color:var(--jk-label-2)}.ds-nav[aria-current]{background:color-mix(in srgb,var(--jk-accent) 10%,transparent);color:var(--jk-accent)}.ds-nav:hover{background:var(--jk-fill-4);color:var(--jk-label)}.ds-nav:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}"
+      "description": "Neutral selected rows, primary label and accent SVG icon; 44px minimum height.",
+      "html": "<nav aria-label=\"Sections\"><a class=\"ds-nav\" href=\"#listen\" aria-current=\"page\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2 10v4M6 6v12M10 3v18M14 8v8M18 5v14M22 10v4\"/></svg>Listen</a><a class=\"ds-nav\" href=\"#library\">Library</a><a class=\"ds-nav\" href=\"#tools\">Tools</a></nav>",
+      "css": ".ds-nav{display:flex;align-items:center;min-height:44px;padding:0 12px;border-radius:10px;text-decoration:none;font-family:var(--font-sans);font-size:15px;font-weight:500;color:var(--jk-label-2)}.ds-nav[aria-current]{background:var(--jk-fill-3);color:var(--jk-label)}.ds-nav:not([aria-current]):hover{background:var(--jk-fill-4);color:var(--jk-label)}.ds-nav:focus-visible{outline:2px solid var(--jk-accent);outline-offset:2px;border-radius:6px}.ds-nav{gap:12px;transition:background-color 100ms,color 100ms}.ds-nav-icon{width:18px;height:18px;flex-shrink:0}.ds-nav[aria-current] .ds-nav-icon{color:var(--jk-accent)}"
     },
     {
       "name": "Demo badge",
@@ -466,18 +628,19 @@
     {
       "name": "Live chord",
       "kind": "custom",
-      "description": "Focused chord with subordinate notation and non-color confidence label.",
-      "html": "<div class=\"ds-chord\"><div class=\"ds-symbol\">Cmaj7</div><div class=\"ds-numeral\">Imaj7</div><p class=\"ds-strength\">Strong chord match</p></div>",
-      "css": ".ds-chord{text-align:center;font-family:var(--font-sans);color:var(--jk-label)}.ds-symbol{font-size:clamp(96px,13vw,208px);font-weight:600;line-height:1;letter-spacing:-.03em}.ds-numeral{margin-top:12px;font-size:24px;font-weight:500;color:var(--jk-accent)}.ds-strength{margin-top:8px;font-size:13px;color:var(--jk-label-2)}"
+      "description": "Bench-readable chord with subordinate numeral; tentative estimates dim the symbol.",
+      "html": "<div class=\"ds-chord\"><div class=\"ds-symbol-row\"><span class=\"ds-symbol\">Cmaj7</span></div><div class=\"ds-numeral\">Imaj7</div></div>",
+      "css": ".ds-chord{text-align:center;font-family:var(--font-sans);color:var(--jk-label)}.ds-symbol-row{height:calc(clamp(96px,13vw,208px)*1.1);display:flex;align-items:center;justify-content:center;overflow:hidden;transition:opacity 500ms ease-out}.ds-symbol{font-size:clamp(96px,13vw,208px);font-weight:600;line-height:1;letter-spacing:-.03em;white-space:nowrap}.ds-symbol-row[data-tentative]{opacity:.55}.ds-numeral{margin-top:12px;min-height:28px;font-size:17px;line-height:1.3;font-weight:500;color:var(--jk-accent)}@media(min-width:640px){.ds-numeral{font-size:20px;line-height:1.25}}"
     }
   ],
   "narrative": {
     "northStar": "Apple recording utility",
-    "overview": "Keel follows the user-pinned Voice Memos / GarageBand utility direction: modern, calm and uncomplicated. Native system typography, semantic light/dark surfaces, grouped controls and restrained blue actions support use at a piano bench. These are interface references, with no Apple affiliation implied.\n\nThe shipped system gives the current task room, uses readable secondary labels, and moves infrequent controls into deliberate sheets. Chord recognition is presented as an estimate with explicit strength labels; screenshots and the demo establish interface behavior, not real-instrument accuracy.",
+    "overview": "Keel follows the user-pinned Voice Memos / GarageBand utility direction: modern, calm and uncomplicated. Native system typography, semantic light/dark surfaces, grouped controls and restrained blue actions support use at a piano bench. These are interface references, with no Apple affiliation implied.\n\nThe shipped system uses a persistent window toolbar, readable secondary labels and quiet grouped surfaces. Listening options stays in the toolbar throughout the session; the live chord remains the largest element. A tentative chord is dimmed and an insufficient estimate is withheld. Screenshots and the demo establish interface behavior, not real-instrument accuracy.",
     "keyCharacteristics": [
       "Semantic light and dark surfaces.",
       "One dominant action and an oversized live chord.",
-      "Grouped controls, labeled SVG icons and responsive sheets."
+      "Grouped controls, labeled SVG icons and responsive sheets.",
+      "Compact toolbar titles, restrained rectangular actions and quiet empty states."
     ],
     "rules": [
       {
@@ -487,7 +650,7 @@
       },
       {
         "name": "The Bench Hierarchy Rule",
-        "body": "The live chord dominates. Roman numeral, match strength and key remain subordinate; long chord symbols scale down without wrapping.",
+        "body": "The live chord dominates. Roman numeral and key remain subordinate; long chord symbols scale down without wrapping.",
         "section": "typography"
       },
       {
@@ -497,8 +660,8 @@
       }
     ],
     "dos": [
-      "Do keep primary actions and navigation at least 44px high; large listening actions are 52px.",
-      "Do show chord match strength in words, alongside the estimate.",
+      "Do keep primary actions and navigation at least 44px high; large listening actions are 48px.",
+      "Do show a tentative chord by dimming the glyph, never with a changing line of text.",
       "Do use the supplied semantic tokens for both themes and preserve visible keyboard focus.",
       "Do keep the demo explicitly labeled and separate from microphone access and saving."
     ],

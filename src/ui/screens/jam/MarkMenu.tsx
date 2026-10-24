@@ -89,7 +89,7 @@ export function MarkMenu({ onMark }: MarkMenuProps) {
       <span ref={anchor} className="inline-flex">
         <Button
           variant="gray"
-          round
+          size="lg"
           aria-haspopup="menu"
           aria-expanded={open}
           aria-controls={open ? id : undefined}

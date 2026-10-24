@@ -2,12 +2,14 @@
 name: Keel
 description: A calm listening utility for live chord and key recognition.
 colors:
-  bg: '#fbfbfd'
-  bg-3: '#f2f2f7'
+  bg: '#f5f5f7'
+  bg-2: '#ffffff'
+  bg-3: '#ededf0'
   surface: '#ffffff'
   surface-2: '#f2f2f7'
-  label: '#000000'
+  label: '#1d1d1f'
   label-2: '#63636b'
+  label-3: '#6e6e73'
   accent: '#0059c7'
   action: '#005ecb'
   danger-action: '#bd2821'
@@ -16,23 +18,34 @@ colors:
   ok: '#34c759'
   warn: '#ff9500'
   fill-3: 'rgba(120, 120, 128, 0.12)'
-  separator: 'rgba(60, 60, 67, 0.29)'
+  separator: 'rgba(60, 60, 67, 0.18)'
   material: 'rgba(249, 249, 249, 0.78)'
-  bg-dark: '#171719'
-  bg-3-dark: '#202023'
-  surface-dark: '#1c1c1e'
+  bg-dark: '#1c1c1e'
+  bg-2-dark: '#202022'
+  bg-3-dark: '#252527'
+  surface-dark: '#2c2c2e'
   surface-2-dark: '#2c2c2e'
   label-dark: '#ffffff'
   label-2-dark: '#aaaab2'
+  label-3-dark: '#98989f'
   accent-dark: '#70b1ff'
   accent-fg-dark: '#ffffff'
   live-dark: '#ff6961'
   ok-dark: '#30d158'
   warn-dark: '#ff9f0a'
   fill-3-dark: 'rgba(120, 120, 128, 0.24)'
-  separator-dark: 'rgba(84, 84, 88, 0.6)'
+  separator-dark: 'rgba(154, 154, 160, 0.22)'
   material-dark: 'rgba(28, 28, 30, 0.72)'
 typography:
+  title-1:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: '1.75rem'
+    lineHeight: 1.22
+    letterSpacing: '-0.015em'
+  title-3:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: '1.25rem'
+    lineHeight: 1.25
   headline:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     fontSize: '1.0625rem'
@@ -77,6 +90,12 @@ components:
     rounded: '{rounded.control}'
     height: '44px'
     padding: '0 16px'
+  button-primary-large:
+    backgroundColor: '{colors.action}'
+    textColor: '{colors.accent-fg}'
+    rounded: '{rounded.control}'
+    height: '48px'
+    padding: '0 24px'
   button-gray:
     backgroundColor: '{colors.fill-3}'
     textColor: '{colors.label}'
@@ -88,7 +107,134 @@ components:
     rounded: '{rounded.cell}'
 ---
 
-<!-- Historical sections 1–6 are retained verbatim below; shipped visual guidance follows them. Their proposed screen layouts and phase labels are historical, not current UI requirements. -->
+# Design System: Keel
+
+## Overview
+
+**Creative North Star: "Apple recording utility"**
+
+Keel follows the user-pinned Voice Memos / GarageBand utility direction: modern, calm and uncomplicated. Native system typography, semantic light/dark surfaces, grouped controls and restrained blue actions support use at a piano bench. These are interface references, with no Apple affiliation implied.
+
+The shipped system uses a persistent window toolbar, readable secondary labels and quiet grouped surfaces. Listening options stays in the toolbar throughout the session; the live chord remains the largest element. A tentative chord is dimmed and an insufficient estimate is withheld. Screenshots and the demo establish interface behavior, not real-instrument accuracy.
+
+**Key Characteristics:**
+
+- Semantic light and dark surfaces.
+- One dominant action and an oversized live chord.
+- Grouped controls, labeled SVG icons and responsive sheets.
+- Compact toolbar titles, restrained rectangular actions and quiet empty states.
+
+Recorded from the shipped 2026-10-24 refinement: `src/index.css`, `src/app/AppShell.tsx`, `src/ui/screens/JamScreen.tsx`, `src/ui/screens/jam/`, `src/ui/kit/`, Tools and Settings. `PRODUCT.md` owns durable product truth. The direction contract is `.context/design-direction.md`. Historical seed `95cde4f4` remains in `.context/design-seed-95cde4f4.txt`; the user-pinned Apple-native direction takes precedence. This refinement has no new roll or approved image comp. Reference captures in `.context/` include `listen-desktop-light.png`, `listen-desktop-dark.png`, `listen-phone-light.png`, `listen-phone-dark.png`, `options-desktop-light.png`, `options-phone-light.png`, `tools-desktop-light.png`, `settings-desktop-light.png`, `library-desktop-light.png` and `review-phone-light.png`. Validation is recorded in `.context/design-validation.md`. No raster asset ships in the interface.
+
+## Colors
+
+A neutral surface system carries a blue action/notation family and semantic status colors. Frontmatter values without a suffix are light-mode values from `:root`; `-dark` values replace their corresponding roles under `.dark`. CSS custom properties remain the runtime source of truth. Action and danger-action inherit unchanged in dark mode.
+
+### Primary
+
+- **Accent blue** (`accent`): notation, active navigation, plain actions and selection tints.
+- **Action blue** (`action`): filled controls with white `accent-fg`, including Start listening and Finish & save.
+
+### Neutral
+
+- **Canvas** (`bg`, `bg-2`, `bg-3`): primary page and sidebar grounds.
+- **Surface** (`surface`, `surface-2`): grouped rows and raised control materials.
+- **Labels** (`label`, `label-2`, `label-3`): main text, readable explanations and quiet supporting labels/icons. Tertiary labels remain legible on both themes.
+- **Quiet fill and seam** (`fill-3`, `separator`): control wells and hairline separation.
+- **Material** (`material`): translucent navigation, with saturate(180%) blur(20px).
+
+Red `live` denotes live/error/destructive text and `danger-action` supports destructive filled actions. Green `ok` and orange `warn` remain semantic status roles; text communicates the state as well.
+
+**The Action Contrast Rule.** Use action for a filled control with white text; use accent for text, selection and notation. Dark mode changes accent while action retains its light-root value.
+
+## Typography
+
+**Display Font / Body Font:** the native system stack in frontmatter. The system font is intentional for this user-pinned native utility; no external font request is needed. Numerals and session duration use tabular figures where specified.
+
+### Hierarchy
+
+- **Live chord:** `clamp(96px, 13vw, 208px)`, semibold, line-height 1, tracking -0.03em. Fixed row height reserves 1.1 times the base symbol size. Symbols longer than five characters shrink to 0.8 / 0.64 / 0.52 of the base size at the component's length thresholds.
+- **Page title:** title-3 (20px / 1.25), semibold with tight tracking, in the persistent toolbar.
+- **State heading:** title-1 (28px), semibold; idle and finished Listen states use 1.25 line-height and tight tracking.
+- **Headline / body:** 17px with 1.3 / 1.35 line-height; headline weight 600.
+- **Subhead:** 15px / 1.35 for control and supporting labels.
+- **Footnote / caption:** 13px / 1.35 and 12px / 1.35, respectively.
+- **Live numeral:** headline (17px) on phones and title-3 (20px) from 640px, accent blue; chord detail uses 36px / 48px at those widths.
+
+The title-1 and title-3 roles keep utility and state headings compact. The oversized live chord is a functional readout; it is not a precedent for promotional display headings.
+
+**The Bench Hierarchy Rule.** The live chord dominates. Roman numeral and key remain subordinate; long chord symbols scale down without wrapping.
+
+## Layout
+
+At 1024px and wider, the shell uses a 208px sidebar with Listen, Library and Tools, plus Settings pinned at its foot. Below that width, three persistent bottom tabs carry Listen, Library and Tools; Settings is in Tools. A live-session return banner appears on other routes while listening. Screens own their scrolling.
+
+The shared page toolbar stays sticky at the top with a 64px minimum height, a 20px title and 16px horizontal padding growing to 24px at 640px. It can wrap when actions need space. Listen and shared pages use a centered 768px content cap; Listen has 16px horizontal insets. The idle mode selector and start-action column cap at 288px. The live chord region has a 260px minimum height, increasing to 340px at 640px. Shared page content begins 28px below the toolbar, increasing to 36px at 640px. Repeated gaps and padding follow 8, 12, 16, 24 and 32px steps, with smaller utility increments where necessary.
+
+Listening options is a centered dialog from 640px and a bottom sheet below it. The generic automatic sheet placement becomes a 380px side panel at 1024px; narrow screens use bottom sheets capped at 82vh. Centered dialogs cap at 440px and 92vw, with a maximum height of the dynamic viewport minus 32px. Scrollable sheet bodies and bottom bars account for safe-area insets. Listening controls wrap instead of forcing horizontal overflow.
+
+## Elevation & Depth
+
+Ordinary content relies on tonal layering, inset 0.5px hairlines and grouped surfaces. Overlays use the `--jk-shadow` elevated token: light `0 10px 30px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06)`; dark `0 14px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35)`. Modal sheets use a black 40% scrim and 2px backdrop blur. Segmented selection and slider thumbs have localized small shadows.
+
+**The Surface Depth Rule.** Use tonal surfaces and hairlines for ordinary content; reserve elevated shadows for overlays and selection affordances.
+
+## Shapes
+
+Controls use 10px corners, inset grouped containers 12px, cards 16px and sheets 20px. Main listening actions use the 10px rectangular control shape. Passive status badges and the sheet close button retain their native pill/circular forms. Segmented controls have their own compact track/selection geometry. Borders and hairline seams separate real groups; repeated decorative frames are not part of the system.
+
+## Components
+
+### Buttons
+
+The kit supports filled, tinted, gray and plain variants. Medium controls are 44px high with 16px horizontal padding; large controls are 48px with 24px padding. Both medium and large actions use 10px corners. Small mouse controls are 32px and expand to at least 44px on coarse pointers. Filled buttons brighten on hover and darken on activation; other variants change their fills. Pressed buttons expose `aria-pressed`, loading sets `aria-busy` and disables activation, and disabled controls use 40% opacity. Global focus is a 2px accent outline with a 2px offset. Press feedback changes color or brightness over a 150ms ease-out transition; buttons do not scale.
+
+### Grouped containers and fields
+
+Groups use surface backgrounds, 12px corners and hairline-separated rows, with title-case 13px medium-weight group headings and optional explanatory footers. Rows have a 44px minimum height and 16px side padding. Sliders and segmented selections can stack below labels so explanations remain readable. Native selects keep keyboard and touch behavior; the regular select is 44px high. Error fields use associated validation text rather than color alone.
+
+### Empty states
+
+Empty-state icons are quiet unframed SVGs: 48px glyphs with 1.25px strokes in a 64px slot, using label-3. A 20px semibold title, 15px explanation and a clear action complete the pattern. The Listen idle state uses the same quiet stroke treatment with a 64px waveform above its 28px state heading.
+
+### Navigation and badges
+
+Active sidebar items use a neutral fill-3 background and label text, with only the 18px SVG icon in accent blue; inactive items use label-2. Mobile tabs pair 24px SVG icons with 12px labels and a 56px minimum height. Active routes expose `aria-current`. Badges are 24px-high passive status pills, including the explicit Demo label; they are not touch controls. Use SVG icons with visible labels or accessible names.
+
+### Sheets
+
+Listening options is modal: focus moves into the panel, Tab stays within the active modal, the app root becomes inert, Escape or scrim closes it, and focus returns to the invoker. Stacked modals retain the correct focus owner. Ideas is modeless, preserving access to the live session. The sheet uses the canvas background so grouped surface rows remain distinct, and its header includes a named close button. Motion uses the shared expo easing: fade 180ms, rise 260ms, side slide 280ms, bottom slide 320ms. Reduced-motion preference collapses animation and transition durations.
+
+### Listening flow and permissions
+
+The primary path is Start listening → connecting → play a chord → live chord/key/progression → Finish & save → saved confirmation → Open session. The initial surface requires no setup: quiet waveform icon, compact headline, one line, the Just me · With a band choice (settings `mode`), Start listening, Try a demo and one privacy line. Listening options is a named icon button in the persistent Listen toolbar in idle, live and finished states. The mode selector uses 44px segments; the primary start action is 48px high. Idle, listening and finished share one centred axis; Ideas overlays it and never shifts it. Microphone access starts only on activation; a failure returns a clear error and Try again. The default start asks for microphone access, while MIDI is attempted only after explicit device selection or an existing MIDI grant. Settings provides device discovery and selection. A pending permission response cannot start an abandoned session.
+
+Try a demo runs a labeled example progression without microphone access or persistence. It keeps playing when you visit another screen (the shell shows "Demo in progress · Return to your jam", as it does for live listening). Switching to live stops the example and removes demo mode. Live input shows its source and level, a timer, chord symbol, Roman numeral, key and timeline. The hierarchy is chord, then "Key C major" (title-2 on phones, title-1 wider; tap for alternatives with % scores), then the numeral. At insufficient confidence it asks the musician to play or hold a chord; below the detector threshold the display withholds a guess. A tentative estimate (confidence < 0.6) is shown dimmed; there is no match-strength text. After four quiet seconds below level 0.06, a positioning/sensitivity hint appears for live microphone input.
+
+Listening options holds only how Keel listens and what it shows: Microphone sensitivity (Quieter room … Soft playing), Listen to (Just me / With a band), Record audio, Chord detail (Simple / With 7ths / Everything) and Show keyboard (not offered on phones, where the keyboard is hidden while listening). Record audio is chosen before a live session and locks while starting/listening; demo cannot record. Ideas holds next-chord, scale, voicing and modulation help; it always starts closed (only its tab is remembered), docks at the side from 1440px and is a half-height sheet below that, with the chord, key and Finish kept above it. Mark sits beside Finish & save and opens a small menu: Bookmark · Intro · Verse · Chorus · Bridge · Outro. The new flag in the timeline confirms it; plain toasts never take taps.
+
+Finish & save releases microphone/MIDI resources and saves the chart locally. Saving, success, save failure and empty completion have distinct text, and the finished screen is the only save message (no extra toast); Open session › appears only with a saved session. Sessions are named after the key heard longest ("Jam in C major", or "Jam"); the date is shown next to the name, never in it. The screen stays awake while listening (Screen Wake Lock, re-taken when the page becomes visible). A failure does not claim success. Audio is optional and stays local; configured account sync can sync chord data. The privacy copy must preserve that distinction.
+
+Space starts/finishes, B bookmarks, 1/2/3 changes detail, P toggles keyboard, M changes mode, I opens Ideas, and N/S/V/K selects its tabs. Shortcuts ignore text fields, modifier combinations and modal dialogs.
+
+## Do's and Don'ts
+
+### Do:
+
+- **Do** keep primary actions and navigation at least 44px high; large listening actions are 48px.
+- **Do** show a tentative chord by dimming the glyph, never with a changing line of text.
+- **Do** use the supplied semantic tokens for both themes and preserve visible keyboard focus.
+- **Do** keep the demo explicitly labeled and separate from microphone access and saving.
+
+### Don't:
+
+- **Don't** invent accuracy claims or Apple affiliation.
+- **Don't** rely on color alone to communicate chord confidence or recording state.
+- **Don't** promote compact legacy control dimensions into the touch target standard.
+
+Not canonized: the unused idle music-note glyph in ChordDisplay is a legacy defect, not an icon-system precedent. Oversized system-font promotional display treatment is not a reusable rule; system typography here is the user-pinned native utility voice, with an oversized chord solely as a musical readout. Compact fine-pointer controls do not lower the 44px touch-target requirement.
+
+<!-- Historical sections 1–6 are retained verbatim below; shipped visual guidance precedes them. Their proposed screen layouts and phase labels are historical, not current UI requirements. -->
 
 # Historical product design and roadmap (2026-10-22)
 
@@ -285,124 +431,3 @@ latency-free. The mic pipeline stays as fallback for acoustic piano and guitar.
 5. **Extras**: analyze audio files, ear training, vocal melody tracking, MIDI/MusicXML export, guitar tools.
 
 Detailed engineering plan, contracts, and PR breakdown: [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md).
-
-# Design System: Keel
-
-## Overview
-
-**Creative North Star: "Apple recording utility"**
-
-Keel follows the user-pinned Voice Memos / GarageBand utility direction: modern, calm and uncomplicated. Native system typography, semantic light/dark surfaces, grouped controls and restrained blue actions support use at a piano bench. These are interface references, with no Apple affiliation implied.
-
-The shipped system gives the current task room, uses readable secondary labels, and moves infrequent controls into deliberate sheets. Chord recognition is presented as an estimate with explicit strength labels; screenshots and the demo establish interface behavior, not real-instrument accuracy.
-
-**Key Characteristics:**
-
-- Semantic light and dark surfaces.
-- One dominant action and an oversized live chord.
-- Grouped controls, labeled SVG icons and responsive sheets.
-
-Recorded from the shipped 2026-10-23 sources: `src/index.css`, `src/app/AppShell.tsx`, `src/ui/screens/JamScreen.tsx`, `src/ui/screens/jam/`, `src/ui/kit/`, Tools and Settings. `PRODUCT.md` owns durable product truth. Direction replay evidence is `.context/design-seed-95cde4f4.txt`; the pinned Apple utility world takes precedence over that seed. Reference captures include `.context/apple-listen-desktop.png`, `apple-listen-phone.png`, `apple-live-desktop.png`, `apple-live-phone.png`, `apple-options-phone.png`, `apple-finished-phone.png`, `apple-tools-ipad.png` and the `apple-*-user-1720-dark.png` captures. No raster asset ships in the interface.
-
-## Colors
-
-A neutral surface system carries a blue action/notation family and semantic status colors. Frontmatter values without a suffix are light-mode values from `:root`; `-dark` values replace their corresponding roles under `.dark`. CSS custom properties remain the runtime source of truth. Action and danger-action inherit unchanged in dark mode.
-
-### Primary
-
-- **Accent blue** (`accent`): notation, active navigation, plain actions and selection tints.
-- **Action blue** (`action`): filled controls with white `accent-fg`, including Start listening and Finish & save.
-
-### Neutral
-
-- **Canvas** (`bg`, `bg-3`): primary page and sidebar grounds.
-- **Surface** (`surface`, `surface-2`): grouped rows and raised control materials.
-- **Labels** (`label`, `label-2`): main text and readable explanations.
-- **Quiet fill and seam** (`fill-3`, `separator`): control wells and hairline separation.
-- **Material** (`material`): translucent navigation, with saturate(180%) blur(20px).
-
-Red `live` denotes live/error/destructive text and `danger-action` supports destructive filled actions. Green `ok` and orange `warn` remain semantic status roles; text communicates the state as well.
-
-**The Action Contrast Rule.** Use action for a filled control with white text; use accent for text, selection and notation. Dark mode changes accent while action retains its light-root value.
-
-## Typography
-
-**Display Font / Body Font:** the native system stack in frontmatter. The system font is intentional for this user-pinned native utility; no external font request is needed. Numerals and session duration use tabular figures where specified.
-
-### Hierarchy
-
-- **Live chord:** `clamp(96px, 13vw, 208px)`, semibold, line-height 1, tracking -0.03em. Fixed row height reserves 1.1 times the base symbol size. Symbols longer than five characters shrink to 0.8 / 0.64 / 0.52 of the base size at the component's length thresholds.
-- **Page title:** title-2, semibold; larger title styles remain available for screen headings.
-- **Headline / body:** 17px with 1.3 / 1.35 line-height; headline weight 600.
-- **Subhead:** 15px / 1.35 for control and supporting labels.
-- **Footnote / caption:** 13px / 1.35 and 12px / 1.35, respectively.
-- **Live numeral:** 24px in the focused listening display, accent blue; chord detail can use the component's larger numeral presentation.
-
-The idle Listen heading uses `clamp(2.25rem, 5vw, 3.5rem)` and finished-state heading `clamp(2rem, 4vw, 3rem)`. These are state-specific compositions, not additional global display tokens.
-
-**The Bench Hierarchy Rule.** The live chord dominates. Roman numeral, match strength and key remain subordinate; long chord symbols scale down without wrapping.
-
-## Layout
-
-At 1024px and wider, the shell uses a 224px sidebar with Listen, Library and Tools, plus Settings pinned at its foot. Below that width, three persistent bottom tabs carry Listen, Library and Tools; Settings is in Tools. A live-session return banner appears on other routes while listening. Screens own their scrolling.
-
-Listen uses a centered container capped at 900px, 24px horizontal padding growing to 40px at 640px. Its live chord region has a 260px minimum height, increasing to 340px at 640px. Tools and Settings use a centered 768px content cap. Repeated gaps and padding follow 8, 12, 16, 24 and 32px steps, with smaller utility increments where necessary.
-
-Sheets become 380px side panels at 1024px; narrow screens use bottom sheets capped at 82vh. Centered dialogs cap at 440px and 92vw. Scrollable sheet bodies and bottom bars account for safe-area insets. Listening controls wrap instead of forcing horizontal overflow.
-
-## Elevation & Depth
-
-Ordinary content relies on tonal layering, inset 0.5px hairlines and grouped surfaces. Overlays use the `--jk-shadow` elevated token: light `0 10px 30px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06)`; dark `0 14px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35)`. Modal sheets use a black 40% scrim and 2px backdrop blur. Segmented selection and slider thumbs have localized small shadows.
-
-**The Surface Depth Rule.** Use tonal surfaces and hairlines for ordinary content; reserve elevated shadows for overlays and selection affordances.
-
-## Shapes
-
-Controls use 10px corners, inset grouped containers 12px, cards 16px and sheets 20px. Main listening actions and status badges use pills. Segmented controls have their own compact track/selection geometry. Borders and hairline seams separate real groups; repeated decorative frames are not part of the system.
-
-## Components
-
-### Buttons
-
-The kit supports filled, tinted, gray and plain variants. Medium controls are 44px high with 16px horizontal padding; large controls are 52px with 24px padding. Main listening actions use the large pill treatment. Filled buttons brighten on hover and darken on activation; other variants change their fills. Pressed buttons expose `aria-pressed`, loading sets `aria-busy` and disables activation, and disabled controls use 40% opacity. Global focus is a 2px accent outline with a 2px offset. Press feedback scales to 0.98 over a 150ms transition.
-
-### Grouped containers and fields
-
-Groups use surface backgrounds, 12px corners and hairline-separated rows, with functional group headings and optional explanatory footers. Rows have a 44px minimum height and 16px side padding. Sliders and segmented selections can stack below labels so explanations remain readable. Native selects keep keyboard and touch behavior; the regular select is 44px high. Error fields use associated validation text rather than color alone.
-
-### Navigation and badges
-
-Active sidebar items use a 10% accent tint and accent text; inactive items use label-2. Mobile tabs pair 24px SVG icons with 12px labels and a 56px minimum height. Active routes expose `aria-current`. Badges are 24px-high passive status pills, including the explicit Demo label; they are not touch controls. Use SVG icons with visible labels or accessible names.
-
-### Sheets
-
-Listening options is modal: focus moves into the panel, Tab stays within the active modal, the app root becomes inert, Escape or scrim closes it, and focus returns to the invoker. Stacked modals retain the correct focus owner. Ideas is modeless, preserving access to the live session. The sheet header includes a named close button. Motion uses the shared expo easing: fade 180ms, rise 260ms, side slide 280ms, bottom slide 320ms. Reduced-motion preference collapses animation and transition durations.
-
-### Listening flow and permissions
-
-The primary path is Start listening → connecting → play a chord → live chord/key/progression → Finish & save → saved confirmation → Open session. The initial surface requires no setup and stays under 25 words: headline, one line, Start listening, Try a demo, the Just me · With a band choice (settings `mode`) with an icon button for Listening options, and one privacy line. Idle, listening and finished share one centred axis; Ideas overlays it and never shifts it. Microphone access starts only on activation; a failure returns a clear error and Try again. The default start asks for microphone access, while MIDI is attempted only after explicit device selection or an existing MIDI grant. Settings provides device discovery and selection. A pending permission response cannot start an abandoned session.
-
-Try a demo runs a labeled example progression without microphone access or persistence. It keeps playing when you visit another screen (the shell shows "Demo in progress · Return to your jam", as it does for live listening). Switching to live stops the example and removes demo mode. Live input shows its source and level, a timer, chord symbol, Roman numeral, key and timeline. The hierarchy is chord, then "Key C major" (title-2 on phones, title-1 wider; tap for alternatives with % scores), then the numeral. At insufficient confidence it asks the musician to play or hold a chord; below the detector threshold the display withholds a guess. A tentative estimate (confidence < 0.6) is shown dimmed; there is no match-strength text. After four quiet seconds below level 0.06, a positioning/sensitivity hint appears for live microphone input.
-
-Listening options holds only how Keel listens and what it shows: Microphone sensitivity (Quieter room … Soft playing), Listen to (Just me / With a band), Record audio, Chord detail (Simple / With 7ths / Everything) and Show keyboard (not offered on phones, where the keyboard is hidden while listening). Record audio is chosen before a live session and locks while starting/listening; demo cannot record. Ideas holds next-chord, scale, voicing and modulation help; it always starts closed (only its tab is remembered), docks at the side from 1440px and is a half-height sheet below that, with the chord, key and Finish kept above it. Mark sits beside Finish & save and opens a small menu: Bookmark · Intro · Verse · Chorus · Bridge · Outro. The new flag in the timeline confirms it; plain toasts never take taps.
-
-Finish & save releases microphone/MIDI resources and saves the chart locally. Saving, success, save failure and empty completion have distinct text, and the finished screen is the only save message (no extra toast); Open session › appears only with a saved session. Sessions are named after the key heard longest ("Jam in C major", or "Jam"); the date is shown next to the name, never in it. The screen stays awake while listening (Screen Wake Lock, re-taken when the page becomes visible). A failure does not claim success. Audio is optional and stays local; configured account sync can sync chord data. The privacy copy must preserve that distinction.
-
-Space starts/finishes, B bookmarks, 1/2/3 changes detail, P toggles keyboard, M changes mode, I opens Ideas, and N/S/V/K selects its tabs. Shortcuts ignore text fields, modifier combinations and modal dialogs.
-
-## Do's and Don'ts
-
-### Do:
-
-- **Do** keep primary actions and navigation at least 44px high; large listening actions are 52px.
-- **Do** show a tentative chord by dimming the glyph, never with a changing line of text.
-- **Do** use the supplied semantic tokens for both themes and preserve visible keyboard focus.
-- **Do** keep the demo explicitly labeled and separate from microphone access and saving.
-
-### Don't:
-
-- **Don't** invent accuracy claims or Apple affiliation.
-- **Don't** rely on color alone to communicate chord confidence or recording state.
-- **Don't** promote compact legacy control dimensions into the touch target standard.
-
-Not canonized: compact legacy controls below 44px (including small kit variants, segmented segments and the tuning field) do not establish a touch target rule. The unused idle music-note glyph in ChordDisplay is not an icon-system precedent. Neither exception should propagate to new surfaces.

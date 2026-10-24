@@ -2,7 +2,17 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { RefObject } from 'react';
 import { Link } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
-import { Check, ChevronRight, Lightbulb, Mic, Play, Square, Usb } from 'lucide-react';
+import {
+  AudioLines,
+  Check,
+  ChevronRight,
+  Lightbulb,
+  LockKeyhole,
+  Mic,
+  Play,
+  Square,
+  Usb,
+} from 'lucide-react';
 import { clock, MIN_DISPLAY_CONFIDENCE } from '@/core';
 import type { Chord, JamMode, VocabLevel } from '@/core';
 import { jamStore, snapToChordStart, useJamStore } from '@/state/jamStore';
@@ -220,112 +230,120 @@ export function JamScreen() {
 
   return (
     <div className="flex h-full flex-col overflow-y-auto">
-      {/* The same 768 px column as every other page. No title row: the sidebar and tab bar
-          already say Listen; the top bar holds the state, the timer and the input. */}
+      <header className="material hairline-b sticky top-0 z-10 flex min-h-16 shrink-0 items-center justify-between px-4 sm:px-6">
+        <h1 className="text-title-3 font-semibold tracking-tight">Listen</h1>
+        {options(true)}
+      </header>
       <main
         className={cx(
           'mx-auto flex w-full max-w-3xl flex-1 flex-col px-4',
           halfIdeas ? 'pb-3' : 'pb-8 sm:pb-10',
         )}
       >
-        <div
-          data-testid="listen-status"
-          className="flex h-13 shrink-0 items-center justify-between gap-3 text-subhead text-label-2"
-        >
-          <div className="flex shrink-0 items-center gap-2">
-            {input.mock ? (
-              <Badge>Demo</Badge>
-            ) : (
-              live && (
-                <>
-                  {/* The dot means one thing: audio is being kept. */}
-                  {recording && <span className="size-2 rounded-full bg-live" aria-hidden />}
-                  <span>{starting ? 'Connecting…' : recording ? 'Recording' : 'Listening'}</span>
-                </>
-              )
-            )}
-            {listening && (
-              <time className="tabular" aria-label="Session duration">
-                {formatTime(elapsed)}
-              </time>
-            )}
-          </div>
-          {live && (
-            <div className="flex min-w-0 items-center gap-2">
+        {(live || input.mock) && (
+          <div
+            data-testid="listen-status"
+            className="flex h-13 shrink-0 items-center justify-between gap-3 text-subhead text-label-2"
+          >
+            <div className="flex shrink-0 items-center gap-2">
               {input.mock ? (
-                <span className="truncate">Example progression</span>
+                <Badge>Demo</Badge>
               ) : (
-                <>
-                  {jam.source === 'midi' ? (
-                    <Usb className="size-4 shrink-0" aria-hidden />
-                  ) : (
-                    <Mic className="size-4 shrink-0" aria-hidden />
-                  )}
-                  <span className="min-w-0 truncate">{inputLabel}</span>
-                  <Meter level={jam.level} active={listening} bars={7} />
-                </>
+                live && (
+                  <>
+                    {/* The dot means one thing: audio is being kept. */}
+                    {recording && <span className="size-2 rounded-full bg-live" aria-hidden />}
+                    <span>{starting ? 'Connecting…' : recording ? 'Recording' : 'Listening'}</span>
+                  </>
+                )
+              )}
+              {listening && (
+                <time className="tabular" aria-label="Session duration">
+                  {formatTime(elapsed)}
+                </time>
               )}
             </div>
-          )}
-        </div>
-        {!listening && !starting && !stopped && !input.saving ? (
-          <div className="flex flex-1 flex-col items-center justify-center py-12 text-center sm:py-20">
-            <h2 className="max-w-lg text-[clamp(2.25rem,5vw,3.5rem)] leading-[1.08] font-semibold tracking-[-0.035em] text-balance">
-              See what you’re playing.
-            </h2>
-            <p className="mt-4 text-body text-label-2 sm:text-title-3">
-              {input.mock
-                ? 'A scripted progression. Nothing is saved.'
-                : 'Chords and key, as you play.'}
-            </p>
-            {jam.status === 'error' && jam.error && (
-              <p role="alert" className="mt-6 max-w-md text-subhead leading-relaxed text-live">
-                {jam.error}
-              </p>
-            )}
-            <Button
-              className="mt-9 min-w-52"
-              variant="filled"
-              size="lg"
-              round
-              leading={
-                input.mock ? (
-                  <Play className="size-5 fill-current" aria-hidden />
+            {live && (
+              <div className="flex min-w-0 items-center gap-2">
+                {input.mock ? (
+                  <span className="truncate">Example progression</span>
                 ) : (
-                  <Mic className="size-5" aria-hidden />
-                )
-              }
-              onClick={() => void start()}
-            >
-              {input.mock ? 'Start demo' : jam.status === 'error' ? 'Try again' : 'Start listening'}
-            </Button>
-            {input.mock ? (
-              <Button className="mt-2" variant="plain" onClick={() => void input.startLive()}>
-                Use my microphone
-              </Button>
-            ) : (
-              <Button
-                className="mt-2"
-                variant="plain"
-                onClick={input.startDemo}
-                leading={<Play className="size-3.5" aria-hidden />}
-              >
-                Try a demo
-              </Button>
-            )}
-            <div className="mt-8 flex items-center gap-1">
-              <Segmented
-                aria-label="Listen to"
-                value={settings.mode}
-                onChange={setMode}
-                options={MODE_OPTIONS}
-              />
-              {options(true)}
-            </div>
-            {!input.mock && (
-              <p className="mt-6 text-footnote text-label-2">Audio stays on this device.</p>
+                  <>
+                    {jam.source === 'midi' ? (
+                      <Usb className="size-4 shrink-0" aria-hidden />
+                    ) : (
+                      <Mic className="size-4 shrink-0" aria-hidden />
+                    )}
+                    <span className="min-w-0 truncate">{inputLabel}</span>
+                    <Meter level={jam.level} active={listening} bars={7} />
+                  </>
+                )}
+              </div>
             )}
           </div>
+        )}
+        {!listening && !starting && !stopped && !input.saving ? (
+          <>
+            <div className="flex flex-1 flex-col items-center justify-center py-10 text-center sm:py-14">
+              <AudioLines className="mb-6 size-16 text-label-3" strokeWidth={1.25} aria-hidden />
+              <h2 className="max-w-sm text-title-1 leading-tight font-semibold tracking-tight text-balance">
+                See what you’re playing.
+              </h2>
+              <p className="mt-2 text-subhead text-label-2">
+                {input.mock
+                  ? 'A scripted progression. Nothing is saved.'
+                  : 'Chords and key, as you play.'}
+              </p>
+              {jam.status === 'error' && jam.error && (
+                <p role="alert" className="mt-6 max-w-md text-subhead leading-relaxed text-live">
+                  {jam.error}
+                </p>
+              )}
+              <div className="mt-8 flex w-full max-w-72 flex-col gap-3">
+                <Segmented
+                  fill
+                  aria-label="Listen to"
+                  value={settings.mode}
+                  onChange={setMode}
+                  options={MODE_OPTIONS}
+                  className="[&>button]:h-11"
+                />
+                <Button
+                  variant="filled"
+                  size="lg"
+                  leading={
+                    input.mock ? (
+                      <Play className="size-4 fill-current" aria-hidden />
+                    ) : (
+                      <Mic className="size-[18px]" aria-hidden />
+                    )
+                  }
+                  onClick={() => void start()}
+                >
+                  {input.mock
+                    ? 'Start demo'
+                    : jam.status === 'error'
+                      ? 'Try again'
+                      : 'Start listening'}
+                </Button>
+                {input.mock ? (
+                  <Button variant="plain" onClick={() => void input.startLive()}>
+                    Use my microphone
+                  </Button>
+                ) : (
+                  <Button variant="plain" onClick={input.startDemo}>
+                    Try a demo
+                  </Button>
+                )}
+              </div>
+            </div>
+            {!input.mock && (
+              <p className="flex items-center justify-center gap-1.5 pt-4 text-footnote text-label-2">
+                <LockKeyhole className="size-3" aria-hidden />
+                Audio stays on this device.
+              </p>
+            )}
+          </>
         ) : stopped || input.saving ? (
           <div className="flex flex-1 flex-col items-center justify-center py-12 text-center sm:py-16">
             {input.saved && (
@@ -333,7 +351,7 @@ export function JamScreen() {
                 <Check className="size-6" aria-hidden />
               </span>
             )}
-            <h2 className="text-[clamp(2rem,4vw,3rem)] leading-tight font-semibold tracking-[-0.03em]">
+            <h2 className="text-title-1 leading-tight font-semibold tracking-tight">
               {input.saving
                 ? 'Saving your jam…'
                 : input.mock
@@ -362,14 +380,13 @@ export function JamScreen() {
                 {input.saved && (
                   <Link
                     to={`/review/${input.saved.id}`}
-                    className="inline-flex min-h-13 items-center gap-1 rounded-full bg-action pr-5 pl-6 text-body font-semibold text-accent-fg transition-[filter] hover:brightness-110"
+                    className="inline-flex min-h-12 items-center gap-1 rounded-control bg-action pr-5 pl-6 text-body font-semibold text-accent-fg transition-[filter] hover:brightness-110"
                   >
                     Open session <ChevronRight className="size-5" aria-hidden />
                   </Link>
                 )}
                 <Button
                   variant={input.saved ? 'gray' : 'filled'}
-                  round
                   size="lg"
                   onClick={() => void input.startLive()}
                 >
@@ -454,7 +471,7 @@ export function JamScreen() {
                   halfIdeas ? 'py-2' : 'py-4',
                   // The floating Ideas panel covers the column's right edge, where the newest
                   // chord is: the strip ends at the panel (the chord above does not move).
-                  sideOpen && 'pr-[max(0px,calc(316px-(100vw-992px)/2))]',
+                  sideOpen && 'pr-[max(0px,calc(316px-(100vw-976px)/2))]',
                 )}
               >
                 {timeline}
@@ -468,7 +485,6 @@ export function JamScreen() {
                 <Button
                   variant="filled"
                   size="lg"
-                  round
                   className="min-w-48"
                   loading={starting}
                   leading={<Square className="size-4 fill-current" aria-hidden />}
@@ -480,7 +496,6 @@ export function JamScreen() {
               </div>
               {!halfIdeas && (
                 <div className="flex flex-wrap items-center justify-center gap-x-3">
-                  {options(false)}
                   {listening && (
                     <Button
                       variant="plain"

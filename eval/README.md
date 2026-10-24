@@ -145,3 +145,24 @@ are not hundreds of independent performances. Nine progressions are major and on
 They do not establish real-microphone, guitar, singer or held-out musician accuracy. The report
 includes poor conditions, missed changes, startup false positives and key ambiguity, so improved
 headline averages must not be read as a field accuracy guarantee.
+
+## Noise-only regression controls
+
+`pnpm exec tsx --tsconfig eval/tsconfig.json eval/controls.ts` checks startup white
+and pink noise at two levels, a fan-like noise starting after silence, short
+typing-like bursts, isolated 50/60 Hz hum, and immediate quiet sampled piano.
+It reports chord-display time and published keys at all three sensitivity settings.
+`src/audio/noiseRejection.test.ts` checks different seeds at 44.1 and 48 kHz.
+
+To evaluate a speech/noise recording, convert it to mono 48 kHz float32 PCM, then
+pass `--pcm /path/to/noise.f32` to the controls command. Use a noise-only clip:
+any chord or key is counted as a false positive. For example, on macOS:
+
+```sh
+say -v Samantha -o /tmp/keel-speech.aiff 'Can you hear me? There is someone talking in the room. Please put the books on the table. What time are we leaving today? The television is on in the background.'
+ffmpeg -y -i /tmp/keel-speech.aiff -ar 48000 -ac 1 -f f32le /tmp/keel-speech.f32
+pnpm exec tsx --tsconfig eval/tsconfig.json eval/controls.ts --pcm /tmp/keel-speech.f32
+```
+
+Generated speech is only a development check. It does not validate a real
+microphone, overlapping speakers, or TV audio with background music.

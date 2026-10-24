@@ -204,7 +204,7 @@ export function LibraryScreen() {
                   placeholder="Search name, tag, key or date"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="h-9 w-full min-w-0 rounded-control bg-fill-3 pr-3 pl-8 text-body text-label placeholder:text-label-3 pointer-coarse:h-11"
+                  className="h-11 w-full min-w-0 rounded-control bg-fill-3 pr-3 pl-8 text-subhead text-label placeholder:text-label-2"
                 />
               </label>
               <Segmented<LibrarySort>

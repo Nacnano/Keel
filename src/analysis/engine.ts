@@ -208,7 +208,6 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
   let lastHeard: Chord | null = null;
   let lastHeardT = 0;
   let lastNotes = '';
-  let heldSims: Float32Array | null = null;
   let prevBass: PitchClass | null = null;
   let lastSoundT = -Infinity;
   /** Per smoother frame: 1 when the gate has been closed for longer than the release hold. */
@@ -258,7 +257,6 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     sims = new Float32Array(bank.size + 1);
     smoother = createSmoother({ numStates: bank.size + 1, stability: cfg.stability });
     lastDecodedFrame = -1;
-    heldSims = null;
     pending = null;
     updateInKey();
   }
@@ -319,6 +317,9 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
       }
       return;
     }
+    // A new chord needs continuous evidence. Separate short noises must not accumulate
+    // dwell across uncertain frames, even when nothing has been shown yet.
+    pending = null;
     if (!lastHeard) return;
     // Released silence has already waited RELEASE_HOLD_SEC; a gap with sound waits GAP_HOLD_SEC.
     if (silent || tEnd - lastSureT + 1e-6 >= GAP_HOLD_SEC) {
@@ -353,9 +354,6 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     if (!silent && inKeyBonus) for (let i = 0; i < bank.size; i++) sims[i] += inKeyBonus[i];
     if (!silent) {
       lastSoundT = frame.t;
-      heldSims = Float32Array.from(sims);
-    } else if (heldSims && frame.t - lastSoundT < RELEASE_HOLD_SEC) {
-      sims.set(heldSims);
     }
     quiet[smoother.frames % TIME_RING] = silent && frame.t - lastSoundT >= RELEASE_HOLD_SEC ? 1 : 0;
     const pcs: PitchClass[] = [];

@@ -13,11 +13,7 @@ export interface GroupProps extends Omit<HTMLAttributes<HTMLElement>, 'title'> {
 export function Group({ title, footer, flush, className, children, ...rest }: GroupProps) {
   return (
     <section className={cx('flex flex-col gap-2', className)} {...rest}>
-      {title && (
-        <h2 className="px-4 text-footnote font-medium tracking-wide text-label-2 uppercase">
-          {title}
-        </h2>
-      )}
+      {title && <h2 className="px-4 text-footnote font-medium text-label-2">{title}</h2>}
       <div
         className={cx(
           'overflow-hidden rounded-cell bg-surface',

@@ -27,12 +27,12 @@ change, describe it in the PR body; the integrator lands it.
 
 ## CI/CD
 
-`.github/workflows/ci.yml` runs on every pull request, on pushes to `main`, and in merge queues:
+The **Keel CI** workflow in `.github/workflows/ci.yml` runs on every pull request, on pushes to `main`, and in merge queues:
 
 - **Jobs run in parallel:** `Lint and format`, `Typecheck`, `Unit tests` (with a coverage
-  report attached as an artifact and summarised on the run page), `Production build`
+  report attached as `keel-coverage` and summarised on the run page), `Production build`
   (checks that the worker, worklet and service worker are emitted, summarises bundle sizes,
-  uploads `dist`).
+  uploads the `keel-dist` artifact).
 - **`CI` is the single required check** for branch protection; it fails if any job failed,
   was cancelled or skipped.
 - Workflow permissions are read-only, every job has a timeout, a newer push cancels the
@@ -42,7 +42,7 @@ change, describe it in the PR body; the integrator lands it.
 - Node comes from `.nvmrc`, pnpm from `packageManager`; `.github/actions/setup` is the
   shared install step.
 - **Deploys** are handled by the Vercel GitHub integration: every PR gets a preview URL,
-  every merge to `main` goes to production at https://music.nacnano.dev.
+  every merge to `main` goes to production at https://keel.nacnano.dev.
 - Repo settings: merge commits only (squash and rebase merge are disabled), merged branches
   are deleted automatically, secret scanning with push protection and CodeQL are on.
 

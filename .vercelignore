@@ -1,0 +1,15 @@
+# Local workspace data and credentials
+.context/
+.impeccable/
+.git/
+.vercel/
+.env
+.env.*
+*.local
+
+# Dependencies and generated artifacts are rebuilt on Vercel
+node_modules/
+dist/
+dev-dist/
+coverage/
+eval/.cache/

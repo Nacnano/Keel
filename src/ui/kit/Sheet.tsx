@@ -135,8 +135,7 @@ export function Sheet({
       aria-modal={modeless ? undefined : true}
       aria-label={aria['aria-label'] ?? (typeof title === 'string' ? title : undefined)}
       className={cx(
-        'flex flex-col overflow-hidden bg-surface text-label shadow-elevated',
-        'dark:bg-[#1c1c1e]',
+        'flex flex-col overflow-hidden bg-bg text-label shadow-elevated',
         resolved === 'side' &&
           'anim-slide-in-right fixed top-16 right-3 bottom-3 z-40 w-[380px] max-w-[calc(100vw-1.5rem)] rounded-sheet',
         resolved === 'bottom' &&

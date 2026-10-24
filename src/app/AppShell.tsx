@@ -45,10 +45,14 @@ function SidebarLink({
       aria-current={active ? 'page' : undefined}
       className={cx(
         'flex min-h-11 items-center gap-3 rounded-control px-3 text-subhead font-medium transition-colors duration-100',
-        active ? 'bg-accent/10 text-accent' : 'text-label-2 hover:bg-fill-4 hover:text-label',
+        active ? 'bg-fill-3 text-label' : 'text-label-2 hover:bg-fill-4 hover:text-label',
       )}
     >
-      <Icon className="size-[18px] shrink-0" aria-hidden />
+      <Icon
+        className={cx('size-[18px] shrink-0', active && 'text-accent')}
+        strokeWidth={1.75}
+        aria-hidden
+      />
       <span className="truncate">{label}</span>
     </Link>
   );
@@ -105,12 +109,10 @@ export function AppShell() {
     <div className="flex h-full bg-bg text-label">
       <aside
         aria-label="Primary"
-        className="hidden w-56 shrink-0 flex-col gap-1 border-r border-separator/40 bg-bg-3 p-4 pt-8 lg:flex"
+        className="hidden w-52 shrink-0 flex-col gap-1 border-r border-separator/60 bg-bg-3 px-3 pb-4 lg:flex"
       >
-        <div className="mb-8 flex items-center gap-2.5 px-3">
-          <span className="flex size-8 items-center justify-center rounded-control bg-action text-accent-fg">
-            <AudioLines className="size-5" aria-hidden />
-          </span>
+        <div className="mb-5 flex h-16 shrink-0 items-center gap-2.5 px-3">
+          <AudioLines className="size-6 text-label" strokeWidth={1.75} aria-hidden />
           <span className="text-headline font-semibold tracking-tight">Keel</span>
         </div>
         <nav className="flex flex-col gap-0.5" aria-label="Sections">

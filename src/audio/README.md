@@ -90,7 +90,7 @@ each change within 0.3 s, and the key C major.
   window covers `[t + hop/sr − frame/sr, t + hop/sr]`. Frames arrive every hop
   (≈ 23.4 fps at 48 kHz, ≈ 21.5 fps at 44.1 kHz). `clock` (`src/core/clock.ts`)
   is attached to the same AudioContext, so MIDI and session time line up.
-- `chroma` is 12 bins (C = 0), L1-normalised. It is all zeros when the gate is closed.
+- `chroma` is 12 bins (C = 0), L1-normalised. It is all zeros when the level gate is closed or the spectrum lacks tonal evidence.
 - `energy` is the RMS of the newest hop mapped from −60…0 dBFS to 0…1, with a release
   (piano 0.4 s, guitar 0.15 s) so a level meter decays smoothly. Gating uses the
   raw level.
@@ -139,6 +139,25 @@ each change within 0.3 s, and the key C major.
 
 The worker posts `stats` (`meanMs`, `maxMs`, `load` = mean / hop duration)
 every 64 hops. `load` ≈ worker CPU share, and the target is < 0.15.
+
+## Room-noise rejection
+
+Before chroma normalisation, at least 55% of power in the 30–5000 Hz analysis band
+must lie around prominent spectral peaks. This prevents the few random peaks in
+fan noise, hiss or a click from being amplified into a full-strength chord. The
+pipeline also rejects isolated 50/60 Hz harmonic buzz when its fundamental is
+present and its harmonic series accounts for over 90% of prominent-peak power.
+The level meter still reports actual microphone volume.
+
+The analysis engine holds an already confirmed chord across a short pause, but
+does not replay a new candidate's evidence during silence. Separate short sounds
+do not accumulate the dwell time needed to confirm a chord. No calibration step
+or extra user setting is required; microphone speech processing remains disabled.
+
+Run `pnpm exec vitest run src/audio/noiseRejection.test.ts src/analysis/engine.test.ts`
+for regression coverage. `eval/controls.ts` measures noise-only false positives
+and quiet piano using the same pipeline. These are signal heuristics, not source
+separation: sustained speech, singing or music from a TV can still be detected.
 
 ## Known limits
 

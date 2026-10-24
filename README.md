@@ -53,14 +53,28 @@ Node 22, pnpm 11.
 
 ## Deploy
 
-Production: **https://music.nacnano.dev** (Vercel project `keel`, connected to this
-repo; **https://keel-music.vercel.app** is the fallback URL; the pre-rename `*.vercel.app` address redirects to production). Every PR gets a preview deployment; every merge to `main` deploys to production.
+Production: **https://keel.nacnano.dev**. The Vercel project `keel` is connected to
+[**Nacnano/Keel**](https://github.com/Nacnano/Keel), with `main` as its production
+branch. **https://keel-nacnano.vercel.app** is the fallback URL (`keel.vercel.app`
+is unavailable). Every PR gets a preview deployment; every merge to `main` deploys
+to production. GitHub Actions runs the **Keel CI** workflow.
+
 `vercel.json` has the SPA rewrite. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
 in the Vercel project settings only if you set up sync.
 
 DNS for the custom domain lives in Cloudflare (the personal account, not the work one):
-a DNS-only `CNAME` for `music` pointing at `f207e94ba4b78857.vercel-dns-017.com`, the
+a DNS-only `CNAME` for `keel` points at `f207e94ba4b78857.vercel-dns-017.com`, the
 value Vercel shows for the domain. Vercel issues and renews the TLS certificate.
+
+### Moving existing sessions
+
+The former addresses, `music.nacnano.dev` and `keel-music.vercel.app`, remain
+accessible for existing browser-local sessions and recordings. Browser storage
+is separate for each domain; it does not move when the deployment gets a new URL.
+Export sessions as JSON from the old site's Library and import them into the new
+site. JSON exports do not include audio recordings, and preferences must be set
+again. Keep using the old site to access its saved audio. The earlier
+`jamkey.vercel.app` redirect now points to `keel.nacnano.dev`.
 
 ## Browser support
 

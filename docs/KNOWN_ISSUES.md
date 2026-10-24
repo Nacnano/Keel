@@ -17,7 +17,7 @@ See the first-run checklist in `README.md`.
 
 ## Known limitations
 
-- [Detection evaluation](ACCURACY.md) uses ten simulated piano sessions, also used during tuning. It is not held-out or real-device validation. Strong harmonic hum remains difficult, and startup white noise can briefly display a false chord.
+- [Detection evaluation](ACCURACY.md) uses ten simulated piano sessions, also used during tuning. It is not held-out or real-device validation. Strong harmonic hum mixed with playing remains difficult. Startup noise and transient false chords now have dedicated rejection tests; these use simulated noise, not room recordings.
 - Sensitivity controls the adaptive noise gate; it does not amplify the microphone.
 
 - Settings persist in localStorage, not the Dexie `settings` table, so they do not sync between devices.
@@ -46,4 +46,11 @@ See the first-run checklist in `README.md`.
 
 ## Custom domain
 
-Resolved 2026-10-23: the DNS-only CNAME `music` → `f207e94ba4b78857.vercel-dns-017.com` was added in Cloudflare and `music.nacnano.dev` serves production. `keel-music.vercel.app` remains as a fallback (`keel.vercel.app` is taken by another Vercel account); the pre-rename `*.vercel.app` address redirects to production. Wrangler is not logged in on the dev machine; DNS changes go through the Cloudflare dashboard.
+Updated 2026-10-24: production is **https://keel.nacnano.dev**, with
+**https://keel-nacnano.vercel.app** as its fallback. Cloudflare has a DNS-only CNAME
+`keel` → `f207e94ba4b78857.vercel-dns-017.com`; both addresses have working HTTPS.
+Vercel project `keel` is linked to `Nacnano/Keel`, production branch `main`.
+
+The former addresses are retained for access to browser-local data. Sessions,
+recordings, preferences and installed PWAs do not automatically move between
+origins. See [Moving existing sessions](../README.md#moving-existing-sessions).
