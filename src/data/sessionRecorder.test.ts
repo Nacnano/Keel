@@ -185,6 +185,16 @@ describe('sessionRecorder', () => {
     expect(await db.markers.count()).toBe(0);
   });
 
+  it('discards a silent take even when it has an audio recording', async () => {
+    const h = startSession({ ...META, t0: 0, now: () => WALL });
+    await h.ready;
+    h.onAnalysisEvent(chordEvent(1, null));
+    await h.setAudioBlob(await cloneableBlob('hiss', 'audio/webm'), 'audio/webm', 12);
+    expect(await h.stop({ endT: 12, discardIfEmpty: true })).toBeNull();
+    expect(await db.sessions.count()).toBe(0);
+    expect(await db.recordings.count()).toBe(0);
+  });
+
   it('keeps a session with chords even when discardIfEmpty is set', async () => {
     const h = startSession({ ...META, t0: 0, now: () => WALL });
     h.onAnalysisEvent(chordEvent(1, POP_PROGRESSION[0]));
