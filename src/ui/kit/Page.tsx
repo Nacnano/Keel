@@ -13,8 +13,6 @@ export interface PageProps {
   leading?: ReactNode;
   /** Top bar actions, right-aligned. */
   actions?: ReactNode;
-  /** 1104 px column (Review's lanes) instead of the 768 px reading column. */
-  wide?: boolean;
   children: ReactNode;
   className?: string;
 }
@@ -24,21 +22,10 @@ export interface PageProps {
  * link and the actions, and the large title under it. The top bar row is always there, so the
  * title sits at the same place on every page.
  */
-export function Page({
-  title,
-  subtitle,
-  back,
-  leading,
-  actions,
-  wide,
-  children,
-  className,
-}: PageProps) {
+export function Page({ title, subtitle, back, leading, actions, children, className }: PageProps) {
   return (
     <div className="h-full overflow-y-auto">
-      <div
-        className={cx('mx-auto flex w-full flex-col', wide ? 'max-w-6xl' : 'max-w-3xl', className)}
-      >
+      <div className={cx('mx-auto flex w-full max-w-3xl flex-col', className)}>
         <div
           data-testid="page-top-bar"
           className="flex h-13 items-center justify-between gap-2 px-2"

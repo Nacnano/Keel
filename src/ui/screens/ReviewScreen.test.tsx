@@ -2,7 +2,13 @@ import { resetDb } from '@/data/testing/setup';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { mockChordRecords, mockKeyRecords, mockMarkers, mockSession } from '@/core/mocks';
+import {
+  C_MAJOR_KEY,
+  mockChordRecords,
+  mockKeyRecords,
+  mockMarkers,
+  mockSession,
+} from '@/core/mocks';
 import type { MidiEvent } from '@/core';
 import { db } from '@/data';
 import { settingsStore } from '@/state/settingsStore';
@@ -26,6 +32,13 @@ async function seed(opts: { midi?: boolean } = {}) {
 }
 
 const markerLane = () => within(screen.getByRole('group', { name: /^Markers/ }));
+/** The lanes sit behind the Timeline disclosure, closed on a compact screen (and in jsdom). */
+const openTimeline = async () => {
+  const toggle = await screen.findByRole('button', { name: /^Timeline/ });
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
+};
 
 const renderAt = (path: string) =>
   render(
@@ -51,24 +64,47 @@ afterEach(() => {
 });
 
 describe('ReviewScreen', () => {
-  it('renders a seeded session: header, lanes, summary and transport', async () => {
+  it('renders a seeded session: chart and transport up front, lanes behind Timeline', async () => {
     await seed({ midi: true });
     renderAt(`/review/${ID}`);
     expect(screen.getByRole('status')).toHaveTextContent('Loading session');
     expect(await screen.findByDisplayValue('Evening idea in C')).toBeInTheDocument();
     expect(screen.getByTestId('review-keys')).toHaveTextContent('C major');
-    expect(screen.getAllByTestId('lane-chord').length).toBeGreaterThan(3);
-    expect(screen.getAllByTestId('lane-chord')[0]).toHaveAccessibleName('C, I at 0:00');
-    expect(screen.getAllByTestId('key-segment')[0]).toHaveTextContent('C major');
-    expect(screen.getByTestId('playhead-chord')).toHaveTextContent('C');
-    expect(screen.getByRole('img', { name: /Piano roll, 1 notes/ })).toBeInTheDocument();
+    expect(screen.getByTestId('review-chart')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
     expect(screen.getByRole('slider', { name: 'Seek' })).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: 'Playback speed' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mark' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Share' })).toBeInTheDocument();
+    // The studio tools wait behind the disclosure.
+    expect(screen.queryByRole('switch', { name: 'Piano sound' })).toBeNull();
+    expect(screen.queryByRole('group', { name: /^Chord lane/ })).toBeNull();
+
+    await openTimeline();
+    expect(screen.getAllByTestId('lane-chord').length).toBeGreaterThan(3);
+    expect(screen.getAllByTestId('lane-chord')[0]).toHaveAccessibleName('C, I at 0:00');
+    expect(screen.getAllByTestId('key-segment')[0]).toHaveTextContent('C major');
+    expect(screen.getByRole('img', { name: /Piano roll, 1 notes/ })).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'Piano sound' })).toBeChecked();
-    expect(screen.getByTestId('clock-source')).toHaveTextContent('Piano playback');
-    // The folded chart shows the loops; there is no separate "Top progressions" list.
+    // One label for the piano, no clock caption, no "Now" readout, no key percentages.
+    expect(screen.queryByText('Piano playback')).toBeNull();
+    expect(screen.queryByText('Now')).toBeNull();
+    expect(screen.queryByText(/%/)).toBeNull();
     expect(screen.queryByText('Top progressions')).toBeNull();
+  });
+
+  it('draws the lane from the chart keys: no key wobble under ten seconds', async () => {
+    await seed();
+    // A B major guess for the first 5 s, then C major: the chart and the lane say C throughout.
+    await db.keys.bulkPut([
+      { id: `${ID}-k-0`, sessionId: ID, t: 0, key: { ...C_MAJOR_KEY, tonic: 11 } },
+      { id: `${ID}-k-1`, sessionId: ID, t: 5, key: C_MAJOR_KEY },
+    ]);
+    renderAt(`/review/${ID}`);
+    await openTimeline();
+    expect(screen.getByTestId('review-keys')).toHaveTextContent(/^C major$/);
+    expect(screen.getAllByTestId('key-segment').map((k) => k.textContent)).toEqual(['C major']);
+    expect(screen.getAllByTestId('lane-chord')[0]).toHaveAccessibleName('C, I at 0:00');
   });
 
   it('leads with the chord chart and shares it as text (copy without a share sheet)', async () => {
@@ -84,9 +120,9 @@ describe('ReviewScreen', () => {
     expect(writeText.mock.calls[0][0]).toMatch(
       /^Evening idea in C — .*\nKey: C major\n\n\[Intro\]\n/,
     );
-    await waitFor(() =>
-      expect(useToastStore.getState().toasts.map((t) => t.message)).toContain('Chord chart copied'),
-    );
+    // The button says so itself; no toast lands on the title.
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
+    expect(useToastStore.getState().toasts).toEqual([]);
 
     // No cloud sync: More holds the downloads but no share link.
     fireEvent.click(screen.getByRole('button', { name: 'More' }));
@@ -99,9 +135,10 @@ describe('ReviewScreen', () => {
   it('clicking a chord seeks the playhead', async () => {
     await seed();
     renderAt(`/review/${ID}`);
+    await openTimeline();
     const chips = await screen.findAllByTestId('lane-chord');
     fireEvent.click(chips[2]); // Am at 3.0 s
-    expect(screen.getByTestId('playhead-chord')).toHaveTextContent('Am');
+    expect(screen.getAllByTestId('lane-chord')[2]).toHaveAttribute('aria-current', 'true');
     expect(screen.getByRole('slider', { name: 'Seek' })).toHaveValue('3');
   });
 
@@ -171,6 +208,7 @@ describe('ReviewScreen', () => {
   it('B adds a bookmark at the playhead; the marker editor deletes it', async () => {
     await seed();
     renderAt(`/review/${ID}`);
+    await openTimeline();
     await screen.findAllByTestId('lane-chord');
     expect(await db.markers.count()).toBe(3);
 
@@ -192,6 +230,7 @@ describe('ReviewScreen', () => {
   it('adds a section marker from the toolbar and deletes a focused pin with Delete', async () => {
     await seed();
     renderAt(`/review/${ID}`);
+    await openTimeline();
     await screen.findAllByTestId('lane-chord');
     fireEvent.click(screen.getByRole('button', { name: 'Mark' }));
     const menu = screen.getByRole('menu', { name: 'Mark' });

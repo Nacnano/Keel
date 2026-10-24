@@ -1,11 +1,11 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
-  Bookmark,
+  Check,
+  ChevronDown,
   Ellipsis,
   FileQuestion,
   Keyboard,
-  Maximize2,
   Pencil,
   Share,
   ZoomIn,
@@ -17,21 +17,21 @@ import type { Chord, ChordRecord } from '@/core';
 import { buildChart, chartRows, type SessionFull } from '@/data';
 import { useSettings } from '@/state/settingsStore';
 import { sameChord } from '@/theory';
-import { Badge, Button, EmptyState, Group, Page, Row, Sheet } from '../kit';
+import { Badge, Button, EmptyState, Group, Page, Row, Sheet, Switch, useFlash } from '../kit';
 import { ChordLane } from '../components/ChordLane';
 import { ChordPicker } from '../components/ChordPicker';
 import { MarkerLane, MarkerToolbar } from '../components/MarkerLane';
 import { PianoRoll } from '../components/PianoRoll';
 import { ReharmPanel, type ReharmSource } from '../components/ReharmPanel';
 import { buildNoteIndex } from '../components/PianoRoll.logic';
-import { SummaryCard } from '../components/SummaryCard';
 import { toast } from '../components/toastStore';
 import { keyLabel, pretty } from '../lib/chordLabel';
+import { cx } from '../lib/cx';
 import { MARKER_LABEL } from '../lib/markers';
 import type { MarkChoice } from './review/MarkMenu';
 import { useSync } from '@/sync/store';
 import { DownloadItems, ShareLinkItem } from './library/ShareItems';
-import { runExport, shareChartWithToast } from './library/exportActions';
+import { runExport, shareChart } from './library/exportActions';
 import { GRAY_LINK } from './library/linkStyles';
 import { Menu, MenuItem, MenuSeparator } from './library/Menu';
 import { ChartCard } from './review/ChartCard';
@@ -62,7 +62,10 @@ const fmtDate = (ms: number) =>
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
-/** `/review/:id`: synced playback, chord lane, piano roll, markers and summary (DESIGN.md §3.2). */
+/**
+ * `/review/:id` (DESIGN.md §3.2): the chord chart, playback, Mark and Share up front; the chord
+ * lane, marker lane and piano roll behind one Timeline disclosure.
+ */
 export function ReviewScreen() {
   const { id } = useParams();
   const api = useReviewSession(id);
@@ -117,6 +120,13 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   // Keyboard shortcut hints are noise on a touch screen.
   const touch = useMediaQuery('(pointer: coarse)');
+  // The timeline is a studio tool: open on a wide screen, one tap away on a phone.
+  const roomy = useMediaQuery('(min-width: 768px)');
+  const [timelineChoice, setTimelineChoice] = useState<boolean | null>(null);
+  const timelineOpen = timelineChoice ?? roomy;
+  const timelineId = useId();
+  const pianoLabel = useId();
+  const [copied, flashCopied] = useFlash();
   const settings = useSettings(
     useShallow((s) => ({
       spellingFollowsKey: s.spellingFollowsKey,
@@ -138,6 +148,20 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
   const { controller, time, playing, rate, source, pianoOn, piano, hasAudio, attachAudio } =
     usePlayback({ duration, recording, midiEvents: hasMidi ? midiEvents : null });
 
+  // The folded chart; the lanes, the header and the chord editor use its keys (no wobbles
+  // under ten seconds, no parallel-key detours), so everything on the page agrees with it.
+  const chart = useMemo(
+    () => buildChart({ chords, keys, markers, durationSec: session.durationSec }),
+    [chords, keys, markers, session.durationSec],
+  );
+  const chartKeys = useMemo(
+    () => chart.keys.map((k) => ({ t: k.start, key: k.key })),
+    [chart.keys],
+  );
+  const keyList = chart.keys
+    .map((k) => k.key)
+    .filter((k, i, a) => a.findIndex((x) => x.tonic === k.tonic && x.mode === k.mode) === i);
+
   // Shared horizontal viewport for ruler, chord lane, markers and piano roll.
   const lanes = useRef<HTMLDivElement>(null);
   const { width } = useElementSize(lanes);
@@ -149,7 +173,7 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
   const [follow, setFollow] = useState(true);
   let viewport = clampViewport(rawViewport, width, duration);
   const visible = visibleSeconds(viewport, width);
-  if (follow && (time < viewport.start || time > viewport.start + visible * 0.92)) {
+  if (follow && width > 0 && (time < viewport.start || time > viewport.start + visible * 0.92)) {
     // Page the view (adjusting state during render: no extra effect pass, no flicker).
     const paged = clampViewport({ ...viewport, start: time - visible * 0.1 }, width, duration);
     if (paged.start !== viewport.start) {
@@ -189,12 +213,11 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
     setRawViewport({ start: 0, pxPerSec: 0 }); // clamping raises it to "whole session fits"
   };
 
-  // Chord + key at the playhead.
+  // Chord at the playhead (for Edit chord and the piano roll's label).
   const currentIdx = indexAt(chords, time);
   const currentRec = currentIdx >= 0 ? chords[currentIdx] : null;
-  const currentKey = keyAtTime(keys, time);
   const current = currentRec
-    ? chordText(currentRec, currentKey, {
+    ? chordText(currentRec, keyAtTime(chartKeys, time), {
         spellingFollowsKey: settings.spellingFollowsKey,
         showSlash: settings.showSlashChords,
       })
@@ -264,15 +287,7 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
     editing === null,
   );
 
-  // The folded chart: its key by time and key changes of 10 s or more head the page.
-  const chart = useMemo(
-    () => buildChart({ chords, keys, markers, durationSec: session.durationSec }),
-    [chords, keys, markers, session.durationSec],
-  );
-  const keyList = chart.keys
-    .map((k) => k.key)
-    .filter((k, i, a) => a.findIndex((x) => x.tonic === k.tonic && x.mode === k.mode) === i);
-  const editingKey = editing ? keyAtTime(keys, editing.t) : null;
+  const editingKey = editing ? keyAtTime(chartKeys, editing.t) : null;
 
   // Reharmonize: the chart's loops (up to three), or up to four chords from the playhead.
   const reharmSources = useMemo<ReharmSource[]>(() => {
@@ -294,23 +309,33 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
       const c = chords[i].chord;
       if (c && !sameChord(picked[picked.length - 1], c)) picked.push(c);
     }
-    const k = keyAtTime(keys, chords[start]?.t ?? 0);
+    const k = keyAtTime(chartKeys, chords[start]?.t ?? 0);
     if (!picked.length || !k) return null;
     return { chords: picked, key: { tonic: k.tonic, mode: k.mode } };
-  }, [chords, keys, controller]);
+  }, [chords, chartKeys, controller]);
 
   const getFull = useCallback(async () => full, [full]);
-  const share = () => void runExport(getFull, shareChartWithToast)();
+  // The share sheet is its own feedback; a copy says so on the button itself.
+  const share = () =>
+    void runExport(getFull, async (f) => {
+      const how = await shareChart(f);
+      if (how === 'copied') flashCopied();
+      else if (how === 'downloaded') toast('Chord chart downloaded', { tone: 'success' });
+    })();
   const openShareLink = () => {
     if (!syncUser) {
       toast('Sign in under Settings → Account & sync to share a link.', { durationMs: 3500 });
     } else setShareOpen(true);
   };
 
+  const counts = [
+    `${session.summary?.chordCount ?? chords.filter((c) => c.chord).length} chords`,
+    `${markers.filter((m) => m.kind === 'bookmark').length} bookmarks`,
+  ].join(' · ');
+
   return (
     <>
       <Page
-        wide
         back={{ to: '/library', label: 'Library' }}
         title={
           <NameField
@@ -344,15 +369,29 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
         }
         actions={
           <>
-            <Button
-              icon
-              variant="plain"
-              aria-label="Share"
-              title="Share the chord chart"
-              onClick={share}
-            >
-              <Share className="size-5" aria-hidden />
-            </Button>
+            {copied ? (
+              <Button
+                variant="plain"
+                leading={<Check className="size-5" aria-hidden />}
+                onClick={share}
+                className="px-2"
+              >
+                Copied
+              </Button>
+            ) : (
+              <Button
+                icon
+                variant="plain"
+                aria-label="Share"
+                title="Share the chord chart"
+                onClick={share}
+              >
+                <Share className="size-5" aria-hidden />
+              </Button>
+            )}
+            <span role="status" className="sr-only">
+              {copied ? 'Chord chart copied' : ''}
+            </span>
             <Menu
               align="end"
               width={260}
@@ -365,23 +404,6 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
             >
               {syncConfigured && <ShareLinkItem onSelect={openShareLink} />}
               <DownloadItems getFull={getFull} />
-              <MenuSeparator />
-              <MenuItem
-                icon={<Pencil />}
-                disabled={!currentRec}
-                onSelect={() => currentRec && setEditing(currentRec)}
-              >
-                Edit chord at playhead
-              </MenuItem>
-              <MenuItem
-                icon={<Bookmark />}
-                onSelect={() => void addMarker({ kind: 'bookmark' }, controller.position())}
-              >
-                Bookmark at playhead
-              </MenuItem>
-              <MenuItem icon={<Maximize2 />} onSelect={fitAll}>
-                Show whole session
-              </MenuItem>
               {!touch && (
                 <>
                   <MenuSeparator />
@@ -394,9 +416,10 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
           </>
         }
       >
-        <div className="flex flex-col gap-5 px-4">
+        <div className="flex min-w-0 flex-col gap-5 px-4">
           <ChartCard
             full={full}
+            chart={chart}
             spellingFollowsKey={settings.spellingFollowsKey}
             showSlash={settings.showSlashChords}
             time={time}
@@ -419,45 +442,69 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
               rate={rate}
               source={source}
               hasMidi={hasMidi}
-              hasAudio={hasAudio}
-              pianoOn={pianoOn}
               piano={piano}
               onToggle={toggle}
               onSeek={seek}
               onRate={(r) => controller.setRate(r)}
-              onPiano={(on) => controller.setPianoOn(on)}
             />
 
-            <div className="overflow-hidden rounded-card bg-surface">
-              <div className="hairline-b flex min-h-14 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
-                <div className="flex min-w-0 items-baseline gap-2.5" aria-live="off">
-                  <span className="text-caption font-medium tracking-wide text-label-3 uppercase">
-                    Now
+            <MarkerToolbar
+              time={Math.min(duration, time)}
+              selected={markers.find((m) => m.id === selectedMarker) ?? null}
+              onAdd={(kind, t) => void addMarker(kind, t)}
+              onDelete={deleteMarker}
+              onChangeKind={(mid, kind) =>
+                void run(api.changeMarkerKind(mid, kind), 'change the marker')
+              }
+              onDeselect={() => setSelectedMarker(null)}
+            >
+              {currentRec && (
+                <Button
+                  variant="gray"
+                  size="sm"
+                  leading={<Pencil className="size-3.5" aria-hidden />}
+                  onClick={() => setEditing(currentRec)}
+                >
+                  Edit chord
+                </Button>
+              )}
+            </MarkerToolbar>
+          </section>
+
+          <TagEditor
+            tags={session.tags}
+            onChange={(tags) => run(api.setTags(tags), 'save the tags')}
+          />
+
+          <section aria-label="Timeline" className="overflow-hidden rounded-card bg-surface">
+            <h2>
+              <button
+                type="button"
+                aria-expanded={timelineOpen}
+                aria-controls={timelineId}
+                onClick={() => setTimelineChoice(!timelineOpen)}
+                className="flex min-h-13 w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-100 hover:bg-fill-4 active:bg-fill-3"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-headline text-label">Timeline</span>
+                  <span className="block text-footnote text-label-2">
+                    {hasMidi ? 'Chords, marks and notes by time' : 'Chords and marks by time'}
                   </span>
-                  <span
-                    data-testid="playhead-chord"
-                    className="text-title-2 font-bold tracking-tight text-label"
-                  >
-                    {current?.symbol ?? '—'}
-                  </span>
-                  <span className="text-subhead font-medium text-accent">{current?.numeral}</span>
-                  {currentKey && (
-                    <span className="text-subhead text-label-2">
-                      {pretty(keyLabel(currentKey, settings))}
-                    </span>
+                </span>
+                <ChevronDown
+                  aria-hidden
+                  className={cx(
+                    'size-4 shrink-0 text-label-3 transition-transform duration-200 ease-out-expo',
+                    timelineOpen && 'rotate-180',
                   )}
-                </div>
-                {currentRec && (
-                  <Button
-                    variant="plain"
-                    size="sm"
-                    leading={<Pencil className="size-3.5" aria-hidden />}
-                    onClick={() => setEditing(currentRec)}
-                  >
-                    Edit chord
-                  </Button>
-                )}
-                <div className="ml-auto flex items-center" role="group" aria-label="Zoom">
+                />
+              </button>
+            </h2>
+
+            {/* Kept mounted while closed so the lanes keep their viewport and listeners. */}
+            <div id={timelineId} hidden={!timelineOpen} className="hairline-t">
+              <div className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-1.5">
+                <div className="-ml-2 flex items-center" role="group" aria-label="Zoom">
                   <Button
                     variant="plain"
                     icon
@@ -482,9 +529,21 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
                     Fit
                   </Button>
                 </div>
+                {hasMidi && (
+                  <label className="ml-auto flex min-h-11 items-center gap-2">
+                    <span id={pianoLabel} className="text-subhead text-label">
+                      Piano sound
+                    </span>
+                    <Switch
+                      checked={pianoOn}
+                      onChange={(on) => controller.setPianoOn(on)}
+                      aria-labelledby={pianoLabel}
+                    />
+                  </label>
+                )}
               </div>
 
-              <div ref={lanes} className="flex flex-col">
+              <div ref={lanes} className="hairline-t flex flex-col">
                 <div className="relative">
                   <TimeRuler
                     viewport={viewport}
@@ -495,7 +554,7 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
                   />
                   <ChordLane
                     chords={chords}
-                    keys={keys}
+                    keys={chartKeys}
                     duration={duration}
                     viewport={viewport}
                     width={width}
@@ -536,51 +595,32 @@ function ReviewLoaded({ full, api }: { full: SessionFull; api: ReviewSessionApi 
                   </div>
                 )}
               </div>
-            </div>
 
-            <MarkerToolbar
-              time={Math.min(duration, time)}
-              selected={markers.find((m) => m.id === selectedMarker) ?? null}
-              onAdd={(kind, t) => void addMarker(kind, t)}
-              onDelete={deleteMarker}
-              onChangeKind={(mid, kind) =>
-                void run(api.changeMarkerKind(mid, kind), 'change the marker')
-              }
-              onDeselect={() => setSelectedMarker(null)}
-            />
-            <p className="hidden text-caption text-label-3 lg:pointer-fine:block">
-              Click a chord to jump there; right-click or long-press it to fix it. Space plays, B
-              bookmarks.{' '}
-              <button
-                type="button"
-                onClick={() => setShortcutsOpen(true)}
-                className="text-accent hover:underline"
-              >
-                All shortcuts
-              </button>
-            </p>
+              <p className="hairline-t px-4 py-2.5 text-footnote text-label-2">
+                <span className="tabular">{counts}</span>
+                {!touch && (
+                  <>
+                    {' · '}Right-click a chord to fix it.{' '}
+                    <button
+                      type="button"
+                      onClick={() => setShortcutsOpen(true)}
+                      className="text-accent hover:underline"
+                    >
+                      Shortcuts
+                    </button>
+                  </>
+                )}
+              </p>
+            </div>
           </section>
 
-          <TagEditor
-            tags={session.tags}
-            onChange={(tags) => run(api.setTags(tags), 'save the tags')}
+          <ReharmPanel
+            sources={reharmSources}
+            capture={captureAtPlayhead}
+            onAudition={auditionChord}
+            spellingFollowsKey={settings.spellingFollowsKey}
+            showSlash={settings.showSlashChords}
           />
-
-          <div className="grid items-start gap-6 lg:grid-cols-2">
-            <SummaryCard
-              summary={session.summary}
-              durationSec={session.durationSec}
-              spellingFollowsKey={settings.spellingFollowsKey}
-            />
-            <ReharmPanel
-              sources={reharmSources}
-              capture={captureAtPlayhead}
-              onAudition={auditionChord}
-              spellingFollowsKey={settings.spellingFollowsKey}
-              showSlash={settings.showSlashChords}
-              className="lg:pt-7"
-            />
-          </div>
         </div>
       </Page>
       <ShareDialog open={shareOpen} onClose={() => setShareOpen(false)} sessionId={session.id} />
