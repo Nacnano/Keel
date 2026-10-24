@@ -299,6 +299,7 @@ describe('mic path', () => {
       .map((e) => e.type === 'notes' && e.pitchClasses);
     expect(notes).toEqual([
       [0, 4, 7],
+      [0, 4, 7, 9], // brief overlap while G releases and A is confirmed
       [0, 4, 9],
     ]);
   });
