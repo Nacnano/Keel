@@ -241,3 +241,8 @@ a harmonic series — is dropped before chroma normalisation, so it cannot becom
 of lit keys. Very flat spectra can still reach the chord smoother, but their piano-key vector is
 forced off. The cut is strict enough that noisy or quiet guitar keeps its harmonic series and
 its previous scores. This does not separate the player from other music or from pitched machinery.
+
+The keyboard lights one MIDI key per sounding fundamental. Harmonic partials are not extra keys,
+and a pitch class is not painted in every octave. Pitch-class note metrics in this benchmark stay
+on the chord chroma, so a coverage change here is a change in which classes are active, not in
+which octaves the keyboard draws.

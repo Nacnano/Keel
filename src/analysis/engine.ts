@@ -22,6 +22,7 @@ import type {
   InputSource,
   Key,
   KeyEvent,
+  MidiNote,
   PitchClass,
   VocabLevel,
 } from '@/core';
@@ -31,7 +32,7 @@ import { exactPitchClasses, identifyExact, scoreChroma } from './chordScorer';
 import { createKeyEstimator } from './keyEstimator';
 import { createKeyPublisher } from './keyPublisher';
 import { createSmoother } from './smoother';
-import { createNoteTracker } from './noteTracker';
+import { createNoteTracker, createPlayedNoteTracker } from './noteTracker';
 import type { Smoother } from './smoother';
 import { CHORD_VOCAB, buildTemplates, sameChordFamily } from './templates';
 import type { TemplateBank } from './templates';
@@ -193,6 +194,7 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
   const publisher = createKeyPublisher();
   const bass = createBassResolver();
   const micNotes = createNoteTracker();
+  const playedNotes = createPlayedNoteTracker();
   /** Frame times indexed by the smoother's own frame counter (mic frames only). */
   const times = new Float64Array(TIME_RING);
 
@@ -209,6 +211,8 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
   let lastHeard: Chord | null = null;
   let lastHeardT = 0;
   let lastNotes = '';
+  /** The screen starts with no keys lit, so the first empty set is not an event. */
+  let announcedNotes = false;
   let prevBass: PitchClass | null = null;
   let lastSoundT = -Infinity;
   /** Per smoother frame: 1 when the gate has been closed for longer than the release hold. */
@@ -329,17 +333,26 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     }
   }
 
-  function emitNotes(t: number, pcs: PitchClass[]) {
-    const sig = pcs.join(',');
+  function emitNotes(t: number, pcs: PitchClass[], midiNotes?: readonly MidiNote[]) {
+    const midi = midiNotes ? [...midiNotes] : undefined;
+    const sig = `${pcs.join(',')}|${midi ? midi.join(',') : ''}`;
     if (sig === lastNotes) return;
     lastNotes = sig;
-    emitter.emit({ type: 'notes', t, pitchClasses: pcs });
+    if (pcs.length === 0 && (!midi || midi.length === 0)) {
+      if (!announcedNotes) return;
+    } else announcedNotes = true;
+    emitter.emit(
+      midi
+        ? { type: 'notes', t, pitchClasses: pcs, midiNotes: midi }
+        : { type: 'notes', t, pitchClasses: pcs },
+    );
   }
 
   function pushExact(frame: ChromaFrame) {
     micNotes.reset();
+    playedNotes.reset();
     const pcs = exactPitchClasses(frame.chroma);
-    emitNotes(frame.t, pcs);
+    emitNotes(frame.t, pcs, frame.midiNotes);
     const best = identifyExact(pcs, frame.bass, level)[0];
     const chord = best ? applyBass(best.chord, best.chord.bass ?? null, cfg.showSlashChords) : null;
     emitChord(frame.t, chord, best ? Math.min(1, best.score) : 1, 'midi');
@@ -358,7 +371,16 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
       lastSoundT = frame.t;
     }
     quiet[smoother.frames % TIME_RING] = silent && frame.t - lastSoundT >= RELEASE_HOLD_SEC ? 1 : 0;
-    emitNotes(frame.t, micNotes.push(frame.t, frame.noteChroma ?? frame.chroma, silent));
+    if (frame.midiNotes) {
+      // Pitch classes keep the chord-display coverage. The keyboard uses only the
+      // exact notes, so a pitch class does not light every octave.
+      const notes = playedNotes.push(frame.t, frame.midiNotes, silent);
+      const pcs = micNotes.push(frame.t, frame.noteChroma ?? frame.chroma, silent);
+      emitNotes(frame.t, pcs, notes);
+    } else {
+      playedNotes.reset();
+      emitNotes(frame.t, micNotes.push(frame.t, frame.noteChroma ?? frame.chroma, silent));
+    }
     bass.push(silent ? null : frame.bass);
     times[smoother.frames % TIME_RING] = frame.t;
 
@@ -424,12 +446,14 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
       inKeyBonus = null;
       bass.reset();
       micNotes.reset();
+      playedNotes.reset();
       rebuild();
       lastChord = null;
       lastHeard = null;
       lastHeardT = 0;
       lastSureT = -Infinity;
       lastNotes = '';
+      announcedNotes = false;
       lastSoundT = -Infinity;
       prevBass = null;
     },

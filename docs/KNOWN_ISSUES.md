@@ -17,7 +17,7 @@ See the first-run checklist in `README.md`.
 
 ## Known limitations
 
-- [Detection evaluation](ACCURACY.md) uses ten simulated piano sessions, also used during tuning. It is not held-out or real-device validation. Strong harmonic hum mixed with playing remains difficult. Startup noise and transient false chords now have dedicated rejection tests; these use simulated noise, not room recordings. Inharmonic rings and broadband noise are kept off the piano keys. A chord label can still linger for about two seconds after playing stops into loud harmonic noise such as a vacuum.
+- [Detection evaluation](ACCURACY.md) uses ten simulated piano sessions, also used during tuning. It is not held-out or real-device validation. Strong harmonic hum mixed with playing remains difficult. Startup noise and transient false chords now have dedicated rejection tests; these use simulated noise, not room recordings. The on-screen piano lights the estimated key, not every octave of a pitch class. Inharmonic rings and broadband noise stay off those keys. A chord label can still linger for about two seconds after playing stops into loud harmonic noise such as a vacuum.
 - Sensitivity controls the adaptive noise gate; it does not amplify the microphone.
 
 - Settings persist in localStorage, not the Dexie `settings` table, so they do not sync between devices.

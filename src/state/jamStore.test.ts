@@ -68,6 +68,7 @@ describe('jamStore.applyEvent', () => {
   it('tracks notes and level', () => {
     const s = jamStore.getState();
     s.applyEvent({ type: 'notes', t: 1, pitchClasses: [0, 4, 7], midiNotes: [60, 64, 67] });
+    expect(jamStore.getState().exactKeys).toBe(true);
     s.applyEvent({ type: 'level', t: 1, energy: 0.4 });
     const st = jamStore.getState();
     expect(st.activePitchClasses).toEqual([0, 4, 7]);

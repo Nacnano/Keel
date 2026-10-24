@@ -81,6 +81,12 @@ export interface ChromaFrame {
    * while a chord may still be scored from `chroma`.
    */
   noteChroma?: Float32Array;
+  /**
+   * Exact keys for this frame. Present (possibly empty) on microphone frames: only these
+   * notes may light, never every octave of a pitch class. Absent on older fixtures, which
+   * fall back to pitch-class chroma.
+   */
+  midiNotes?: MidiNote[];
   /** 0..1 loudness proxy. */
   energy: number;
   bass: PitchClass | null;

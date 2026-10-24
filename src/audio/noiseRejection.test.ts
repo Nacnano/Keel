@@ -60,6 +60,11 @@ describe.each([44100, 48000])('room-noise rejection at %i Hz', (sampleRate) => {
     expect(seen.has(0)).toBe(true);
     expect(seen.has(4)).toBe(true);
     expect(seen.has(7)).toBe(true);
+    const keys = new Set(played.flatMap((e) => (e.type === 'notes' ? (e.midiNotes ?? []) : [])));
+    expect(keys.has(60)).toBe(true);
+    expect(keys.has(64)).toBe(true);
+    expect(keys.has(67)).toBe(true);
+    for (const note of keys) expect([60, 64, 67]).toContain(note);
 
     const n = Math.floor(sampleRate * 2);
     const ring = new Float32Array(n);
