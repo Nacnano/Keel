@@ -135,7 +135,7 @@ export function MarkerLane({
             onClick={() => onClick(m)}
             onKeyDown={onKeyDown(m)}
             className={cx(
-              'absolute top-1 bottom-1 flex min-w-11 touch-none items-center gap-1 rounded-r-[8px] pr-2 pl-1.5 text-caption font-semibold whitespace-nowrap text-warn',
+              'absolute top-0.5 bottom-0.5 flex min-w-11 touch-none items-center gap-1 rounded-r-[8px] pr-2 pl-1.5 text-caption font-semibold whitespace-nowrap text-warn',
               'cursor-ew-resize shadow-[inset_2px_0_0_var(--jk-warn)] transition-colors duration-100 focus-visible:z-10',
               isSel ? 'bg-warn/20' : 'bg-warn/[0.07] hover:bg-warn/15',
             )}

@@ -150,7 +150,6 @@ export function ChordPicker({
               <span className="text-footnote font-medium text-label-2">Quality</span>
               <Segmented<VocabLevel>
                 aria-label="Chord vocabulary"
-                size="sm"
                 options={LEVEL_OPTIONS}
                 value={level}
                 onChange={setLevel}

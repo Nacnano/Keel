@@ -252,7 +252,6 @@ function AnalyzeOptions({
         label="Chord detail"
         accessory={
           <Segmented<VocabLevel>
-            size="sm"
             fill={narrow}
             aria-label="Chord detail"
             options={LEVEL_OPTIONS}
@@ -266,7 +265,6 @@ function AnalyzeOptions({
         label="Listening mode"
         accessory={
           <Segmented<JamMode>
-            size="sm"
             fill={narrow}
             aria-label="Listening mode"
             options={MODE_OPTIONS}

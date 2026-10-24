@@ -34,7 +34,7 @@ export function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="jk-slider h-7 w-full cursor-pointer appearance-none bg-transparent"
+        className="jk-slider h-7 w-full pointer-coarse:h-11 cursor-pointer appearance-none bg-transparent"
         style={{ ['--pct' as string]: `${pct}%` }}
         {...rest}
       />
