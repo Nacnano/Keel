@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { C_MAJOR_KEY } from '@/core/mocks';
 import type { AnalysisEvent, Chord, KeyEstimate } from '@/core';
-import { initialJamData, jamStore } from './jamStore';
+import { initialJamData, jamStore, snapToChordStart } from './jamStore';
 
 const C: Chord = { root: 0, quality: 'maj' };
 const G: Chord = { root: 7, quality: 'maj' };
@@ -138,5 +138,89 @@ describe('jamStore markers and lifecycle', () => {
     s.setSource('midi');
     s.toggleRecordAudio();
     expect(jamStore.getState()).toMatchObject({ source: 'midi', recordAudio: true });
+  });
+});
+
+describe('jamStore key reveal', () => {
+  const E_MAJOR: KeyEstimate = { ...C_MAJOR_KEY, tonic: 4, confidence: 0.8 };
+  const B_MAJOR: KeyEstimate = { ...C_MAJOR_KEY, tonic: 11, confidence: 0.6 };
+  const keys = () => jamStore.getState().keyHistory.map((k) => [k.t, k.key.tonic]);
+  const level = (t: number): AnalysisEvent => ({ type: 'level', t, energy: 0.3 });
+
+  it('labels the song from its start with the first key', () => {
+    const s = jamStore.getState();
+    s.startSession(0);
+    s.applyEvent(chord(0.5, C));
+    s.applyEvent(level(4));
+    s.applyEvent({ type: 'key', t: 1.5, key: C_MAJOR_KEY });
+    expect(keys()).toEqual([[0, 0]]);
+  });
+
+  it('replaces a key that changes within 10 s instead of adding a chip', () => {
+    const s = jamStore.getState();
+    s.startSession(0);
+    s.applyEvent(level(2));
+    s.applyEvent({ type: 'key', t: 1.6, key: B_MAJOR });
+    s.applyEvent(level(8.2));
+    s.applyEvent({ type: 'key', t: 6, key: E_MAJOR });
+    expect(keys()).toEqual([[0, 4]]);
+    expect(jamStore.getState().key).toEqual(E_MAJOR);
+    // a change after the key has held 10 s is a real one
+    s.applyEvent(level(30));
+    s.applyEvent({ type: 'key', t: 27, key: C_MAJOR_KEY });
+    expect(keys()).toEqual([
+      [0, 4],
+      [27, 0],
+    ]);
+    // ...and a detour back within 10 s folds into the key before it
+    s.applyEvent(level(33));
+    s.applyEvent({ type: 'key', t: 31, key: E_MAJOR });
+    expect(keys()).toEqual([[0, 4]]);
+  });
+
+  it('takes the engine word for a superseded key when the event says so', () => {
+    const s = jamStore.getState();
+    s.startSession(0);
+    s.applyEvent(level(5));
+    s.applyEvent({ type: 'key', t: 1, key: B_MAJOR });
+    s.applyEvent(level(40));
+    s.applyEvent({ type: 'key', t: 38, key: E_MAJOR, supersedes: true } as AnalysisEvent);
+    expect(keys()).toEqual([[0, 4]]);
+  });
+
+  it('labels a new song from where New song was marked', () => {
+    const s = jamStore.getState();
+    s.startSession(0);
+    s.applyEvent(level(5));
+    s.applyEvent({ type: 'key', t: 1, key: C_MAJOR_KEY });
+    s.applyEvent(level(30));
+    s.clearKey(29.5);
+    expect(jamStore.getState().key).toBeNull();
+    s.applyEvent(level(32));
+    s.applyEvent({ type: 'key', t: 31, key: E_MAJOR });
+    expect(keys()).toEqual([
+      [0, 0],
+      [29.5, 4],
+    ]);
+  });
+});
+
+describe('snapToChordStart', () => {
+  const rec = (t: number) => ({
+    id: String(t),
+    sessionId: 's',
+    t,
+    chord: C,
+    confidence: 1,
+    source: 'mic' as const,
+    manual: false,
+  });
+
+  it('snaps to a chord that began within 2 s, else keeps the tap time', () => {
+    const timeline = [rec(1), rec(4)];
+    expect(snapToChordStart(timeline, 5.5)).toBe(4);
+    expect(snapToChordStart(timeline, 6.5)).toBe(6.5);
+    expect(snapToChordStart(timeline, 0.5)).toBe(0.5);
+    expect(snapToChordStart([], 3)).toBe(3);
   });
 });

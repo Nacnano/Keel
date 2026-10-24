@@ -35,6 +35,44 @@ import { toast } from '@/ui/components/toastStore';
 
 export const MIDI_PRIORITY_SEC = 2;
 
+/** Input below this level counts as "can't hear much". */
+export const QUIET_LEVEL = 0.06;
+/** Quiet this long before the nudge shows: time to reach the keys. */
+export const QUIET_ONSET_SEC = 4;
+/** Loud this long before the nudge goes away, so a single note does not make it blink. */
+export const QUIET_RELEASE_SEC = 2;
+
+/**
+ * "Can't hear much", decided on the engine's level events (clock seconds), so it holds whether
+ * or not the Listen screen is mounted. Each crossing restarts the wait; only a state held for
+ * the whole wait flips it.
+ */
+export function createQuietGate() {
+  let quiet = false;
+  let loud: boolean | null = null;
+  let since = 0;
+  return {
+    get quiet() {
+      return quiet;
+    },
+    reset() {
+      quiet = false;
+      loud = null;
+    },
+    /** Feed one level reading; returns whether the input counts as too quiet now. */
+    level(t: number, energy: number): boolean {
+      const isLoud = energy > QUIET_LEVEL;
+      if (isLoud !== loud) {
+        loud = isLoud;
+        since = t;
+      }
+      if (quiet && isLoud && t - since >= QUIET_RELEASE_SEC) quiet = false;
+      else if (!quiet && !isLoud && t - since >= QUIET_ONSET_SEC) quiet = true;
+      return quiet;
+    },
+  };
+}
+
 type Unsub = () => void;
 
 export interface StopOptions {
@@ -55,9 +93,10 @@ export interface LiveInputController {
   isRunning(): boolean;
   /**
    * "New song" from the Mark menu: forget the key so it re-locks from what is played next.
-   * The marker itself is added by the caller.
+   * The marker itself is added by the caller; `from` (session seconds) is where it landed, so
+   * the new key labels the song from there.
    */
-  newSong(): void;
+  newSong(from?: number): void;
   /** Re-read audio + MIDI device lists into the input store. */
   refreshDevices(): Promise<void>;
   /** Exposed for the audition helper (shares the AudioContext). */
@@ -168,6 +207,9 @@ export function createLiveInput(): LiveInputController {
   let persistedMarkers = 0;
   let unsubDevices: Unsub | null = null;
   const wakeLock = createWakeLock();
+  const quietGate = createQuietGate();
+  /** The newest chord event held back while too quiet; it is replayed when sound returns. */
+  let heldChord: AnalysisEvent | null = null;
 
   // Keep engine + mic settings live.
   settingsStore.subscribe((s, prev) => {
@@ -191,10 +233,35 @@ export function createLiveInput(): LiveInputController {
     }
   });
 
-  function onEngineEvent(e: AnalysisEvent) {
+  function forward(e: AnalysisEvent) {
     jamStore.getState().applyEvent(e);
     session?.onAnalysisEvent(e);
-    if (e.type === 'level') inputStore.getState().setMicLevel(e.energy);
+  }
+
+  /** MIDI is exact: a quiet room says nothing about it. */
+  function quietApplies(t: number): boolean {
+    return jamStore.getState().source !== 'midi' && t - lastMidiActivity >= MIDI_PRIORITY_SEC;
+  }
+
+  function onEngineEvent(e: AnalysisEvent) {
+    if (e.type === 'level') {
+      inputStore.getState().setMicLevel(e.energy);
+      const quiet = quietGate.level(e.t, e.energy) && quietApplies(e.t);
+      const jam = jamStore.getState();
+      if (jam.quiet !== quiet) {
+        jam.setQuiet(quiet);
+        // Sound is back: the chord the engine settled on meanwhile is what is playing now.
+        if (!quiet && heldChord) forward({ ...heldChord, t: e.t });
+        heldChord = null;
+      }
+    }
+    // While "Can't hear much" shows, chords are guesses: keep them out of the timeline and
+    // the saved session (the last chord before it stays as it was).
+    if (e.type === 'chord' && jamStore.getState().quiet) {
+      heldChord = e;
+      return;
+    }
+    forward(e);
   }
 
   function onMicFrame(f: ChromaFrame) {
@@ -272,6 +339,8 @@ export function createLiveInput(): LiveInputController {
     engine.reset();
     lastMidiActivity = -Infinity;
     persistedMarkers = 0;
+    quietGate.reset();
+    heldChord = null;
 
     let micOk = false;
     let micError: unknown = null;
@@ -443,10 +512,10 @@ export function createLiveInput(): LiveInputController {
     return stopping;
   }
 
-  function newSong() {
+  function newSong(from?: number) {
     if (!running || !engine.resetKey) return;
     engine.resetKey();
-    jamStore.getState().clearKey();
+    jamStore.getState().clearKey(from);
   }
 
   return {
