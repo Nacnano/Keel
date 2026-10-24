@@ -75,6 +75,12 @@ export interface ChromaFrame {
   t: Seconds;
   /** 12 bins, index 0 = C, L1-normalised (sums to 1) or all zeros if silent. */
   chroma: Float32Array;
+  /**
+   * Piano-key bins when they differ from `chroma`. Absent means the keys follow `chroma`
+   * (MIDI, tests, and frames that passed the harmonic/phase check). Zeros suppress keys
+   * while a chord may still be scored from `chroma`.
+   */
+  noteChroma?: Float32Array;
   /** 0..1 loudness proxy. */
   energy: number;
   bass: PitchClass | null;

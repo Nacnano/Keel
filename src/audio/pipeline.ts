@@ -28,9 +28,16 @@ import {
 import { findPeaks } from './peaks';
 import { INSTRUMENT_PROFILES } from './profiles';
 import { createRoomProcessor } from './room';
-import { isMainsHum, tonalEnergyRatio } from './tonality';
+import { isMainsHum, spectralFlatness, tonalEnergyRatio } from './tonality';
 import { amplitudeScale, hann } from './window';
-import { createMusicalGate, spectralEvidence } from './musicalEvidence';
+import {
+  createMusicalGate,
+  createPartialCoherence,
+  harmonicPowerFraction,
+  inharmonicDrone,
+  randomNoiseFrame,
+  spectralEvidence,
+} from './musicalEvidence';
 import { createTuningTracker } from './tuning';
 
 export interface PipelineConfig {
@@ -123,6 +130,8 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
   let shortScale = 0;
   let windowBuf: Float32Array; // last frameSize samples, oldest first
   let longIn: Float32Array;
+  let longRe: Float64Array;
+  let longIm: Float64Array;
   let longMag: Float32Array;
   let hopBuf: Float32Array; // accumulating hop
   let shortIn: Float32Array;
@@ -138,6 +147,7 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
   let energyOut = 0;
   const musicalGate = createMusicalGate();
   const tuning = createTuningTracker();
+  let coherence = createPartialCoherence(cfg.hopSize / cfg.sampleRate);
 
   function makeGate(): AdaptiveGate {
     if (cfg.gateDb !== undefined) {
@@ -184,6 +194,7 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
     energyOut = 0;
     musicalGate.reset();
     tuning.reset();
+    coherence.reset();
   }
 
   function build() {
@@ -195,7 +206,10 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
     shortScale = amplitudeScale(shortWin);
     windowBuf = new Float32Array(cfg.frameSize);
     longIn = new Float32Array(cfg.frameSize);
+    longRe = new Float64Array(longFft.bins);
+    longIm = new Float64Array(longFft.bins);
     longMag = new Float32Array(longFft.bins);
+    coherence = createPartialCoherence(cfg.hopSize / cfg.sampleRate);
     hopBuf = new Float32Array(cfg.hopSize);
     shortIn = new Float32Array(cfg.hopSize);
     shortMag = new Float32Array(shortFft.bins);
@@ -232,6 +246,7 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
 
     if (!open) {
       musicalGate.close();
+      coherence.reset();
       room.reset();
       lastChroma = new Float32Array(12);
       lastBass = null;
@@ -246,8 +261,10 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
     }
 
     for (let i = 0; i < frameSize; i++) longIn[i] = windowBuf[i] * longWin[i];
-    longFft.magnitudes(longIn, longMag);
-    for (let k = 0; k < longMag.length; k++) longMag[k] *= longScale;
+    longFft.forward(longIn, longRe, longIm);
+    for (let k = 0; k < longMag.length; k++) {
+      longMag[k] = Math.hypot(longRe[k], longIm[k]) * longScale;
+    }
 
     const peaks = findPeaks(longMag, {
       sampleRate,
@@ -260,9 +277,27 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
     // after a fan switches on. Require actual tonal energy before normalising its peaks.
     const tonal = tonalEnergyRatio(longMag, peaks, sampleRate, frameSize);
     const evidence = spectralEvidence(peaks, a4);
+    const flatness = spectralFlatness(longMag, sampleRate, frameSize);
+    const harmonic = harmonicPowerFraction(peaks);
+    const binHz = sampleRate / frameSize;
+    const coherenceValue = coherence.update(
+      peaks.map((p) => {
+        const bin = Math.max(1, Math.min(longMag.length - 2, Math.round(p.freq / binHz)));
+        return { freq: p.freq, mag: p.mag, phase: Math.atan2(longIm[bin], longRe[bin]) };
+      }),
+    );
+    // Unrelated steady tones are peaked enough to pass the tonal gate and, after
+    // normalisation, become a fake chord. Music keeps a harmonic series.
+    const noiseFeatures = {
+      flatness,
+      harmonicFraction: harmonic,
+      coherence: coherenceValue,
+      concentration: evidence.concentration,
+    };
     if (
       !musicalGate.accepts(t, tonal, evidence.concentration, evidence.narrowFraction) ||
-      isMainsHum(peaks)
+      isMainsHum(peaks) ||
+      inharmonicDrone(noiseFeatures)
     ) {
       room.reset();
       lastChroma = new Float32Array(12);
@@ -312,7 +347,18 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
       lastChroma = Float32Array.from(chroma);
       lastBass = bass;
     }
-    return { t, chroma, energy: energyOut, bass, onset: on.onset, exact: false };
+    // Chord chroma stays available for the smoother. Keys ignore this frame when it is
+    // hiss, a click or an inharmonic ring, so those peaks are not normalised into lit notes.
+    const noteChroma = randomNoiseFrame(noiseFeatures) ? new Float32Array(12) : undefined;
+    return {
+      t,
+      chroma,
+      ...(noteChroma ? { noteChroma } : {}),
+      energy: energyOut,
+      bass,
+      onset: on.onset,
+      exact: false,
+    };
   }
 
   return {
