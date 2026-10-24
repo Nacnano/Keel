@@ -124,12 +124,41 @@ describe('live input lifecycle', () => {
     const start = input.start();
     await vi.waitFor(() => expect(mocks.mic.start).toHaveBeenCalled());
     const stop = input.stop();
-    permission.resolve();
+    // Neither cancellation nor the returned startup promise waits for native permission.
     await Promise.all([start, stop]);
+    permission.resolve();
+    await Promise.resolve();
     expect(mocks.startSession).not.toHaveBeenCalled();
     expect(mocks.mic.stop).toHaveBeenCalledOnce();
     expect(input.isRunning()).toBe(false);
     expect(jamStore.getState().status).toBe('idle');
+  });
+
+  it('retries before a cancelled native start settles and ignores its late completion', async () => {
+    const oldPermission = deferred();
+    const newPermission = deferred();
+    mocks.mic.start
+      .mockReturnValueOnce(oldPermission.promise)
+      .mockReturnValueOnce(newPermission.promise);
+    mocks.mic.isRunning.mockReturnValue(false);
+    const input = createLiveInput();
+    const oldStart = input.start();
+    await input.stop();
+    await oldStart;
+    expect(mocks.mic.stop).toHaveBeenCalledOnce();
+
+    const retry = input.start();
+    oldPermission.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mocks.startSession).not.toHaveBeenCalled();
+    expect(input.start()).toBe(retry);
+    expect(mocks.mic.start).toHaveBeenCalledTimes(2);
+    newPermission.resolve();
+    await retry;
+    expect(mocks.startSession).toHaveBeenCalledOnce();
+    expect(jamStore.getState().status).toBe('listening');
+    await input.stop();
   });
 
   it('finishes saving the old session before starting another', async () => {

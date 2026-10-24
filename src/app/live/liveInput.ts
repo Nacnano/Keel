@@ -199,6 +199,7 @@ export function createLiveInput(): LiveInputController {
   let running = false;
   let stopping: Promise<void> | null = null;
   let starting: Promise<void> | null = null;
+  let cancelPendingStart: (() => void) | null = null;
   let generation = 0;
   let session: SessionHandle | null = null;
   let audioRec: AudioRecorder | null = null;
@@ -385,6 +386,7 @@ export function createLiveInput(): LiveInputController {
         mode: settings.mode,
         sensitivity: settings.sensitivity,
       });
+      if (token !== generation) return;
       micOk = true;
       // Device labels become available once permission is granted.
       void refreshAudioDevices();
@@ -408,7 +410,12 @@ export function createLiveInput(): LiveInputController {
     if (midiAllowed) {
       await refreshDevices();
       if (token !== generation) return;
-      midiConnected = await connectMidi();
+      const connected = await connectMidi();
+      if (token !== generation) {
+        if (!running) midi.disconnect();
+        return;
+      }
+      midiConnected = connected;
     } else {
       midiConnected = false;
     }
@@ -484,7 +491,7 @@ export function createLiveInput(): LiveInputController {
     wakeLock.release();
 
     try {
-      if (mic.isRunning()) await mic.stop();
+      await mic.stop();
     } catch (err) {
       console.warn('[live] mic stop failed', err);
     }
@@ -526,24 +533,33 @@ export function createLiveInput(): LiveInputController {
     if (running && !stopping) return Promise.resolve();
     const token = ++generation;
     const pendingStop = stopping;
-    starting = (async () => {
-      if (pendingStop) await pendingStop;
-      if (token !== generation) return;
-      await beginStart(token);
-    })().finally(() => {
-      starting = null;
+    const cancelled = new Promise<void>((resolve) => {
+      cancelPendingStart = resolve;
     });
-    return starting;
+    const pending = Promise.race([
+      (async () => {
+        if (pendingStop) await pendingStop;
+        if (token !== generation) return;
+        await beginStart(token);
+      })(),
+      cancelled,
+    ]).finally(() => {
+      if (starting === pending) {
+        starting = null;
+        cancelPendingStart = null;
+      }
+    });
+    starting = pending;
+    return pending;
   }
 
   function stop(opts: StopOptions = {}): Promise<void> {
     ++generation; // A pending permission request must never start a session after leaving Jam.
     if (stopping) return stopping;
-    const pendingStart = starting;
-    stopping = (async () => {
-      if (pendingStart) await pendingStart;
-      await finishStop(opts);
-    })().finally(() => {
+    cancelPendingStart?.();
+    cancelPendingStart = null;
+    starting = null;
+    stopping = finishStop(opts).finally(() => {
       stopping = null;
     });
     return stopping;

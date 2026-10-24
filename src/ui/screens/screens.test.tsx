@@ -85,6 +85,20 @@ describe('JamScreen', () => {
     refresh.mockRestore();
   });
 
+  it('lets a player cancel connecting and returns to the start screen without a save claim', async () => {
+    jamStore.getState().setStatus('starting');
+    const stop = vi.spyOn(liveInput(), 'stop').mockImplementation(async () => {
+      jamStore.getState().stopSession();
+    });
+    renderJam();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Cancel' })));
+    expect(stop).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Start listening' })).toBeEnabled();
+    expect(screen.queryByText('Your jam is saved.')).toBeNull();
+    stop.mockRestore();
+  });
+
   it('shows the saved session directly after Finish & save', async () => {
     const start = vi.spyOn(liveInput(), 'start').mockImplementation(async () => {
       jamStore.getState().startSession();

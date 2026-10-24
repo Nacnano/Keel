@@ -461,3 +461,17 @@ visible false-note time. No physical-device or zero-false-positive claim is made
 The browser run verified live processing, quiet clearing, finishing/saving and tablet layout
 with the capture substitution above. Saved-session and settings surfaces were also exercised.
 Four subsequent rounds will address observed usability problems and verify the combined build.
+
+### Improvement round 1 — recoverable microphone startup
+
+Observed feedback: a native worklet load could leave a pianist stuck on Connecting with no
+way to cancel. Added an active Cancel action, a 20-second setup deadline, and safe retry.
+Cancellation returns to the start screen without claiming an unsaved jam was saved. Late
+permission grants and stale callbacks cannot revive a canceled attempt or tear down a retry.
+This follows Apple's progress-indicator guidance to offer cancellation and explain stalls:
+https://developer.apple.com/design/human-interface-guidelines/progress-indicators.
+
+Validation: 954 tests across 89 files, lint, TypeScript and production build pass. Browser
+verification reproduced the native worklet stall, canceled it, observed timeout with released
+tracks, then retried using scheduled PCM capture and saved the resulting session. The native
+browser limitation remains; no capture fallback was added to the product.

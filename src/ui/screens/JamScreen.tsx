@@ -518,11 +518,12 @@ export function JamScreen() {
                   variant="filled"
                   size="lg"
                   className="min-w-48"
-                  loading={starting}
-                  leading={<Square className="size-4 fill-current" aria-hidden />}
+                  leading={
+                    starting ? undefined : <Square className="size-4 fill-current" aria-hidden />
+                  }
                   onClick={() => void stop()}
                 >
-                  {starting ? 'Connecting…' : input.mock ? 'Stop demo' : 'Finish & save'}
+                  {starting ? 'Cancel' : input.mock ? 'Stop demo' : 'Finish & save'}
                 </Button>
                 {listening && <MarkMenu onMark={addMarker} />}
               </div>
