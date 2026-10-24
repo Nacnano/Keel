@@ -23,6 +23,11 @@ function mediaStream() {
 const getUserMedia = vi.fn();
 const addModule = vi.fn();
 const closeContext = vi.fn();
+const captureNodes: Array<{ onprocessorerror: (() => void) | null }> = [];
+const workers: Array<{
+  onmessage: ((event: MessageEvent) => void) | null;
+  onerror: ((event: ErrorEvent) => void) | null;
+}> = [];
 const contexts: Array<{ close: typeof closeContext; onstatechange?: unknown }> = [];
 
 beforeEach(() => {
@@ -31,6 +36,8 @@ beforeEach(() => {
   addModule.mockReset().mockResolvedValue(undefined);
   closeContext.mockReset().mockResolvedValue(undefined);
   contexts.length = 0;
+  workers.length = 0;
+  captureNodes.length = 0;
   vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } });
   vi.stubGlobal(
     'AudioContext',
@@ -56,15 +63,24 @@ beforeEach(() => {
     'AudioWorkletNode',
     class {
       port = { postMessage: vi.fn(), onmessage: null };
+      onprocessorerror: (() => void) | null = null;
       connect = vi.fn();
       disconnect = vi.fn();
+      constructor() {
+        captureNodes.push(this);
+      }
     },
   );
   vi.stubGlobal(
     'Worker',
     class {
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onerror: ((event: ErrorEvent) => void) | null = null;
       postMessage = vi.fn();
       terminate = vi.fn();
+      constructor() {
+        workers.push(this);
+      }
     },
   );
 });
@@ -176,4 +192,61 @@ describe('microphone startup recovery', () => {
     expect(input.isRunning()).toBe(true);
     await input.stop();
   });
+});
+
+describe('runtime microphone failure classification', () => {
+  it('reports ended capture as fatal without closing the shared session clock', async () => {
+    const capture = mediaStream();
+    getUserMedia.mockResolvedValueOnce(capture.stream);
+    const input = createMicInput();
+    const onError = vi.fn();
+    input.onError(onError);
+    await input.start();
+    const context = input.getContext();
+    const ended = capture.track.addEventListener.mock.calls.find(
+      ([name]) => name === 'ended',
+    )![1] as () => void;
+    ended();
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: 'no-device' }));
+    expect(input.getContext()).toBe(context);
+    expect(closeContext).not.toHaveBeenCalled();
+    await input.stop();
+  });
+
+  it('keeps per-hop DSP errors recoverable and identifies worker crashes as fatal', async () => {
+    const input = createMicInput();
+    const onError = vi.fn();
+    const onFrame = vi.fn();
+    input.onError(onError);
+    input.onFrame(onFrame);
+    await input.start();
+    workers[0].onmessage?.({ data: { type: 'error', message: 'bad hop' } } as MessageEvent);
+    expect(onError.mock.calls[0][0]).not.toHaveProperty('code');
+    const frame = { t: 1, chroma: new Float32Array(12), midiNotes: [] };
+    workers[0].onmessage?.({ data: { type: 'frame', frame } } as MessageEvent);
+    expect(onFrame).toHaveBeenCalledWith(frame);
+    workers[0].onerror?.({ message: 'worker crashed' } as ErrorEvent);
+    expect(onError.mock.calls[1][0]).toMatchObject({ code: 'worklet' });
+    expect(closeContext).not.toHaveBeenCalled();
+    await input.stop();
+  });
+});
+
+it('reports processor crashes as fatal and detaches the old handler before retry', async () => {
+  const input = createMicInput();
+  const onError = vi.fn();
+  input.onError(onError);
+  await input.start();
+  const oldHandler = captureNodes[0].onprocessorerror!;
+  oldHandler();
+  expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: 'worklet' }));
+  await input.stop();
+  expect(captureNodes[0].onprocessorerror).toBeNull();
+  await input.start();
+  onError.mockClear();
+  oldHandler();
+  expect(onError).not.toHaveBeenCalled();
+  captureNodes[1].onprocessorerror?.();
+  expect(onError).toHaveBeenCalledOnce();
+  await input.stop();
 });

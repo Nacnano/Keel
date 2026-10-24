@@ -281,6 +281,80 @@ describe('JamScreen', () => {
     expect(slot.textContent).toBe('');
   });
 
+  it('shows a persistent input failure without stale notes or quiet-room advice, then recovers', () => {
+    const issue = 'Microphone stopped. Finish & save, then start again.';
+    jamStore.setState({
+      status: 'listening',
+      source: 'mic',
+      sessionStart: clock.now(),
+      currentChord: { root: 0, quality: 'maj' },
+      confidence: 0.9,
+      key: C_MAJOR_KEY,
+      activeMidiNotes: [60],
+      tentativeMidiNotes: [64],
+      level: 0.6,
+      recordAudio: true,
+      previewChord: { root: 2, quality: 'min' },
+      previewConfidence: 0.8,
+      previewKey: { ...C_MAJOR_KEY, tonic: 7 },
+      quiet: true,
+      inputIssue: issue,
+    });
+    renderJam();
+    expect(screen.getByTestId('listen-status')).toHaveTextContent('Input stopped');
+    expect(screen.getByTestId('listen-status')).not.toHaveTextContent('Recording');
+    expect(screen.getByRole('heading', { name: 'Input stopped' })).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'Input level' })).toHaveAttribute(
+      'aria-valuenow',
+      '0',
+    );
+    expect(screen.getAllByText(issue)).toHaveLength(1);
+    expect(screen.getByRole('status')).toHaveTextContent(issue);
+    expect(screen.queryByText('Can’t hear much.')).toBeNull();
+    expect(screen.queryByText(/raise sensitivity/)).toBeNull();
+    expect(screen.queryByTestId('chord-symbol')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Key C major/ })).toBeNull();
+    expect(screen.queryByRole('img', { name: /Piano/ })).toBeNull();
+    expect(screen.getByTestId('live-candidate').textContent).toBe('');
+    expect(screen.getByRole('button', { name: 'Finish & save' })).toBeEnabled();
+    act(() => jamStore.setState({ inputIssue: null, quiet: false }));
+    expect(screen.queryByText(issue)).toBeNull();
+    expect(screen.getByTestId('listen-status')).toHaveTextContent('Recording');
+    expect(screen.getByTestId('chord-symbol')).toHaveTextContent('C');
+    expect(screen.getByRole('img', { name: /Piano/ })).toBeInTheDocument();
+  });
+
+  it('keeps MIDI live while showing one nonblocking microphone issue notice', () => {
+    const issue = 'Audio processing stopped. Finish & save, then start again.';
+    jamStore.setState({
+      status: 'listening',
+      source: 'midi',
+      sessionStart: clock.now(),
+      currentChord: { root: 0, quality: 'maj' },
+      confidence: 1,
+      key: C_MAJOR_KEY,
+      activeMidiNotes: [60],
+      quiet: true,
+      inputIssue: issue,
+    });
+    renderJam();
+    expect(screen.getByTestId('listen-status')).toHaveTextContent('Listening');
+    expect(screen.getByTestId('listen-status')).not.toHaveTextContent('Input stopped');
+    expect(screen.getByTestId('chord-symbol')).toHaveTextContent('C');
+    expect(screen.getByRole('button', { name: /Key C major/ })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /confirmed C4/ })).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'Input level' })).toHaveAttribute(
+      'aria-valuenow',
+      '0',
+    );
+    expect(screen.getAllByText(issue)).toHaveLength(1);
+    expect(screen.getByRole('status')).toHaveTextContent(issue);
+    expect(screen.getByRole('button', { name: 'Finish & save' })).toBeEnabled();
+    act(() => jamStore.setState({ inputIssue: null, quiet: false }));
+    expect(screen.queryByText(issue)).toBeNull();
+    expect(screen.getByTestId('chord-symbol')).toHaveTextContent('C');
+  });
+
   it('renders the idle layout', () => {
     renderJam();
     expect(screen.queryByRole('complementary', { name: 'Ideas' })).toBeNull();

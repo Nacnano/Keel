@@ -208,6 +208,7 @@ export function createLiveInput(): LiveInputController {
   let activeSource: InputSource | null = null;
   let lastFrameTime: number | null = null;
   let midiConnected = false;
+  let micFailed = false;
   let persistedMarkers = 0;
   let unsubDevices: Unsub | null = null;
   const wakeLock = createWakeLock();
@@ -278,6 +279,35 @@ export function createLiveInput(): LiveInputController {
     forward(e);
   }
 
+  function onMicError(err: Error) {
+    const fatal =
+      err instanceof AudioInputError && (err.code === 'no-device' || err.code === 'worklet');
+    if (!fatal) {
+      toast(`Audio processing warning: ${err.message}`, { tone: 'error' });
+      return;
+    }
+    if (micFailed) return;
+    micFailed = true;
+    const jam = jamStore.getState();
+    quietGate.reset();
+    jam.setQuiet(false);
+    heldChord = null;
+    if (activeSource !== 'midi') {
+      if (session)
+        forward({ type: 'chord', t: clock.now(), chord: null, confidence: 0, source: 'mic' });
+      engine.reset();
+      jam.clearLiveReadout();
+    }
+    inputStore.getState().setMicLevel(0);
+    jam.setInputIssue(
+      err.code === 'no-device'
+        ? 'Microphone stopped. Finish & save, then start again.'
+        : 'Audio processing stopped. Finish & save, then start again.',
+    );
+    // Keep the session, recorder and shared AudioContext clock alive until
+    // normal Finish & save. Valid MIDI can continue on the same timeline.
+  }
+
   function acceptSource(source: InputSource, t: number) {
     const discontinuity = lastFrameTime !== null && (t < lastFrameTime || t - lastFrameTime > 0.5);
     if ((activeSource !== null && activeSource !== source) || discontinuity) {
@@ -292,6 +322,7 @@ export function createLiveInput(): LiveInputController {
   }
 
   function onMicFrame(f: ChromaFrame) {
+    if (micFailed) return;
     if (midiConnected && f.t - lastMidiActivity < MIDI_PRIORITY_SEC) return;
     acceptSource('mic', f.t);
     engine.push(f);
@@ -366,6 +397,8 @@ export function createLiveInput(): LiveInputController {
     const jam = jamStore.getState();
     const settings = settingsStore.getState();
     jam.setStatus('starting');
+    jam.setInputIssue(null);
+    micFailed = false;
     engine.configure(analysisConfigFrom(settings));
     engine.reset();
     lastMidiActivity = -Infinity;
@@ -378,6 +411,15 @@ export function createLiveInput(): LiveInputController {
 
     let micOk = false;
     let micError: unknown = null;
+    // Runtime failure can happen while MIDI permission/device setup is pending.
+    // Subscribe before capture starts; generation checks keep cancelled attempts inert.
+    subs = [
+      mic.onError((err) => {
+        if (token !== generation || !running) return;
+        onMicError(err);
+        if (micFailed) micError = err;
+      }),
+    ];
     try {
       await mic.start({
         deviceId: settings.audioDeviceId ?? undefined,
@@ -421,8 +463,16 @@ export function createLiveInput(): LiveInputController {
     }
     if (token !== generation) return;
 
+    micOk = micOk && !micFailed;
     if (!micOk && !midiConnected) {
+      for (const unsub of subs) unsub();
+      subs = [];
+      // A fatal error can arrive after capture started but before session setup.
+      // There is no session to finish in this path, so release capture for retry.
+      await mic.stop().catch((err) => console.warn('[live] mic stop failed', err));
+      if (token !== generation) return;
       running = false;
+      jam.setInputIssue(null);
       jam.setStatus('error', describeError(micError ?? new Error('No input available.')));
       return;
     }
@@ -436,22 +486,15 @@ export function createLiveInput(): LiveInputController {
       clock: clock.now,
     });
 
-    subs = [
+    subs.push(
       engine.subscribe(onEngineEvent),
       micOk ? mic.onFrame(onMicFrame) : () => {},
       midiConnected ? midi.onFrame(onMidiFrame) : () => {},
       midiConnected ? midi.onEvent(onMidiEvent) : () => {},
-      mic.onError((err) => {
-        if (activeSource !== 'midi') {
-          jamStore.getState().clearLiveReadout();
-          heldChord = null;
-        }
-        toast(`Microphone stopped: ${err.message}`, { tone: 'error' });
-      }),
       jamStore.subscribe((s, prev) => {
         if (s.markers !== prev.markers) syncMarkers();
       }),
-    ];
+    );
 
     const stream = mic.getStream();
     const canRecord = micOk && Boolean(stream) && isAudioRecordingSupported();
@@ -473,7 +516,9 @@ export function createLiveInput(): LiveInputController {
       }
     }
 
+    const inputIssue = jamStore.getState().inputIssue;
     jam.startSession(t0);
+    if (micFailed) jam.setInputIssue(inputIssue);
     jam.setSource(midiConnected && !micOk ? 'midi' : 'mic');
     wakeLock.hold();
     if (!micOk && midiConnected) {
