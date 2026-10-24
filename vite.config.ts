@@ -9,7 +9,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Keep the active app and its lazy chunks together until all tabs close or the
+      // user explicitly reloads. Replacing caches mid-jam can strand an older tab.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icon.svg'],
       manifest: {
         name: 'Keel',

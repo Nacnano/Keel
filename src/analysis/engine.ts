@@ -31,12 +31,12 @@ import { exactPitchClasses, identifyExact, scoreChroma } from './chordScorer';
 import { createKeyEstimator } from './keyEstimator';
 import { createKeyPublisher } from './keyPublisher';
 import { createSmoother } from './smoother';
+import { createNoteTracker } from './noteTracker';
 import type { Smoother } from './smoother';
 import { CHORD_VOCAB, buildTemplates, sameChordFamily } from './templates';
 import type { TemplateBank } from './templates';
 
-/** Chroma bins (L1-normalised) above this are reported in `notes` events for mic input. */
-export const NOTE_THRESHOLD = 0.08;
+export { NOTE_THRESHOLD } from './noteTracker';
 
 /**
  * Mic frames that are silent (gate closed) less than this long after sound keep the last
@@ -192,6 +192,7 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
   const keys = createKeyEstimator();
   const publisher = createKeyPublisher();
   const bass = createBassResolver();
+  const micNotes = createNoteTracker();
   /** Frame times indexed by the smoother's own frame counter (mic frames only). */
   const times = new Float64Array(TIME_RING);
 
@@ -336,6 +337,7 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
   }
 
   function pushExact(frame: ChromaFrame) {
+    micNotes.reset();
     const pcs = exactPitchClasses(frame.chroma);
     emitNotes(frame.t, pcs);
     const best = identifyExact(pcs, frame.bass, level)[0];
@@ -356,11 +358,7 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
       lastSoundT = frame.t;
     }
     quiet[smoother.frames % TIME_RING] = silent && frame.t - lastSoundT >= RELEASE_HOLD_SEC ? 1 : 0;
-    const pcs: PitchClass[] = [];
-    if (!silent) {
-      for (let b = 0; b < 12; b++) if (frame.chroma[b] > NOTE_THRESHOLD) pcs.push(b as PitchClass);
-    }
-    emitNotes(frame.t, pcs);
+    emitNotes(frame.t, micNotes.push(frame.t, frame.chroma, silent));
     bass.push(silent ? null : frame.bass);
     times[smoother.frames % TIME_RING] = frame.t;
 
@@ -425,6 +423,7 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
       dominant = false;
       inKeyBonus = null;
       bass.reset();
+      micNotes.reset();
       rebuild();
       lastChord = null;
       lastHeard = null;

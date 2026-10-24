@@ -43,7 +43,8 @@ any frame ─► keyEstimator (decaying histogram × Krumhansl-Kessler, hysteres
 - `key` — when a key is confirmed (see `keyPublisher.ts`): `t` = where it is drawn from, `id`,
   `since` = where its own evidence started; a replacement of a short key adds `supersedes`
   (the withdrawn `id`) and `replacesSince` (its start, equal to `t`).
-- `notes` — when the set changes. Mic: bins > 0.08 of the L1-normalised chroma. MIDI: every held
+- `notes` — when the set changes. Mic: bins > 0.10 for 120 ms light up; bins < 0.06 for 240 ms clear.
+  This display-only hysteresis ignores brief spikes and dropouts. MIDI: every held
   pitch class. `midiNotes` is not filled (a `ChromaFrame` carries no note numbers).
 - `level` — every frame, `energy` passed through.
 
@@ -62,7 +63,7 @@ any frame ─► keyEstimator (decaying histogram × Krumhansl-Kessler, hysteres
 | `EXACT_MIN_SCORE`         | `chordScorer.ts`  | 0.45                     | weakest partial MIDI match reported (a lone note is never a chord) |
 | `MIN_BASS_FRAMES`         | `bassResolver.ts` | 3                        | frames a bass must hold before a slash chord shows                 |
 | `DEFAULT_KEY_OPTIONS`     | `keyEstimator.ts` | 8 s / 0.08 / 2 s / 1.5 s | half-life, switch margin, switch hold, first-key evidence          |
-| `NOTE_THRESHOLD`          | `engine.ts`       | 0.08                     | mic `notes` event threshold                                        |
+| `NOTE_THRESHOLD`          | `noteTracker.ts`  | 0.10                     | mic note activation threshold                                      |
 
 `mode`, `instrument` and `a4` are accepted but not used here (tuning and instrument profiles live
 in `src/audio`).
