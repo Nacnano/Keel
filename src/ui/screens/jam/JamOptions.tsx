@@ -81,7 +81,11 @@ export function JamOptions(p: JamOptionsProps) {
                   options={MODE_OPTIONS}
                 />
               }
-              detail="Steadier, simpler chords when others are playing."
+              detail={
+                p.mode === 'room'
+                  ? 'With a band always shows simple chords.'
+                  : 'Steadier, simpler chords when others are playing.'
+              }
             />
             <Row
               label="Record audio"
@@ -96,33 +100,38 @@ export function JamOptions(p: JamOptionsProps) {
               }
             />
           </Group>
-          <Group>
-            <Row
-              label="Chord detail"
-              stacked
-              accessory={
-                <Segmented
-                  fill
-                  aria-label="Chord detail"
-                  value={p.vocabLevel}
-                  onChange={p.onVocabLevel}
-                  options={VOCAB_OPTIONS}
+          {(p.mode !== 'room' || p.canShowPiano) && (
+            <Group>
+              {/* With a band always shows simple chords, so there is no level to pick. */}
+              {p.mode !== 'room' && (
+                <Row
+                  label="Chord detail"
+                  stacked
+                  accessory={
+                    <Segmented
+                      fill
+                      aria-label="Chord detail"
+                      value={p.vocabLevel}
+                      onChange={p.onVocabLevel}
+                      options={VOCAB_OPTIONS}
+                    />
+                  }
                 />
-              }
-            />
-            {p.canShowPiano && (
-              <Row
-                label="Show keyboard"
-                accessory={
-                  <Switch
-                    checked={p.pianoVisible}
-                    onChange={p.onPianoVisible}
-                    aria-label="Show keyboard"
-                  />
-                }
-              />
-            )}
-          </Group>
+              )}
+              {p.canShowPiano && (
+                <Row
+                  label="Show keyboard"
+                  accessory={
+                    <Switch
+                      checked={p.pianoVisible}
+                      onChange={p.onPianoVisible}
+                      aria-label="Show keyboard"
+                    />
+                  }
+                />
+              )}
+            </Group>
+          )}
         </div>
       </Sheet>
     </>

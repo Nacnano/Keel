@@ -217,7 +217,6 @@ export function ReharmPanel({
               )}
               <Segmented
                 className="ml-auto"
-                size="sm"
                 aria-label="Style"
                 options={STYLES}
                 value={style}

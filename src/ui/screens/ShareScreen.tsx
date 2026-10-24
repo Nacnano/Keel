@@ -2,14 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { AudioLines, CloudOff, Copy, FileQuestion, TriangleAlert } from 'lucide-react';
-import { formatTime, fromJSON } from '@/data/export';
+import { buildChart, formatTime, fromJSON } from '@/data/export';
 import { isSyncConfigured } from '@/sync/client';
 import { fetchShare, type SharedChart } from '@/sync/share';
-import { chordSymbol, keyName, prettyAccidentals, romanNumeral } from '@/theory';
-import { Button, Group } from '../kit';
-import { cx } from '../lib/cx';
+import { keyName, prettyAccidentals } from '@/theory';
+import { ChordChart } from '../components/ChordChart';
+import { Button, Group, Page } from '../kit';
 import { FILLED_LINK, GRAY_LINK } from './library/linkStyles';
-import { buildShareChart, type ChartSegment } from './share/chart';
 import { PageState } from './share/PageState';
 
 type LoadState =
@@ -27,63 +26,34 @@ function fmtDate(epochMs: number): string {
   });
 }
 
-/** One run of chords; repeats are bracketed with a count, like the jam timeline. */
-function Segment({ segment }: { segment: ChartSegment }) {
-  const repeated = segment.repeat > 1;
-  return (
-    <li className={cx('flex items-center', repeated && 'rounded-cell bg-fill-4 pr-2.5')}>
-      {repeated && (
-        <span aria-hidden className="pl-1.5 text-title-2 text-label-4">
-          [
-        </span>
-      )}
-      {segment.items.map((c, i) => (
-        <span key={i} className="flex min-w-12 flex-col items-center px-1.5 py-1.5">
-          <span className="text-title-3 font-semibold text-label">
-            {prettyAccidentals(chordSymbol(c.chord, c.key))}
-          </span>
-          <span
-            className="h-4 text-caption leading-4 font-medium text-accent"
-            data-testid="numeral"
-          >
-            {c.key ? prettyAccidentals(romanNumeral(c.chord, c.key)) : ' '}
-          </span>
-        </span>
-      ))}
-      {repeated && (
-        <>
-          <span aria-hidden className="text-title-2 text-label-4">
-            ]
-          </span>
-          <span className="ml-1 text-callout font-semibold text-accent tabular">
-            ×{segment.repeat}
-          </span>
-        </>
-      )}
-    </li>
-  );
-}
+const WORDMARK = (
+  <Link
+    to="/"
+    className="flex h-11 items-center gap-2 rounded-[8px] px-2 text-subhead font-semibold tracking-tight text-label"
+  >
+    <span className="flex size-6 items-center justify-center rounded-[7px] bg-action text-accent-fg">
+      <AudioLines className="size-3.5" aria-hidden />
+    </span>
+    Keel
+  </Link>
+);
 
-/** Standalone page (no app chrome): small wordmark, then a centred reading column. */
+const SHARED_LABEL = (
+  <span className="px-2 text-caption font-medium tracking-wide text-label-3 uppercase">
+    Shared chart
+  </span>
+);
+
+/** Loading and error states: the wordmark row, then a centred message. */
 function Frame({ children }: { children: ReactNode }) {
   return (
     <div className="h-full overflow-y-auto bg-bg text-label">
-      <div className="mx-auto flex max-w-2xl flex-col gap-6 px-5 pt-6 pb-[max(env(safe-area-inset-bottom),40px)]">
-        <div className="flex items-center justify-between">
-          <Link
-            to="/"
-            className="flex items-center gap-2 rounded-[8px] text-subhead font-semibold tracking-tight text-label"
-          >
-            <span className="flex size-6 items-center justify-center rounded-[7px] bg-action text-accent-fg">
-              <AudioLines className="size-3.5" aria-hidden />
-            </span>
-            Keel
-          </Link>
-          <span className="text-caption font-medium tracking-wide text-label-3 uppercase">
-            Shared chart
-          </span>
+      <div className="mx-auto flex max-w-3xl flex-col">
+        <div className="flex h-13 items-center justify-between gap-2 px-2">
+          {WORDMARK}
+          {SHARED_LABEL}
         </div>
-        {children}
+        <div className="px-4">{children}</div>
       </div>
     </div>
   );
@@ -129,7 +99,13 @@ function SharedChartView({ code }: { code: string }) {
   };
 
   const model = useMemo(
-    () => (state.kind === 'ready' ? buildShareChart(state.share.payload.chart) : null),
+    () =>
+      state.kind === 'ready'
+        ? buildChart({
+            ...state.share.payload.chart,
+            durationSec: state.share.payload.chart.session.durationSec,
+          })
+        : null,
     [state],
   );
 
@@ -215,11 +191,13 @@ function SharedChartView({ code }: { code: string }) {
   };
 
   return (
-    <Frame>
-      <header className="flex flex-col gap-4 pt-4">
-        <div className="flex flex-col gap-1.5">
-          <h1 className="text-large-title font-bold break-words text-label">{session.name}</h1>
-          <p className="flex flex-wrap items-center gap-x-2 text-subhead text-label-2">
+    <div className="h-full bg-bg text-label">
+      <Page
+        leading={WORDMARK}
+        actions={SHARED_LABEL}
+        title={session.name}
+        subtitle={
+          <p className="flex flex-wrap items-center gap-x-2">
             {model.keys.length > 0 && (
               <>
                 <span data-testid="share-keys" className="font-semibold text-label">
@@ -238,78 +216,66 @@ function SharedChartView({ code }: { code: string }) {
             </span>
             <span>{fmtDate(session.createdAt)}</span>
           </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="filled"
-            round
-            size="lg"
-            loading={importing}
-            onClick={() => void openInKeel()}
-          >
-            Open in Keel
-          </Button>
-          <Button
-            variant="gray"
-            round
-            size="lg"
-            leading={<Copy className="size-4" aria-hidden />}
-            onClick={() => void copyChart()}
-          >
-            Copy chart
-          </Button>
-        </div>
-        {notice && (
-          <p role="status" className="anim-fade-in text-subhead text-label-2">
-            {notice}
-          </p>
-        )}
-      </header>
-
-      {model.sections.length === 0 ? (
-        <p className="rounded-card bg-surface px-4 py-6 text-center text-subhead text-label-2">
-          This chart has no chords.
-        </p>
-      ) : (
-        <ol aria-label="Chord chart" className="flex flex-col gap-6">
-          {model.sections.map((s, i) => (
-            <li key={i} className="flex flex-col gap-2">
-              {s.label && (
-                <h2 className="flex items-baseline gap-2 px-1 text-headline text-warn">
-                  <span className="capitalize">{s.label}</span>
-                  <span className="text-footnote font-normal text-label-3 tabular">
-                    {formatTime(s.t)}
-                  </span>
-                </h2>
-              )}
-              <ul className="flex flex-wrap items-center gap-x-2 gap-y-2 rounded-card bg-surface px-2 py-2">
-                {s.segments.length === 0 ? (
-                  <li className="px-2 py-3 text-subhead text-label-3">
-                    No chords in this section.
-                  </li>
-                ) : (
-                  s.segments.map((seg, j) => <Segment key={j} segment={seg} />)
-                )}
-              </ul>
-            </li>
-          ))}
-        </ol>
-      )}
-
-      {model.bookmarks.length > 0 && (
-        <Group title="Bookmarks" aria-label="Bookmarks">
-          {model.bookmarks.map((m) => (
-            <div key={m.id} className="flex min-h-11 items-center gap-3 px-4 py-2 text-body">
-              <span className="w-12 text-subhead text-label-2 tabular">{formatTime(m.t)}</span>{' '}
-              <span className="text-label">{m.label ?? 'Bookmark'}</span>
+        }
+      >
+        <div className="flex flex-col gap-6 px-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="filled"
+                round
+                size="lg"
+                loading={importing}
+                onClick={() => void openInKeel()}
+              >
+                Open in Keel
+              </Button>
+              <Button
+                variant="gray"
+                round
+                size="lg"
+                leading={<Copy className="size-4" aria-hidden />}
+                onClick={() => void copyChart()}
+              >
+                Copy chart
+              </Button>
             </div>
-          ))}
-        </Group>
-      )}
+            {notice && (
+              <p role="status" className="anim-fade-in text-subhead text-label-2">
+                {notice}
+              </p>
+            )}
+          </div>
 
-      <p className="text-center text-caption text-label-3">
-        Shared {fmtDate(state.share.createdAt)} · read-only snapshot
-      </p>
-    </Frame>
+          {model.parts.length === 0 ? (
+            <p className="rounded-card bg-surface px-4 py-6 text-center text-subhead text-label-2">
+              This chart has no chords.
+            </p>
+          ) : (
+            <ChordChart
+              chart={model}
+              spellingFollowsKey
+              showSlash
+              className="rounded-card bg-surface px-4 py-3"
+            />
+          )}
+
+          {model.bookmarks.length > 0 && (
+            <Group title="Bookmarks" aria-label="Bookmarks">
+              {model.bookmarks.map((m) => (
+                <div key={m.id} className="flex min-h-11 items-center gap-3 px-4 py-2 text-body">
+                  <span className="w-12 text-subhead text-label-2 tabular">{formatTime(m.t)}</span>{' '}
+                  <span className="text-label">{m.label ?? 'Bookmark'}</span>
+                </div>
+              ))}
+            </Group>
+          )}
+
+          <p className="text-center text-caption text-label-3">
+            Shared {fmtDate(state.share.createdAt)} · read-only snapshot
+          </p>
+        </div>
+      </Page>
+    </div>
   );
 }

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import type { InspectorTab } from './JamInspector';
 
 const KEY = 'keel.ui.inspector';
-const TABS: InspectorTab[] = ['next', 'scales', 'voicings', 'keys'];
+// The old Modulate tab ('keys') is now the end of Next, so it falls back to 'next'.
+const TABS: InspectorTab[] = ['next', 'scales', 'voicings'];
 
 /** Only the tab is restored: Ideas always starts closed so it never covers a new session. */
 function readTab(): InspectorTab {

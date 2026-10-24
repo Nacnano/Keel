@@ -8,6 +8,7 @@ import {
   renameSession,
   setTags as repoSetTags,
   updateChord as repoUpdateChord,
+  updateChordsLike as repoUpdateChordsLike,
   updateMarker as repoUpdateMarker,
   type SessionFull,
 } from '@/data';
@@ -34,7 +35,9 @@ export interface ReviewSessionApi {
   rename(name: string): Promise<void>;
   setTags(tags: string[]): Promise<void>;
   updateChord(rec: ChordRecord, chord: Chord | null): Promise<ChordRecord>;
-  addMarker(kind: MarkerKind, t: number): Promise<Marker>;
+  /** Every chord with the same root and quality as `match` becomes `chord`; returns how many. */
+  updateChordsLike(match: Chord, chord: Chord | null): Promise<number>;
+  addMarker(kind: MarkerKind, t: number, label?: string): Promise<Marker>;
   moveMarker(id: string, t: number): Promise<void>;
   changeMarkerKind(id: string, kind: MarkerKind): Promise<void>;
   deleteMarker(id: string): Promise<void>;
@@ -123,10 +126,21 @@ export function useReviewSession(id: string | undefined): ReviewSessionApi {
     [patch, refreshSession],
   );
 
+  const updateChordsLike = useCallback(
+    async (match: Chord, chord: Chord | null) => {
+      if (!id) return 0;
+      const updated = new Map((await repoUpdateChordsLike(id, match, chord)).map((r) => [r.id, r]));
+      patch((f) => ({ ...f, chords: f.chords.map((c) => updated.get(c.id) ?? c) }));
+      await refreshSession();
+      return updated.size;
+    },
+    [id, patch, refreshSession],
+  );
+
   const addMarker = useCallback(
-    async (kind: MarkerKind, t: number) => {
+    async (kind: MarkerKind, t: number, label?: string) => {
       if (!id) throw new Error('No session');
-      const m = await repoAddMarker(id, { t, kind });
+      const m = await repoAddMarker(id, label === undefined ? { t, kind } : { t, kind, label });
       patch((f) => ({ ...f, markers: [...f.markers, m].sort(byT) }));
       await refreshSession();
       return m;
@@ -173,6 +187,7 @@ export function useReviewSession(id: string | undefined): ReviewSessionApi {
     rename,
     setTags,
     updateChord,
+    updateChordsLike,
     addMarker,
     moveMarker,
     changeMarkerKind,

@@ -12,6 +12,7 @@ export interface SegmentedProps<T extends string | number> {
   value: T;
   onChange(value: T): void;
   'aria-label': string;
+  /** @deprecated One size everywhere; kept so older call sites still compile. */
   size?: 'sm' | 'md';
   /** Stretch to the container width with equal segments. */
   fill?: boolean;
@@ -23,7 +24,7 @@ export function Segmented<T extends string | number>({
   options,
   value,
   onChange,
-  size = 'md',
+  size: _size,
   fill,
   className,
   ...aria
@@ -79,9 +80,10 @@ export function Segmented<T extends string | number>({
             onClick={() => onChange(o.value)}
             className={cx(
               'relative z-10 inline-flex items-center justify-center rounded-[7px] font-medium whitespace-nowrap transition-colors duration-150',
-              // Track = segment + 4 px: 36 px (sm) / 40 px (md) with a mouse, 44 px on touch.
-              size === 'md' ? 'h-9 min-w-11 px-3 text-subhead' : 'h-8 min-w-9 px-2.5 text-footnote',
-              'pointer-coarse:h-10',
+              // One size: a 32 px segment in a 36 px track with a mouse. On touch the segment
+              // is 44 px and overlaps the track padding, so the track is 44 px too.
+              'h-8 min-w-10 px-3 text-subhead',
+              'pointer-coarse:-my-0.5 pointer-coarse:h-11 pointer-coarse:min-w-11',
               fill && 'flex-1',
               active ? 'text-label' : 'text-label-2 hover:text-label',
             )}

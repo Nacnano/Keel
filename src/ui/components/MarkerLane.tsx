@@ -3,6 +3,7 @@ import type { KeyboardEvent, PointerEvent } from 'react';
 import type { Marker, MarkerKind } from '@/core';
 import { cx } from '../lib/cx';
 import { MARKER_LABEL, SECTION_KINDS } from '../lib/markers';
+import { MarkMenu, type MarkChoice } from '../screens/review/MarkMenu';
 import { clockLabel, timeToX, visibleSeconds, type TimeViewport } from '../screens/review/timeline';
 import { Bookmark, Flag, X } from 'lucide-react';
 import { Button, Select } from '../kit';
@@ -110,7 +111,10 @@ export function MarkerLane({
     >
       {markers.length === 0 && (
         <p className="absolute inset-0 flex items-center px-3 text-footnote text-label-3">
-          No markers yet. Press B for a bookmark at the playhead.
+          No markers yet.
+          <span className="pointer-coarse:hidden">
+            &nbsp;Press B for a bookmark at the playhead.
+          </span>
         </p>
       )}
       {visible.map((m) => {
@@ -135,7 +139,7 @@ export function MarkerLane({
             onClick={() => onClick(m)}
             onKeyDown={onKeyDown(m)}
             className={cx(
-              'absolute top-1 bottom-1 flex min-w-11 touch-none items-center gap-1 rounded-r-[8px] pr-2 pl-1.5 text-caption font-semibold whitespace-nowrap text-warn',
+              'absolute top-0.5 bottom-0.5 flex min-w-11 touch-none items-center gap-1 rounded-r-[8px] pr-2 pl-1.5 text-caption font-semibold whitespace-nowrap text-warn',
               'cursor-ew-resize shadow-[inset_2px_0_0_var(--jk-warn)] transition-colors duration-100 focus-visible:z-10',
               isSel ? 'bg-warn/20' : 'bg-warn/[0.07] hover:bg-warn/15',
             )}
@@ -158,14 +162,14 @@ export interface MarkerToolbarProps {
   /** Playhead; new markers land here. */
   time: number;
   selected: Marker | null;
-  onAdd(kind: MarkerKind, t: number): void;
+  onAdd(choice: MarkChoice, t: number): void;
   onDelete(id: string): void;
   onChangeKind(id: string, kind: MarkerKind): void;
   onDeselect(): void;
   className?: string;
 }
 
-/** Add a bookmark / section at the playhead; edit or delete the selected marker. */
+/** Mark the playhead (the Listen screen's list); edit or delete the selected marker. */
 export function MarkerToolbar({
   time,
   selected,
@@ -177,31 +181,7 @@ export function MarkerToolbar({
 }: MarkerToolbarProps) {
   return (
     <div className={cx('flex flex-wrap items-center gap-2', className)}>
-      <Button
-        variant="gray"
-        size="sm"
-        leading={<Bookmark className="size-3.5" aria-hidden />}
-        onClick={() => onAdd('bookmark', time)}
-        title="Bookmark at the playhead (B)"
-      >
-        Bookmark
-        <kbd className="ml-0.5 rounded-[4px] bg-fill-3 px-1 font-sans text-[10px] text-label-2 pointer-coarse:hidden">
-          B
-        </kbd>
-      </Button>
-      <Select
-        inline
-        className="w-auto"
-        aria-label="Add section marker at playhead"
-        value=""
-        onChange={(v) => {
-          if (v) onAdd(v as MarkerKind, time);
-        }}
-        options={[
-          { value: '', label: 'Add section…' },
-          ...SECTION_KINDS.map((k) => ({ value: k, label: MARKER_LABEL[k] })),
-        ]}
-      />
+      <MarkMenu onMark={(choice) => onAdd(choice, time)} />
 
       {selected && (
         <div

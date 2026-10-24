@@ -54,13 +54,13 @@ describe('ShareScreen', () => {
     renderAt(`/s/${CODE}`);
     expect(await screen.findByRole('heading', { level: 1, name: 'Shared groove' })).toBeVisible();
     expect(screen.getByTestId('share-keys')).toHaveTextContent('C major');
-    const chart = screen.getByRole('list', { name: 'Chord chart' });
+    const chart = screen.getByRole('region', { name: 'Chord chart' });
     // POP_PROGRESSION C G Am F, with numerals relative to C major.
     for (const sym of ['C', 'G', 'Am', 'F']) expect(chart).toHaveTextContent(sym);
-    const numerals = screen.getAllByTestId('numeral').map((n) => n.textContent);
+    const numerals = screen.getAllByTestId('chart-numeral').map((n) => n.textContent);
     expect(numerals).toEqual(expect.arrayContaining(['I', 'V', 'vi', 'IV']));
     expect(chart).toHaveTextContent('×');
-    expect(screen.getByRole('heading', { name: /intro/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Intro' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Bookmarks' })).toHaveTextContent('1:00 nice');
     expect(screen.queryByRole('textbox')).toBeNull();
   });

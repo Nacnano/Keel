@@ -5,7 +5,7 @@ import type { Chord, KeyEstimate } from '@/core/types';
 import { C_MAJOR_KEY, JAZZ_PROGRESSION, POP_PROGRESSION, mockSession } from '@/core/mocks';
 import { db } from './db';
 import { getSessionFull, type SessionFull } from './repo';
-import { ImportError, formatTime, fromJSON, toJSON, toText } from './export';
+import { ImportError, buildChart, formatTime, fromJSON, toJSON, toText } from './export';
 
 const SID = 'mock-session-1';
 const A_MINOR: KeyEstimate = {
@@ -77,20 +77,29 @@ async function seed(full: SessionFull): Promise<void> {
 }
 
 describe('toText', () => {
-  it('renders a compressed chord chart with sections, modulations and bookmarks', () => {
+  it('renders the folded chart: sections, loops, numerals, key changes and bookmarks', () => {
     expect(toText(fixture())).toMatchInlineSnapshot(`
-      "Evening idea in C — 2026-10-22 — 5:00
+      "Evening idea in C — 5:00
       Key: C major
-      [Intro] | C G Am F | ×4
-      [Verse] | Dm7 G7 Cmaj7 | ×2
+
+      [Intro]
+      C G Am F  ×4
+      I V vi IV
+
+      [Verse]
+      Dm7 G7 Cmaj7 ×2
+      ii7 V7 Imaj7
+
       → A minor at 2:35
-      | Am Dm E7 Am |
+      Am Dm E7 Am
+      i  iv V7 i
+
       Bookmarks: 1:00 nice
       "
     `);
   });
 
-  it('spells chords with flats in flat keys and handles empty sessions', () => {
+  it('spells chords with flat glyphs in flat keys and handles empty sessions', () => {
     const full = fixture();
     full.keys = [{ ...full.keys[0], key: { ...C_MAJOR_KEY, tonic: 5 } }];
     full.markers = [];
@@ -98,12 +107,20 @@ describe('toText', () => {
       [
         { root: 5, quality: 'maj' },
         { root: 10, quality: 'maj' },
+        { root: 7, quality: 'm7b5' },
         { root: 5, quality: 'maj', bass: 9 },
       ],
       0,
       1,
     );
-    expect(toText(full).split('\n').slice(1, 3)).toEqual(['Key: F major', '| F Bb F/A |']);
+    expect(toText(full).split('\n').slice(1, 5)).toMatchInlineSnapshot(`
+      [
+        "Key: F major",
+        "",
+        "F B♭ Gm7♭5 F/A",
+        "I IV iiø7  I",
+      ]
+    `);
 
     const empty: SessionFull = {
       session: mockSession({ name: 'Empty' }),
@@ -111,10 +128,40 @@ describe('toText', () => {
       keys: [],
       markers: [],
     };
-    expect(toText(empty).split('\n')).toHaveLength(2);
+    expect(toText(empty)).toBe('Empty — 5:00\n');
   });
 
-  it('folds a lone chord after a loop onto the line before and keeps user labels', () => {
+  it('renders the clean take as two titled sections with one numerals line each', () => {
+    const full = fixture();
+    full.keys = [full.keys[0]];
+    full.markers = [
+      { id: 'm0', sessionId: SID, t: 0, kind: 'intro' },
+      { id: 'm1', sessionId: SID, t: 12, kind: 'chorus' },
+    ];
+    full.chords = chordRows(repeat(POP_PROGRESSION, 5), 0, 1.5);
+    const text = toText(full);
+    expect(text).toMatchInlineSnapshot(`
+      "Evening idea in C — 5:00
+      Key: C major
+
+      [Intro]
+      C G Am F  ×2
+      I V vi IV
+
+      [Chorus]
+      C G Am F  ×3
+      I V vi IV
+      "
+    `);
+    const lines = text.trimEnd().split('\n');
+    expect(lines.filter((l) => l.startsWith('['))).toEqual(['[Intro]', '[Chorus]']);
+    expect(lines.filter((l) => /^I\s+V\s+vi\s+IV/.test(l))).toHaveLength(2);
+    // No row is a lone chord, and there are no bar lines.
+    expect(lines.some((l) => /^\S+$/.test(l) && !l.startsWith('['))).toBe(false);
+    expect(text).not.toContain('|');
+  });
+
+  it('folds a short tail into the row before and keeps user labels', () => {
     const full = fixture();
     full.keys = [full.keys[0]];
     full.markers = [
@@ -123,13 +170,64 @@ describe('toText', () => {
     ];
     full.chords = [
       ...chordRows([...repeat(POP_PROGRESSION, 3), { root: 2, quality: 'min' }], 0, 2),
-      ...chordRows([{ root: 7, quality: 'maj' }], 30, 2, 100),
+      ...chordRows(
+        [
+          { root: 7, quality: 'maj' },
+          { root: 0, quality: 'maj' },
+        ],
+        30,
+        2,
+        100,
+      ),
     ];
-    expect(toText(full).split('\n').slice(1, 4)).toEqual([
-      'Key: C major',
-      '[Chorus] | C G Am F | ×3 | Dm |',
-      '[Tag ending] | G |',
-    ]);
+    expect(toText(full).split('\n').slice(2)).toMatchInlineSnapshot(`
+      [
+        "",
+        "[Chorus]",
+        "C G Am F  ×3   Dm",
+        "I V vi IV      ii",
+        "",
+        "[Tag ending]",
+        "G C",
+        "V I",
+        "",
+      ]
+    `);
+  });
+
+  it('heads the chart with the key by time and hides key wobbles under ten seconds', () => {
+    const full = fixture();
+    full.markers = [];
+    full.session = { ...full.session, durationSec: 60 };
+    // B major for the first 8 s, E major, an A major wobble of 6 s, E major again.
+    const key = (tonic: number) => ({ ...C_MAJOR_KEY, tonic: tonic as 0 });
+    full.keys = [
+      { id: 'k0', sessionId: SID, t: 1, key: key(11) },
+      { id: 'k1', sessionId: SID, t: 8, key: key(4) },
+      { id: 'k2', sessionId: SID, t: 33, key: key(9) },
+      { id: 'k3', sessionId: SID, t: 39, key: key(4) },
+    ];
+    full.chords = chordRows(
+      repeat(
+        [
+          { root: 1, quality: 'min' },
+          { root: 9, quality: 'maj' },
+          { root: 4, quality: 'maj' },
+          { root: 11, quality: 'maj' },
+        ],
+        6,
+      ),
+      0,
+      2.5,
+    );
+    const text = toText(full);
+    expect(text.split('\n')[1]).toBe('Key: E major');
+    expect(text).not.toContain('→');
+    expect(text).toContain('C♯m A  E B ×6');
+    expect(text).toContain('vi  IV I V');
+
+    const chart = buildChart({ ...full, durationSec: 60 });
+    expect(chart.keys.map((k) => [k.key.tonic, k.start, k.end])).toEqual([[4, 0, 60]]);
   });
 
   it('formats times', () => {
