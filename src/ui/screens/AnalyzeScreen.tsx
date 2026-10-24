@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
-import { AlertCircle, Pause, Play } from 'lucide-react';
+import { AlertCircle, Check, Pause, Play } from 'lucide-react';
 import {
   analyseSamplesToEvents,
   decodeFileToMono,
@@ -16,7 +16,7 @@ import { draftFromAnalysis, nameFromFile, saveAnalysedSession } from '@/data/imp
 import { useSettings } from '@/state/settingsStore';
 import { KeyBadge } from '../components/KeyBadge';
 import { toast } from '../components/toastStore';
-import { Button, Group, Page, Row, Segmented, Slider, Switch } from '../kit';
+import { Button, Group, Page, Row, Segmented, Slider, Switch, useFlash } from '../kit';
 import { ChordChart } from '../components/ChordChart';
 import { keyLabel, pretty, sameKey } from '../lib/chordLabel';
 import { cx } from '../lib/cx';
@@ -467,12 +467,12 @@ function AnalyzeResult({
     if (audioEl.paused) void audioEl.play()?.catch(() => {});
     else audioEl.pause();
   };
+  // A copy says so on the button; the download fallback is not visible, so it gets a toast.
+  const [copied, flashCopied] = useFlash();
   const copy = async () => {
     const how = await copyChart(draft);
-    toast(how === 'copied' ? 'Chord chart copied' : 'Clipboard unavailable: chart downloaded', {
-      tone: 'success',
-      durationMs: 1800,
-    });
+    if (how === 'copied') flashCopied();
+    else toast('Clipboard unavailable: chart downloaded', { tone: 'success', durationMs: 1800 });
   };
 
   const nameId = useId();
@@ -602,8 +602,13 @@ function AnalyzeResult({
         <Button variant="filled" onClick={() => void save()} loading={saving}>
           Save to library
         </Button>
-        <Button variant="gray" onClick={() => void copy()} disabled={!chart.parts.length}>
-          Copy chart
+        <Button
+          variant="gray"
+          leading={copied ? <Check className="size-4" aria-hidden /> : undefined}
+          onClick={() => void copy()}
+          disabled={!chart.parts.length}
+        >
+          {copied ? 'Copied' : 'Copy chart'}
         </Button>
         <Button variant="plain" onClick={onReset} className="ml-auto">
           Clear
