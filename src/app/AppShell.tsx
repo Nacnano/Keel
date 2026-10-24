@@ -90,6 +90,10 @@ export function AppShell() {
   const { pathname } = useLocation();
   const listening = useJamStore((state) => state.status === 'listening');
   const demo = useJamStore((state) => state.demo);
+  // Same rule as the Listen header: "Recording" with a red dot only while audio is kept.
+  const recording = useJamStore(
+    (state) => !state.demo && state.recordAudio && state.source === 'mic',
+  );
   const items = NAV.map((item) => ({
     ...item,
     active:
@@ -137,14 +141,21 @@ export function AppShell() {
             className="flex min-h-11 shrink-0 items-center justify-center gap-2 bg-accent/10 px-4 text-subhead font-medium text-accent"
           >
             <span
-              className={cx('size-2 rounded-full', demo ? 'bg-accent' : 'bg-live')}
+              className={cx('size-2 rounded-full', recording ? 'bg-live' : 'bg-accent')}
               aria-hidden
             />
-            {demo ? 'Demo in progress' : 'Listening in progress'} · Return to your jam
+            {demo
+              ? 'Demo in progress'
+              : recording
+                ? 'Recording in progress'
+                : 'Listening in progress'}{' '}
+            · Return to your jam
           </Link>
         )}
-        <main className="min-h-0 flex-1">
+        {/* Toasts sit at the top of the content column, under the screen header. */}
+        <main className="relative min-h-0 flex-1">
           <Outlet />
+          <Toaster />
         </main>
         <nav
           aria-label="Sections"
@@ -155,7 +166,6 @@ export function AppShell() {
           ))}
         </nav>
       </div>
-      <Toaster />
     </div>
   );
 }
