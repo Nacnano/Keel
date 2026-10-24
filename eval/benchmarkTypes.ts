@@ -5,6 +5,8 @@ export interface TruthSpan {
   end: number;
   /** null = no music expected; 'unknown' = unannotated, never counted as correct. */
   chord: Chord | null | 'unknown';
+  /** Independently known sounding MIDI notes; absent means unknown (except labeled silence). */
+  midiNotes?: number[];
 }
 
 export interface BenchmarkCase {
@@ -24,10 +26,39 @@ export interface BenchmarkCase {
 export interface DisplayFrame {
   wall: number;
   chord: Chord | null;
+  /** Legacy confirmed pitch classes, unchanged protocol. */
   notes: PitchClass[];
+  midiNotes?: number[];
+  tentativeMidiNotes?: number[];
+}
+
+export interface ExactNoteChannelMetrics {
+  visibleSec: number;
+  activityCoverage: number;
+  trueNoteSec: number;
+  falseNoteSec: number;
+  missedNoteSec: number;
+  octaveErrorSec: number;
+  falseVisibleSec: number;
+  precision: number | null;
+  recall: number | null;
+  onsetP90Sec: number | null;
+  missedOnsets: number;
+  releaseSec: number | null;
+}
+
+export interface ExactNoteMetrics {
+  protocol: 1;
+  annotatedSec: number;
+  expectedNoteSec: number;
+  expectedOnsets: number;
+  confirmed: ExactNoteChannelMetrics;
+  tentative: ExactNoteChannelMetrics;
+  union: ExactNoteChannelMetrics;
 }
 
 export interface BenchmarkMetrics {
+  exactNotes: ExactNoteMetrics;
   durationSec: number;
   musicSec: number;
   noiseSec: number;

@@ -1,7 +1,7 @@
-import type { BenchmarkMetrics, BenchmarkResult } from './benchmarkTypes';
+import type { BenchmarkMetrics, BenchmarkResult, ExactNoteChannelMetrics } from './benchmarkTypes';
 
 export interface BenchmarkBaseline {
-  version: 1;
+  version: 2;
   corpusHash: string;
   detectorCommit: string;
   suites: { ci: string[]; full: string[] };
@@ -30,12 +30,50 @@ const METRIC_KEYS: (keyof BenchmarkMetrics)[] = [
   'releaseSec',
 ];
 function validMetrics(m: BenchmarkMetrics) {
-  return METRIC_KEYS.every((key) => {
-    const value = m[key];
-    if (value === null)
-      return ['accuracy', 'steadyAccuracy', 'latencyP90Sec', 'releaseSec'].includes(key);
-    return typeof value === 'number' && Number.isFinite(value) && value >= 0;
-  });
+  return (
+    validExactMetrics(m) &&
+    METRIC_KEYS.every((key) => {
+      const value = m[key];
+      if (value === null)
+        return ['accuracy', 'steadyAccuracy', 'latencyP90Sec', 'releaseSec'].includes(key);
+      return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+    })
+  );
+}
+
+function validExactMetrics(m: BenchmarkMetrics) {
+  const e = m.exactNotes;
+  if (!e || e.protocol !== 1) return false;
+  if (
+    ![e.annotatedSec, e.expectedNoteSec, e.expectedOnsets].every(
+      (v) => Number.isFinite(v) && v >= 0,
+    )
+  )
+    return false;
+  const keys: (keyof ExactNoteChannelMetrics)[] = [
+    'visibleSec',
+    'activityCoverage',
+    'trueNoteSec',
+    'falseNoteSec',
+    'missedNoteSec',
+    'octaveErrorSec',
+    'falseVisibleSec',
+    'precision',
+    'recall',
+    'onsetP90Sec',
+    'missedOnsets',
+    'releaseSec',
+  ];
+  return [e.confirmed, e.tentative, e.union].every(
+    (channel) =>
+      channel &&
+      keys.every((key) => {
+        const value = channel[key];
+        return value === null
+          ? ['precision', 'recall', 'onsetP90Sec', 'releaseSec'].includes(key)
+          : typeof value === 'number' && Number.isFinite(value) && value >= 0;
+      }),
+  );
 }
 
 /** Fixed tolerances, not fitted per failing clip. Baseline updates require an explicit review. */
@@ -92,6 +130,43 @@ export function regressionFailures(result: BenchmarkResult, base: BenchmarkMetri
     (m.falseChordSec > 1e-6 || m.falseKeyEvents > 0 || m.falseNoteSec > 1e-6)
   )
     failures.push('music-free control must produce zero chords, keys and piano highlights');
+  const exact = m.exactNotes,
+    oldExact = base.exactNotes;
+  for (const key of ['annotatedSec', 'expectedNoteSec', 'expectedOnsets'] as const)
+    if (Math.abs(exact[key] - oldExact[key]) > 1e-6)
+      failures.push(`exactNotes.${key}: reference coverage changed`);
+  // Tentative predictions remain visible errors through the union. Confirmed activity/recall
+  // also stays gated, so moving every correct note into tentative cannot manufacture a pass.
+  for (const channel of ['confirmed', 'union'] as const) {
+    const actual = exact[channel],
+      before = oldExact[channel];
+    for (const key of ['precision', 'recall', 'activityCoverage'] as const) {
+      if (key === 'activityCoverage' && m.musicSec === 0 && m.noiseSec >= m.durationSec - 1e-6)
+        continue;
+      if (before[key] !== null && (actual[key] ?? 0) < before[key]! - 0.02 - 1e-6)
+        failures.push(`exactNotes.${channel}.${key}: below baseline minus 0.02`);
+    }
+    for (const [key, tolerance] of Object.entries({
+      falseNoteSec: 0.05,
+      octaveErrorSec: 0,
+      falseVisibleSec: 0.05,
+      missedOnsets: 0,
+      onsetP90Sec: 0.1,
+      releaseSec: 0.1,
+    })) {
+      const k = key as
+        | 'falseNoteSec'
+        | 'octaveErrorSec'
+        | 'falseVisibleSec'
+        | 'missedOnsets'
+        | 'onsetP90Sec'
+        | 'releaseSec';
+      if (before[k] !== null && (actual[k] === null || actual[k]! > before[k]! + tolerance + 1e-6))
+        failures.push(`exactNotes.${channel}.${key}: above baseline plus ${tolerance}`);
+    }
+  }
+  if (result.strictNoise && exact.union.visibleSec > 1e-6)
+    failures.push('music-free control must produce zero confirmed or tentative MIDI highlights');
   const previousGaps = qualityGaps(base);
   for (const gap of qualityGaps(m))
     if (!previousGaps.includes(gap)) failures.push(`New quality-target failure: ${gap}`);
@@ -125,7 +200,7 @@ export function validateBaseline(
   ids: string[],
   suite: 'ci' | 'full',
 ) {
-  if (b.version !== 1 || b.corpusHash !== hash)
+  if (b.version !== 2 || b.corpusHash !== hash)
     throw new Error('Corpus/generator/scorer changed: review a new full-suite baseline candidate');
   if (
     !Array.isArray(b.suites?.[suite]) ||

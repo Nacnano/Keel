@@ -6,6 +6,7 @@ import { reduceQuality } from './metrics';
 import { readFixture, resample, sha256 } from './benchmarkAudio';
 import { conditionById, whiteNoise } from './conditions';
 import { roomNoiseTrials } from './noiseFixtures';
+import { exactNoteCases } from './exactNoteCases';
 import { normalizePeak, rms } from './util';
 import type { BenchmarkCase, TruthSpan } from './benchmarkTypes';
 
@@ -34,6 +35,9 @@ export function corpusHash() {
       'benchmarkAudio.ts',
       'benchmark.ts',
       'benchmarkMetrics.ts',
+      'benchmarkTypes.ts',
+      'exactNoteMetrics.ts',
+      'exactNoteCases.ts',
       'metrics.ts',
       'conditions.ts',
       'noiseFixtures.ts',
@@ -336,5 +340,6 @@ export function buildBenchmarkCases(suite: 'ci' | 'full'): BenchmarkCase[] {
       }
     }
   }
+  for (const c of exactNoteCases(suite)) add(c);
   return cases;
 }

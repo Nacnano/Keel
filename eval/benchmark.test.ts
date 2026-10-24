@@ -123,7 +123,7 @@ describe('benchmark scoring and gates', () => {
   });
   it('fails changed corpora, missing baselines, deleted cases and invalid metrics', () => {
     const baseline: BenchmarkBaseline = {
-      version: 1,
+      version: 2,
       corpusHash: 'a',
       detectorCommit: 'test',
       suites: { ci: ['control'], full: ['control'] },
