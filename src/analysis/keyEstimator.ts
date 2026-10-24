@@ -219,12 +219,12 @@ export function createKeyEstimator(options: Partial<KeyEstimatorOptions> = {}): 
     (k < 12 ? opts.majorBias : 0) +
     // V → I is also I → IV, so only the minor cadence (V → i) moves the key
     (k >= 12 ? opts.cadenceBonus * Math.min(1, cadence[k]) : 0) +
+    // chord shares are only telling once a few chords have been heard (a lone first Cm on a
+    // blues fits C minor, not C major)
     (chordTime > 0
-      ? (opts.chordFitBonus * fitTime[k] +
-          // a tonic share is only telling once a few chords have been heard
-          opts.tonicBonus *
-            Math.min(1, chordTime / 8) *
-            (tonicTime[k] + tonicTime[relativeIndex(k)])) /
+      ? (Math.min(1, chordTime / 8) *
+          (opts.chordFitBonus * fitTime[k] +
+            opts.tonicBonus * (tonicTime[k] + tonicTime[relativeIndex(k)]))) /
         chordTime
       : 0);
 
@@ -413,15 +413,14 @@ export function createKeyEstimator(options: Partial<KeyEstimatorOptions> = {}): 
 
     const best = choose(score);
     // The relative major/minor follows the chord evidence without the switching hold.
-    // A settled major needs a second cadence before it turns into its relative minor.
+    // A major needs a second cadence before it turns into its relative minor.
     tenure += dt;
     if (best === relativeIndex(currentIdx)) {
       // a key just adopted is not turned into its relative on the next frame
       if (tenure < opts.switchHold) return null;
-      const settled = age >= opts.settleAfter;
       const evidence =
         best >= 12
-          ? minorEvidence(best, false) && (!settled || cadence[best] >= 2 + cadence[currentIdx])
+          ? minorEvidence(best, false) && cadence[best] >= 2 + cadence[currentIdx]
           : !minorEvidence(currentIdx, true);
       return evidence ? adopt(best, frame.t) : null;
     }
