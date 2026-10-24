@@ -6,7 +6,7 @@ import { ScaleHelper } from '../../components/ScaleHelper';
 import { VoicingPanel } from '../../components/VoicingPanel';
 import { ModulationHints } from '../../components/ModulationHints';
 import { suggestNext } from '../../lib/suggest';
-import { useSteadyChord } from './useSteadyChord';
+import { useRecentChords } from './useRecentChords';
 
 export type InspectorTab = 'next' | 'scales' | 'voicings';
 
@@ -30,19 +30,19 @@ export interface JamInspectorProps {
   onAudition(chord: Chord): void;
   onPlayNotes(notes: MidiNote[]): void;
   /**
-   * `side`: a column over the right edge (the listening column moves clear of it).
-   * `half`: a half-height bottom sheet (`min(42dvh, 420px)`); the listening screen keeps the chord
-   * and Finish above it.
+   * `side`: a floating panel over the right edge; the listening column does not move.
+   * `half`: a bottom sheet sized by the Listen screen (`--keel-ideas-h`, the room under the Finish
+   * row; `min(42dvh, 420px)` until measured), so chord, key, timeline and Finish stay above it.
    */
   layout: 'side' | 'half';
 }
 
 /**
  * Ideas on demand: what to play next (and where the key could go), which scale fits, how to
- * voice it. Everything follows the last chord that held for about a second, not every frame.
+ * voice it. Everything follows the chord on screen (and keeps it through gaps).
  */
 export function JamInspector(p: JamInspectorProps) {
-  const steady = useSteadyChord(p.chord);
+  const steady = useRecentChords(p.chord);
   const tonic = p.keyContext?.tonic;
   const mode = p.keyContext?.mode;
   const key = useMemo<Key | null>(
@@ -61,7 +61,12 @@ export function JamInspector(p: JamInspectorProps) {
       title="Ideas"
       aria-label="Ideas"
       placement={p.layout === 'side' ? 'side' : 'bottom'}
-      className={p.layout === 'half' ? 'h-[min(42dvh,420px)]' : undefined}
+      className={
+        p.layout === 'half'
+          ? // From 1024 px the sidebar stays uncovered.
+            'h-[var(--keel-ideas-h,min(42dvh,420px))] lg:left-56'
+          : 'w-[320px]!'
+      }
     >
       <Segmented
         fill
