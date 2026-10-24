@@ -108,8 +108,9 @@ describe('importAnalysis', () => {
     expect(strip(draft.keys)).toEqual(strip(saved.keys));
     expect(draft.session.summary).toEqual(saved.session.summary);
     expect(toText(draft)).toEqual(toText(saved));
-    expect(toText(draft)).toContain('| C G Am F | ×2');
-    expect(toText(draft)).toContain('→ A minor at 0:17');
+    expect(toText(draft)).toContain('C G Am F  ×2');
+    // Three seconds of A minor at the end is a wobble, not a key change.
+    expect(toText(draft)).not.toContain('→');
   });
 
   it('stores the file as the session recording', async () => {
