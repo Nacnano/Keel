@@ -33,7 +33,7 @@ export function TagEditor({ tags, onChange, className }: TagEditorProps) {
   };
 
   return (
-    <div className={cx('flex flex-wrap items-center gap-1.5', className)}>
+    <div className={cx('flex flex-wrap items-center gap-x-3.5 gap-y-1.5', className)}>
       {tags.map((t) => (
         <span
           key={t}
@@ -41,13 +41,16 @@ export function TagEditor({ tags, onChange, className }: TagEditorProps) {
           className={cx(CHIP, 'gap-0.5 bg-fill-3 pr-0.5 pl-3 text-label-2')}
         >
           {t}
+          {/* A 44 pt box around a 24 px circle; the negative margins keep the chip 28 px. */}
           <button
             type="button"
             aria-label={`Remove tag ${t}`}
             onClick={() => void onChange(tags.filter((x) => x !== t))}
-            className="relative flex size-6 items-center justify-center rounded-full text-label-3 transition-colors before:absolute before:-inset-2.5 hover:bg-fill-3 hover:text-label"
+            className="group -m-2.5 flex size-11 items-center justify-center rounded-full text-label-3 hover:text-label"
           >
-            <X className="size-3.5" aria-hidden />
+            <span className="flex size-6 items-center justify-center rounded-full transition-colors group-hover:bg-fill-3">
+              <X className="size-3.5" aria-hidden />
+            </span>
           </button>
         </span>
       ))}
@@ -90,7 +93,9 @@ export function TagEditor({ tags, onChange, className }: TagEditorProps) {
           onClick={() => setAdding(true)}
           className={cx(
             CHIP,
-            'relative gap-1 px-2.5 text-accent transition-colors before:absolute before:-inset-y-2 before:inset-x-0 hover:bg-accent/10',
+            // 44 pt tall on touch; without tags the label lines up with the column.
+            'gap-1 px-2.5 text-accent transition-colors hover:bg-accent/10 pointer-coarse:h-11',
+            !tags.length && '-ml-2.5',
           )}
         >
           <Plus className="size-3.5" aria-hidden />
