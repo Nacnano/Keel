@@ -257,7 +257,8 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
       lastBass = null;
       return {
         t,
-        chroma: lastChroma,
+        // The worker transfers this buffer; keep our onset-hold state owned here.
+        chroma: new Float32Array(12),
         energy: energyOut,
         bass: null,
         onset: on.onset,
