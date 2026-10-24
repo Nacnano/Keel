@@ -60,6 +60,11 @@ export interface KeyEstimatorOptions {
   /** Blues: decayed seconds of IV7 shown, and the blue-note level (see `blueness`). */
   bluesIV7: number;
   bluesNotes: number;
+  /**
+   * Score bonus × the share of recent chord time on the tonic chords of the key's relative pair
+   * (A♭ and Fm for A♭ major): a key whose tonic is hardly played is a poor reading.
+   */
+  tonicBonus: number;
   /** Subtracted from a minor key's score while it has no minor evidence (cadence or tonic). */
   minorPenalty: number;
   /** How far the relative minor may trail the major and still be chosen on minor evidence. */
@@ -73,7 +78,7 @@ export const DEFAULT_KEY_OPTIONS: KeyEstimatorOptions = {
   switchHold: 2,
   cadenceHold: 0.5,
   settledHold: 13,
-  settleAfter: 8,
+  settleAfter: 12,
   minEvidence: 1.5,
   maxFrameGap: 0.25,
   majorBias: 0.02,
@@ -83,6 +88,7 @@ export const DEFAULT_KEY_OPTIONS: KeyEstimatorOptions = {
   chordHalfLife: 20,
   cadenceBonus: 0.2,
   chordFitBonus: 0.25,
+  tonicBonus: 0.4,
   bluesIV7: 1,
   bluesNotes: 0.45,
   minorPenalty: 0.1,
@@ -192,9 +198,9 @@ export function createKeyEstimator(options: Partial<KeyEstimatorOptions> = {}): 
   const domTime = new Float64Array(12);
   /** Displayed chords of the last seconds, replayed when a new song is re-estimated. */
   const recentChords: Array<{ t: number; chord: Chord | null }> = [];
-  /** Seconds each challenger has led the current key (leaks while it does not). */
-  const held = new Float64Array(24);
-  const leadStart = new Float64Array(24);
+  /** Seconds each challenger (relative pair, by its major) has led the current key. */
+  const held = new Float64Array(12);
+  const leadStart = new Float64Array(12);
   let lastT: number | null = null;
   let evidence = 0;
   let firstSoundT: number | null = null;
@@ -202,6 +208,8 @@ export function createKeyEstimator(options: Partial<KeyEstimatorOptions> = {}): 
   let currentSince = 0;
   /** Seconds of unchallenged music since the current key was (re-)estimated. */
   let age = 0;
+  /** Seconds of music since the current key was adopted. */
+  let tenure = 0;
   let misfit = 0;
   let misfitStart = 0;
   let shownChord: Chord | null = null;
@@ -211,7 +219,14 @@ export function createKeyEstimator(options: Partial<KeyEstimatorOptions> = {}): 
     (k < 12 ? opts.majorBias : 0) +
     // V → I is also I → IV, so only the minor cadence (V → i) moves the key
     (k >= 12 ? opts.cadenceBonus * Math.min(1, cadence[k]) : 0) +
-    (chordTime > 0 ? (opts.chordFitBonus * fitTime[k]) / chordTime : 0);
+    (chordTime > 0
+      ? (opts.chordFitBonus * fitTime[k] +
+          // a tonic share is only telling once a few chords have been heard
+          opts.tonicBonus *
+            Math.min(1, chordTime / 8) *
+            (tonicTime[k] + tonicTime[relativeIndex(k)])) /
+        chordTime
+      : 0);
 
   /**
    * The minor key has a cadence into its tonic (more than the relative major has), or its
@@ -281,6 +296,7 @@ export function createKeyEstimator(options: Partial<KeyEstimatorOptions> = {}): 
   function adopt(idx: number, since: number): KeyEstimate {
     currentIdx = idx;
     currentSince = since;
+    tenure = 0;
     held.fill(0);
     misfit = 0;
     return estimate();
@@ -397,8 +413,16 @@ export function createKeyEstimator(options: Partial<KeyEstimatorOptions> = {}): 
 
     const best = choose(score);
     // The relative major/minor follows the chord evidence without the switching hold.
+    // A settled major needs a second cadence before it turns into its relative minor.
+    tenure += dt;
     if (best === relativeIndex(currentIdx)) {
-      const evidence = best >= 12 ? minorEvidence(best, false) : !minorEvidence(currentIdx, true);
+      // a key just adopted is not turned into its relative on the next frame
+      if (tenure < opts.switchHold) return null;
+      const settled = age >= opts.settleAfter;
+      const evidence =
+        best >= 12
+          ? minorEvidence(best, false) && (!settled || cadence[best] >= 2 + cadence[currentIdx])
+          : !minorEvidence(currentIdx, true);
       return evidence ? adopt(best, frame.t) : null;
     }
     const challenged =
@@ -409,16 +433,19 @@ export function createKeyEstimator(options: Partial<KeyEstimatorOptions> = {}): 
     // a provisional key gives way at once to a minor key that has just been cadenced into
     const cadenced = best >= 12 && cadence[best] >= 0.75 ? opts.cadenceHold : opts.switchHold;
     const hold = age >= opts.settleAfter ? opts.settledHold : cadenced;
-    for (let k = 0; k < 24; k++) {
-      if (!(challenged && k === best)) held[k] = Math.max(0, held[k] - dt);
+    // the lead is counted per relative pair, so a challenger that wavers between A♭ major and
+    // F minor still accumulates
+    const pair = best < 12 ? best : relativeIndex(best);
+    for (let k = 0; k < 12; k++) {
+      if (!(challenged && k === pair)) held[k] = Math.max(0, held[k] - dt);
     }
     if (challenged) {
-      if (held[best] === 0) leadStart[best] = frame.t;
-      held[best] += dt;
-      if (held[best] >= hold) {
+      if (held[pair] === 0) leadStart[pair] = frame.t;
+      held[pair] += dt;
+      if (held[pair] >= hold) {
         // a key that won a settled contest is settled itself
         age = hold === opts.settledHold ? opts.settleAfter : 0;
-        return adopt(best, leadStart[best]);
+        return adopt(best, leadStart[pair]);
       }
     }
     return null;
