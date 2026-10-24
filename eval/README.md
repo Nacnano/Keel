@@ -19,7 +19,16 @@ pnpm exec tsx --tsconfig eval/tsconfig.json eval/controls.ts # startup + noise-o
 
 # timeline of one session (displayed chord, confidence, chroma, key) next to the ground truth
 pnpm eval:inspect pop-G-broken-72 laptop solo 2 [--wav]   # --wav writes eval/.cache/<id>.wav
+
+# a real recording (16-bit PCM wav) through the live path: displayed chord, numeral and key
+# over time, the key path, changes/min and screen time per label
+pnpm exec tsx --tsconfig eval/tsconfig.json eval/clip.ts <wav> [solo|room] [level] \
+  [--quiet] [--seconds=60] [--skip=0.5] [--reset-at=30] [--frames=10-12]
 ```
+
+`--skip` starts into the file (the browser's fake microphone starts mid-file, so a live run is
+an offline run with a small offset), `--reset-at` calls `engine.resetKey()` (the New song mark)
+and `--frames` prints the chroma and the top templates of each frame in a time range.
 
 ## Files
 
@@ -31,6 +40,7 @@ pnpm eval:inspect pop-G-broken-72 laptop solo 2 [--wav]   # --wav writes eval/.c
 | `metrics.ts`    | Display model and metrics for one run                                                    |
 | `run.ts`        | Plan (sessions × conditions × configs), report, baseline comparison                      |
 | `inspect.ts`    | Debug view of one run                                                                    |
+| `clip.ts`       | A real recording through the live path (key path, labels, changes/min)                   |
 | `baseline.json` | Summary numbers measured before the detection fixes (commit `a39bf72`), for before/after |
 
 `eval/.cache/` (git-ignored) holds the downloaded samples and the last run's JSON.
@@ -77,6 +87,8 @@ SNRs are relative to the RMS of the whole session.
 ## Configs
 
 - Primary: stability 0.5, vocabulary level 2, sensitivity 0.5, piano, Solo (Room as well for `vocal` and `speaker`).
+  Room mode decodes triads only (level 1, whatever the chord-detail level), so Room runs are
+  scored against the written chords reduced to level 1.
 - Sweep: stability 0.3 / 0.5 / 0.7 × level 2 / 3 × Solo / Room on clean, pink 10 dB, laptop and
   speaker.
 - 44.1 kHz: clean, low40 and laptop with the primary config.

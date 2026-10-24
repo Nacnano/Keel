@@ -1,7 +1,11 @@
 export {
   createAnalysisEngine,
   dwellSeconds,
+  effectiveVocabLevel,
+  keyReading,
   GAP_HOLD_SEC,
+  ROOM_IN_KEY_BONUS,
+  ROOM_VOCAB_LEVEL,
   NOTE_THRESHOLD,
   RELEASE_HOLD_SEC,
 } from './engine';

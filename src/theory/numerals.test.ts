@@ -42,7 +42,7 @@ describe('romanNumeral: pop (C major)', () => {
       Bm7b5: 'viiø7',
       Csus4: 'Isus4',
       Gsus4: 'Vsus4',
-      Cadd9: 'Iadd9',
+      Cadd9: 'I',
       C5: 'I5',
       Am7: 'vi7',
     });
@@ -57,7 +57,7 @@ describe('romanNumeral: pop (C major)', () => {
       Db: 'bII',
       'F#dim': '#iv°',
       Caug: 'I+',
-      Fm6: 'iv6',
+      Fm6: 'iv',
       Bbmaj7: 'bVIImaj7',
       Gb: 'bV',
     });
@@ -71,7 +71,9 @@ describe('romanNumeral: pop (C major)', () => {
       E7: 'V7/vi',
       A7: 'V7/ii',
       B7: 'V7/iii',
-      C7: 'V7/IV',
+      // a dominant on the tonic is the blues I7
+      C7: 'I7',
+      C9: 'I7',
       'F#dim7': 'vii°7/V',
       'C#dim7': 'vii°7/ii',
       // tritone sub and backdoor dominant are not secondary dominants
@@ -94,26 +96,47 @@ describe('romanNumeral: jazz', () => {
       F7: 'V7',
       Bbmaj7: 'Imaj7',
       Gm7: 'vi7',
-      G7alt: 'V7alt/ii',
+      G7alt: 'V7/ii',
       C7: 'V7/V',
       Ebmaj7: 'IVmaj7',
-      Bbmaj9: 'Imaj9',
-      F13: 'V13',
+      Bbmaj9: 'Imaj7',
+      F13: 'V7',
       B7: 'bII7',
       Am7b5: 'viiø7',
     });
   });
 
-  it('extensions keep their suffix', () => {
+  it('shows the basic quality by default', () => {
     expectNumerals(C, {
-      Dm9: 'ii9',
-      G13: 'V13',
-      Cmaj9: 'Imaj9',
-      G7b9: 'V7b9',
-      'C6/9': 'I6/9',
-      'Fmaj7#11': 'IVmaj7#11',
-      G9sus4: 'V9sus4',
+      Dm9: 'ii7',
+      G13: 'V7',
+      Cmaj9: 'Imaj7',
+      G7b9: 'V7',
+      'C6/9': 'I',
+      'Fmaj7#11': 'IVmaj7',
+      G9sus4: 'V7sus4',
+      E7b13: 'V7/vi',
+      'Am(maj7)': 'vi',
+      'G7/B': 'V7',
+      'Dm9/C': 'ii7',
     });
+  });
+
+  it('extensions keep their suffix on request', () => {
+    expectNumerals(
+      C,
+      {
+        Dm9: 'ii9',
+        G13: 'V13',
+        Cmaj9: 'Imaj9',
+        G7b9: 'V7b9',
+        'C6/9': 'I6/9',
+        'Fmaj7#11': 'IVmaj7#11',
+        G9sus4: 'V9sus4',
+        E7b13: 'V7b13/vi',
+      },
+      { extensions: true },
+    );
   });
 });
 
@@ -133,6 +156,7 @@ describe('romanNumeral: minor keys', () => {
       'G#dim7': 'vii°7',
       D: 'IV',
       A: 'I',
+      // in a minor key a dominant on the tonic still leads to iv
       A7: 'V7/iv',
       B7: 'V7/v',
       D7: 'V7/bVII',

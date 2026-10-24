@@ -3,6 +3,7 @@
  * and secondary leading-tone sevenths. ASCII accidentals ('bVII', '#iv°').
  */
 import type { Chord, ChordQuality, Key, PitchClass } from '@/core';
+import { chordFamily } from './chordName';
 import { isDiatonic, mod12, scaleIntervals } from './keys';
 import { CHORD_TEMPLATES, isDiminishedQuality, isDominantQuality, isMinorQuality } from './vocab';
 
@@ -17,6 +18,20 @@ export interface NumeralOptions {
   minorStyle?: MinorNumeralStyle;
   /** Recognise secondary dominants (V7/vi) and leading-tone sevenths (vii°7/V). Default true. */
   secondary?: boolean;
+  /**
+   * Keep extensions and alterations in the suffix ("V7b9", "ii9", "Iadd9"). Default false: the
+   * numeral shows the basic quality ("V7", "ii7", "I") and the chord symbol keeps the rest.
+   */
+  extensions?: boolean;
+}
+
+/**
+ * The quality a numeral names: added tones, extensions and alterations dropped (`chordFamily`),
+ * and m(maj7) read as its minor triad.
+ */
+export function numeralQuality(quality: ChordQuality): ChordQuality {
+  const f = chordFamily(quality);
+  return f === 'mMaj7' ? 'min' : f;
 }
 
 /** Suffix after the numeral, by quality. Minor-ness is carried by the numeral's case. */
@@ -144,14 +159,21 @@ function targetNumeral(target: PitchClass, key: Key, style: MinorNumeralStyle): 
 
 /**
  * Roman numeral of `chord` in `key`: "IV", "V7", "ii7", "IVmaj7", "vii°", "bVII", "iv",
- * "#iv°", "V7/vi", "V/V", "vii°7/V". Minor keys default to the pop convention
- * (i, bIII, bVI, bVII; V and vii° from harmonic minor count as diatonic). The slash bass is
- * not part of the numeral; see `bassDegree` / `inversionFigure`.
+ * "#iv°", "V7/vi", "V/V", "vii°7/V", "I7" (a dominant on a major tonic). Minor keys default to
+ * the pop convention (i, bIII, bVI, bVII; V and vii° from harmonic minor count as diatonic).
+ * The numeral names the basic quality (G13 → "V7", Dm9 → "ii7", Cadd9 → "I") unless
+ * `extensions` is set. The slash bass is not part of the numeral; see `bassDegree` /
+ * `inversionFigure`.
  */
 export function romanNumeral(chord: Chord, key: Key, opts: NumeralOptions = {}): string {
   const style = opts.minorStyle ?? 'flat';
-  const { root, quality } = chord;
-  if (opts.secondary !== false && !inKey(chord, key)) {
+  const root = chord.root;
+  const quality = opts.extensions ? chord.quality : numeralQuality(chord.quality);
+  // a dominant seventh on the tonic of a major key is the blues I7, not V7/IV
+  if (key.mode === 'major' && root === key.tonic && isDominantQuality(quality)) {
+    return `I${NUMERAL_SUFFIX[quality]}`;
+  }
+  if (opts.secondary !== false && !inKey({ root, quality }, key)) {
     // secondary dominant: a dominant-type chord a fifth above a diatonic major / minor chord
     const isTriad = quality === 'maj';
     if (isDominantQuality(quality) || isTriad) {

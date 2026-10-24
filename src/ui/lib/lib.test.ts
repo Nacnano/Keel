@@ -78,6 +78,33 @@ describe('compressRepeats', () => {
     expect(sameChordFamily(null, null)).toBe(true);
     expect(sameChordFamily(C, null)).toBe(false);
   });
+  it('anchors the fold at the loop start: [C G Am F] x2 C G Am, not C [G Am F C] x2 G Am', () => {
+    const fold = (seq: string) =>
+      compressRepeats(seq.split(' '), eq)
+        .map((x) => (x.repeat > 1 ? `[${x.items.join(' ')}] x${x.repeat}` : x.items.join(' ')))
+        .join(' ');
+    expect(fold('C G Am F C G Am F C G Am')).toBe('[C G Am F] x2 C G Am');
+    expect(fold('C G Am F C G Am F C G Am F C G Am F C G Am F C G')).toBe('[C G Am F] x5 C G');
+    expect(fold('C G Am F C G Am F C')).toBe('[C G Am F] x2 C');
+  });
+  it('numerals show the basic quality and a tonic dominant is I7', () => {
+    expect(romanNumeral({ root: 4, quality: '7b13' }, C_MAJ)).toBe('V7/vi');
+    expect(romanNumeral({ root: 2, quality: 'min9' }, C_MAJ)).toBe('ii7');
+    expect(romanNumeral({ root: 2, quality: 'm7b5' }, { tonic: 0, mode: 'minor' })).toBe('iiø7');
+    expect(romanNumeral({ root: 0, quality: '7' }, C_MAJ)).toBe('I7');
+    expect(romanNumeral({ root: 7, quality: '13', bass: 11 }, C_MAJ)).toBe('V7');
+  });
+  it('spelling follows the key only: one pitch-class chord, one name per key', () => {
+    const Gb: Key = { tonic: 6, mode: 'major' };
+    const D: Key = { tonic: 2, mode: 'major' };
+    const sharpLike = { root: 6, quality: 'maj7' } as const;
+    expect(chordSymbol(sharpLike, Gb)).toBe('Gbmaj7');
+    expect(chordSymbol(sharpLike, D)).toBe('F#maj7');
+    for (const q of ['maj', 'maj7', '7', 'min7', 'dim', 'm7b5'] as const) {
+      expect(chordSymbol({ root: 6, quality: q }, Gb).startsWith('Gb'), q).toBe(true);
+      expect(chordSymbol({ root: 6, quality: q }, D).startsWith('F#'), q).toBe(true);
+    }
+  });
   it('C F G C F G -> [C F G] x2', () => {
     expect(compressRepeats('C F G C F G'.split(' '), eq)).toEqual([
       { items: ['C', 'F', 'G'], repeat: 2, start: 0 },

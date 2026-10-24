@@ -61,6 +61,20 @@ describe('scoreChroma evidence rules', () => {
     expect(top(chroma({ 0: 0.3, 4: 0.25, 7: 0.2, 11: 0.2 }))).toBe('0:maj7');
   });
 
+  it('in a major key a blue third over the ♭7 is the I7 (C7), not Cm7', () => {
+    // C Eb E G Bb with the blue third a little louder than the major third
+    const c = chroma({ 0: 0.3, 3: 0.12, 4: 0.11, 7: 0.22, 10: 0.17 });
+    const inKey = (majorTonic: number | null) => {
+      scoreChroma(c, 0.5, bank, out, null, { majorTonic: majorTonic as never });
+      const k = best(out);
+      return `${bank.roots[k]}:${bank.qualities[k]}`;
+    };
+    expect(inKey(null)).toBe('0:min7');
+    expect(inKey(0)).toBe('0:7');
+    // the rule is for the key's own I7 / IV7 / V7: in A♭ major the same notes are iii7
+    expect(inKey(8)).toBe('0:min7');
+  });
+
   it('a quiet left-hand root decides a rootless voicing (Cm7 vs Ebmaj7)', () => {
     // Eb G Bb D (rootless Cm9) with a weak C in the bass.
     const c = chroma({ 3: 0.25, 7: 0.25, 10: 0.22, 2: 0.18, 0: 0.08 });
