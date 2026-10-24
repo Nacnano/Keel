@@ -144,6 +144,37 @@ describe('JamScreen', () => {
     stop.mockRestore();
   });
 
+  it('shows the keyboard by default and remembers an explicit hide choice', () => {
+    jamStore.setState({ status: 'listening', source: 'mic', sessionStart: clock.now() });
+    renderJam();
+    expect(screen.getByRole('img', { name: 'Piano, no notes' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Listening options' }));
+    const showKeyboard = screen.getByRole('switch', { name: 'Show keyboard' });
+    expect(showKeyboard).toBeChecked();
+    fireEvent.click(showKeyboard);
+    expect(localStorage.getItem('keel.ui.piano')).toBe('0');
+    cleanup();
+    renderJam();
+    expect(screen.queryByRole('img', { name: /Piano/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Listening options' }));
+    expect(screen.getByRole('switch', { name: 'Show keyboard' })).not.toBeChecked();
+  });
+
+  it('puts listening mode and instrument before sensitivity in Listening options', () => {
+    renderJam();
+    fireEvent.click(screen.getByRole('button', { name: 'Listening options' }));
+    const options = within(screen.getByRole('dialog', { name: 'Listening options' }));
+    const mode = options.getByRole('radiogroup', { name: 'Listen to' });
+    const instrument = options.getByRole('radiogroup', { name: 'Instrument' });
+    const sensitivity = options.getByRole('slider', { name: 'Microphone sensitivity' });
+    expect(
+      mode.compareDocumentPosition(instrument) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      instrument.compareDocumentPosition(sensitivity) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('shows transient previews and exact heard notes without treating previews as theory', () => {
     localStorage.setItem('keel.ui.piano', '1');
     jamStore.setState({
@@ -413,7 +444,9 @@ describe('JamScreen', () => {
   });
 
   it('keyboard shortcuts change level, mode and piano visibility', () => {
+    jamStore.setState({ status: 'listening', source: 'mic', sessionStart: clock.now() });
     renderJam();
+    expect(screen.getByRole('img', { name: /Piano/ })).toBeInTheDocument();
     act(() => {
       fireEvent.keyDown(window, { key: '3' });
       fireEvent.keyDown(window, { key: 'm' });
@@ -422,6 +455,8 @@ describe('JamScreen', () => {
     expect(settingsStore.getState().vocabLevel).toBe(3);
     expect(settingsStore.getState().mode).toBe('room');
     expect(screen.queryByRole('img', { name: /Piano/ })).toBeNull();
+    act(() => fireEvent.keyDown(window, { key: 'p' }));
+    expect(screen.getByRole('img', { name: /Piano/ })).toBeInTheDocument();
   });
 
   it('S opens the ideas inspector on Scales and remembers the choice', () => {

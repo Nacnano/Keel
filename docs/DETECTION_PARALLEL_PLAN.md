@@ -475,3 +475,17 @@ Validation: 954 tests across 89 files, lint, TypeScript and production build pas
 verification reproduced the native worklet stall, canceled it, observed timeout with released
 tracks, then retried using scheduled PCM capture and saved the resulting session. The native
 browser limitation remains; no capture fallback was added to the product.
+
+### Improvement round 2 — notes visible and setup in playing order
+
+Observed feedback: a new pianist could hear chords but could not see the notes without
+finding a hidden keyboard option. New desktop/tablet users now see the keyboard by default;
+an explicit saved preference to hide it remains respected. Listening options now places
+Listen to and Instrument before Microphone sensitivity, matching the first setup decisions.
+No new settings or steps were added.
+
+Validation: 32 screen tests, typecheck, targeted lint and production build pass. A fresh
+834×1194 browser run with coherent piano/bass/drums showed detected keys without setup;
+the Show keyboard switch persisted an explicit hide preference. Mode/instrument/sensitivity
+order and existing keyboard shortcut behavior are covered by tests. Playback and saving were
+checked with the combined startup recovery changes.
