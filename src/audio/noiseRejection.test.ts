@@ -28,6 +28,7 @@ describe.each([44100, 48000])('room-noise rejection at %i Hz', (sampleRate) => {
           const events = analyse(trial.samples, sampleRate, sensitivity);
           expect(events.filter((e) => e.type === 'chord' && e.chord)).toEqual([]);
           expect(events.filter((e) => e.type === 'key' && e.key)).toEqual([]);
+          expect(events.filter((e) => e.type === 'notes' && e.pitchClasses.length)).toEqual([]);
         }
       });
     }
@@ -44,6 +45,33 @@ describe.each([44100, 48000])('room-noise rejection at %i Hz', (sampleRate) => {
     const chords = analyse(samples, sampleRate).filter((e) => e.type === 'chord' && e.chord);
     expect(chords.length).toBeGreaterThan(0);
     expect(chords[0]).toMatchObject({ chord: { root: 0, quality: 'maj' } });
+  });
+
+  it('lights a piano chord and does not light inharmonic tones', () => {
+    const played = analyse(
+      synthChord({
+        notes: ['C4', 'E4', 'G4'].map(noteNumber),
+        sampleRate,
+        seconds: 1.2,
+      }),
+      sampleRate,
+    ).filter((e) => e.type === 'notes' && e.pitchClasses.length);
+    const seen = new Set(played.flatMap((e) => (e.type === 'notes' ? e.pitchClasses : [])));
+    expect(seen.has(0)).toBe(true);
+    expect(seen.has(4)).toBe(true);
+    expect(seen.has(7)).toBe(true);
+
+    const n = Math.floor(sampleRate * 2);
+    const ring = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      ring[i] =
+        0.2 * Math.sin((2 * Math.PI * 173 * i) / sampleRate) +
+        0.15 * Math.sin((2 * Math.PI * 640 * i) / sampleRate) +
+        0.1 * Math.sin((2 * Math.PI * 2100 * i) / sampleRate);
+    }
+    const events = analyse(ring, sampleRate);
+    expect(events.filter((e) => e.type === 'chord' && e.chord)).toEqual([]);
+    expect(events.filter((e) => e.type === 'notes' && e.pitchClasses.length)).toEqual([]);
   });
 
   it.each(['G1', 'A#1', 'B1'])('preserves low musical note %s near mains frequencies', (name) => {

@@ -44,8 +44,10 @@ any frame ─► keyEstimator (decaying histogram × Krumhansl-Kessler, hysteres
   `since` = where its own evidence started; a replacement of a short key adds `supersedes`
   (the withdrawn `id`) and `replacesSince` (its start, equal to `t`).
 - `notes` — when the set changes. Mic: bins > 0.10 for 120 ms light up; bins < 0.06 for 240 ms clear.
-  This display-only hysteresis ignores brief spikes and dropouts. MIDI: every held
-  pitch class. `midiNotes` is not filled (a `ChromaFrame` carries no note numbers).
+  This display-only hysteresis ignores brief spikes and dropouts. When the audio pipeline
+  sets `noteChroma`, keys follow that vector instead of chord `chroma` (random-noise frames
+  are forced off). MIDI: every held pitch class. `midiNotes` is not filled (a `ChromaFrame`
+  carries no note numbers).
 - `level` — every frame, `energy` passed through.
 
 ## Tunable parameters

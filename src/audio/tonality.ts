@@ -50,3 +50,29 @@ export function tonalEnergyRatio(
   }
   return tonal / total;
 }
+
+/**
+ * Wiener entropy of the 80–5000 Hz magnitude spectrum (geometric mean / arithmetic mean).
+ * Broadband noise and clicks land near 1. A harmonic instrument leaves most bins quiet, so
+ * the geometric mean collapses and flatness stays near 0 even when the note is quiet.
+ */
+export function spectralFlatness(
+  mag: ArrayLike<number>,
+  sampleRate: number,
+  fftSize: number,
+): number {
+  const binHz = sampleRate / fftSize;
+  const lo = Math.max(1, Math.ceil(80 / binHz));
+  const hi = Math.min(mag.length - 1, Math.floor(5000 / binHz));
+  let logSum = 0;
+  let sum = 0;
+  let n = 0;
+  for (let k = lo; k <= hi; k++) {
+    const power = mag[k] * mag[k] + 1e-20;
+    logSum += Math.log(power);
+    sum += power;
+    n++;
+  }
+  if (n === 0 || sum <= 0) return 1;
+  return Math.exp(logSum / n) / (sum / n);
+}

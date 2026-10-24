@@ -358,7 +358,7 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
       lastSoundT = frame.t;
     }
     quiet[smoother.frames % TIME_RING] = silent && frame.t - lastSoundT >= RELEASE_HOLD_SEC ? 1 : 0;
-    emitNotes(frame.t, micNotes.push(frame.t, frame.chroma, silent));
+    emitNotes(frame.t, micNotes.push(frame.t, frame.noteChroma ?? frame.chroma, silent));
     bass.push(silent ? null : frame.bass);
     times[smoother.frames % TIME_RING] = frame.t;
 

@@ -144,10 +144,19 @@ every 64 hops. `load` ≈ worker CPU share, and the target is < 0.15.
 
 Before chroma normalisation, at least 55% of power in the 30–5000 Hz analysis band
 must lie around prominent spectral peaks. This prevents the few random peaks in
-fan noise, hiss or a click from being amplified into a full-strength chord. The
-pipeline also rejects isolated 50/60 Hz harmonic buzz when its fundamental is
-present and its harmonic series accounts for over 90% of prominent-peak power.
-The level meter still reports actual microphone volume.
+fan noise, hiss or a click from being amplified into a full-strength chord. A
+peaked but inharmonic spectrum (a ring, a clink, unrelated steady tones) is
+rejected as well when those peaks do not share a pitch-grid offset. The pipeline
+also rejects isolated 50/60 Hz harmonic buzz when its fundamental is present and
+its harmonic series accounts for over 90% of prominent-peak power. The level
+meter still reports actual microphone volume.
+
+Piano keys follow the chord chroma except on frames that are clearly not an
+instrument: spectral flatness above 0.45, or an inharmonic ring whose peaks do
+not share a pitch-grid offset. Played piano and guitar keep a harmonic series,
+including under room noise, so this does not blank keys during a chord. Partials
+are also checked for phase lock (`2πf` per hop) when measuring that ring. A
+chord label can still remain briefly after playing stops.
 
 The analysis engine holds an already confirmed chord across a short pause, but
 does not replay a new candidate's evidence during silence. Separate short sounds

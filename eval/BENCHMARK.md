@@ -233,3 +233,11 @@ separated from competing music by these heuristics; extended/fast guitar voicing
 uneven. After music stops into recorded noise, a held chord can take about 2–3.2 seconds to
 clear. The unannotated full-band recording remains a stability test, and contemporary
 rehearsal-room recordings with musician-reviewed labels are still needed for field claims.
+
+## Piano-key false positives — 2026-10-24
+
+An inharmonic ring — peaked, low pitch-grid concentration, and almost none of its peak power on
+a harmonic series — is dropped before chroma normalisation, so it cannot become a chord or a set
+of lit keys. Very flat spectra can still reach the chord smoother, but their piano-key vector is
+forced off. The cut is strict enough that noisy or quiet guitar keeps its harmonic series and
+its previous scores. This does not separate the player from other music or from pitched machinery.
