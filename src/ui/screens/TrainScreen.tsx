@@ -1,10 +1,9 @@
-import { ToolsBackLink } from './tools/ToolsBackLink';
 import { useEffect, useMemo } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import type { VocabLevel } from '@/core';
 import { keyPool } from '@/theory';
 import type { KeySet, ModeSet, Rng } from '@/theory';
-import { Button, Group, PageHeader, Popover, Row, Segmented } from '../kit';
+import { Button, Group, Page, Popover, Row, Segmented } from '../kit';
 import { ChordQualityDrill } from './train/ChordQualityDrill';
 import { KeyDrill } from './train/KeyDrill';
 import { ProgressionDrill } from './train/ProgressionDrill';
@@ -74,7 +73,6 @@ function TrainOptions({ drill, prefs, setPrefs }: TrainOptionsProps) {
             accessory={
               <Segmented<VocabLevel>
                 fill
-                size="sm"
                 aria-label="Chord detail"
                 options={LEVEL_OPTIONS}
                 value={prefs.level}
@@ -91,7 +89,6 @@ function TrainOptions({ drill, prefs, setPrefs }: TrainOptionsProps) {
               accessory={
                 <Segmented<KeySet>
                   fill
-                  size="sm"
                   aria-label="Key set"
                   options={KEYSET_OPTIONS}
                   value={prefs.keySet}
@@ -105,7 +102,6 @@ function TrainOptions({ drill, prefs, setPrefs }: TrainOptionsProps) {
               accessory={
                 <Segmented<ModeSet>
                   fill
-                  size="sm"
                   aria-label="Modes"
                   options={MODES_OPTIONS}
                   value={prefs.modes}
@@ -122,7 +118,6 @@ function TrainOptions({ drill, prefs, setPrefs }: TrainOptionsProps) {
             accessory={
               <Segmented<Tempo>
                 fill
-                size="sm"
                 aria-label="Tempo"
                 options={TEMPO_OPTIONS}
                 value={prefs.tempo}
@@ -161,35 +156,29 @@ export function TrainScreen({ playback: injected, rng }: TrainScreenProps = {}) 
   };
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-3xl pb-[max(env(safe-area-inset-bottom),32px)]">
-        <ToolsBackLink />
-        <PageHeader
-          title="Ear training"
-          subtitle={DRILL_HINT[drill]}
-          actions={
-            <>
-              <Segmented
-                size="sm"
-                aria-label="Drill"
-                options={DRILL_OPTIONS}
-                value={drill}
-                onChange={(d: DrillId) => {
-                  playback.stop();
-                  setPrefs({ drill: d });
-                }}
-              />
-              <TrainOptions drill={drill} prefs={prefs} setPrefs={setPrefs} />
-            </>
-          }
+    <Page
+      title="Ear training"
+      subtitle={DRILL_HINT[drill]}
+      back={{ to: '/tools', label: 'Tools' }}
+      actions={<TrainOptions drill={drill} prefs={prefs} setPrefs={setPrefs} />}
+    >
+      <div className="px-4">
+        <Segmented
+          fill
+          aria-label="Drill"
+          options={DRILL_OPTIONS}
+          value={drill}
+          onChange={(d: DrillId) => {
+            playback.stop();
+            setPrefs({ drill: d });
+          }}
         />
-
-        <div className="mx-auto w-full max-w-xl px-4 pt-6">
-          {drill === 'quality' && <ChordQualityDrill key="quality" {...props} />}
-          {drill === 'progression' && <ProgressionDrill key="progression" {...props} />}
-          {drill === 'key' && <KeyDrill key="key" {...props} />}
-        </div>
       </div>
-    </div>
+      <div className="mx-auto w-full max-w-xl px-4 pt-6">
+        {drill === 'quality' && <ChordQualityDrill key="quality" {...props} />}
+        {drill === 'progression' && <ProgressionDrill key="progression" {...props} />}
+        {drill === 'key' && <KeyDrill key="key" {...props} />}
+      </div>
+    </Page>
   );
 }

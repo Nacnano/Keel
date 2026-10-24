@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { ChartColumn, LibraryBig, Search, SearchX, Upload } from 'lucide-react';
 import type { Session } from '@/core';
 import {
@@ -14,7 +14,7 @@ import {
 } from '@/data';
 import { useSettings } from '@/state/settingsStore';
 import { useSync } from '@/sync/store';
-import { Button, EmptyState, Group, PageHeader, Segmented } from '../kit';
+import { Button, EmptyState, Group, Page, Segmented } from '../kit';
 import { SyncPill } from '../components/SyncPill';
 import { toast } from '../components/toastStore';
 import { cx } from '../lib/cx';
@@ -39,7 +39,6 @@ const errorText = (err: unknown) => (err instanceof Error ? err.message : String
 /** `/library`: saved sessions with search, tag filter, sort, rename, delete + undo, export/import. */
 export function LibraryScreen() {
   const location = useLocation();
-  const navigate = useNavigate();
   const seedMode = new URLSearchParams(location.search).get('seed') === '1';
   const spellingFollowsKey = useSettings((s) => s.spellingFollowsKey);
   const syncConfigured = useSync((s) => s.configured);
@@ -158,28 +157,27 @@ export function LibraryScreen() {
   const firstRun = !loading && sessions.length === 0 && !filtering && !error;
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-3xl flex-col pb-28 lg:px-4 lg:pb-12">
-        <PageHeader
-          title="Library"
-          subtitle={syncConfigured ? <SyncPill /> : undefined}
-          actions={
-            <>
-              <Button
-                variant="gray"
-                disabled={busy}
-                leading={<Upload className="size-4" aria-hidden />}
-                onClick={() => fileInput.current?.click()}
-              >
-                Import
-              </Button>
-              <Link to="/stats" className={PLAIN_LINK}>
-                <ChartColumn className="size-[18px]" aria-hidden />
-                Stats
-              </Link>
-            </>
-          }
-        />
+    <>
+      <Page
+        title="Library"
+        subtitle={syncConfigured ? <SyncPill /> : undefined}
+        actions={
+          <>
+            <Button
+              variant="plain"
+              disabled={busy}
+              leading={<Upload className="size-4" aria-hidden />}
+              onClick={() => fileInput.current?.click()}
+            >
+              Import
+            </Button>
+            <Link to="/stats" className={PLAIN_LINK}>
+              <ChartColumn className="size-[18px]" aria-hidden />
+              Stats
+            </Link>
+          </>
+        }
+      >
         <input
           ref={fileInput}
           type="file"
@@ -210,7 +208,6 @@ export function LibraryScreen() {
                 />
               </label>
               <Segmented<LibrarySort>
-                size="sm"
                 aria-label="Sort"
                 options={SORT_OPTIONS}
                 value={sort}
@@ -282,7 +279,8 @@ export function LibraryScreen() {
                     {!seedMode && (
                       <button
                         type="button"
-                        onClick={() => void navigate('/library?seed=1')}
+                        disabled={busy}
+                        onClick={() => void seed(false)}
                         className="min-h-11 px-3 text-footnote text-label-3 transition-colors hover:text-label-2"
                       >
                         Or load a demo session
@@ -335,7 +333,9 @@ export function LibraryScreen() {
             </SeedButton>
           </div>
         )}
-      </div>
+        {/* Room for the undo bar above the tab bar. */}
+        <div aria-hidden className="h-20 shrink-0 lg:h-4" />
+      </Page>
 
       {undo && (
         <UndoBar
@@ -345,7 +345,7 @@ export function LibraryScreen() {
         />
       )}
       {sharing && <ShareDialog open onClose={() => setSharing(null)} sessionId={sharing} />}
-    </div>
+    </>
   );
 }
 
