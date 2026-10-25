@@ -186,6 +186,7 @@ describe('JamScreen', () => {
       key: C_MAJOR_KEY,
       activeMidiNotes: [60],
       tentativeMidiNotes: [66],
+      noteConfidences: { 60: 0.65, 66: 0.4 },
       activePitchClasses: [0, 4, 7],
       previewChord: { root: 2, quality: 'maj' },
       previewConfidence: 0.7,
@@ -205,6 +206,14 @@ describe('JamScreen', () => {
       container.querySelector(`[data-note="${n}"]`)?.getAttribute('data-state');
     expect(state(60)).toBe('exact');
     expect(state(66)).toBe('tentative');
+    expect(container.querySelector('[data-note-accent="60"]')).toHaveAttribute(
+      'fill-opacity',
+      '0.65',
+    );
+    expect(container.querySelector('[data-note-accent="66"]')).toHaveAttribute(
+      'fill-opacity',
+      '0.4',
+    );
     expect(state(48)).toBe('off');
     expect(state(64)).toBe('off');
     act(() =>

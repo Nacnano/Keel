@@ -20,6 +20,10 @@ Use **Piano/keyboard** for acoustic, electric, and digital piano voices; no sepa
 sensitivity, optional audio recording, and the keyboard. For a USB piano, use
 **Tools → Settings → Find input devices** before starting.
 
+Microphone keys brighten as repeated detections build support and fade during brief dropouts.
+Tentative notes have a tinted fill and dashed outline; MIDI keys light fully immediately.
+The shading shows detection stability, not a calibrated probability that a note is correct.
+
 ## What it does
 
 | Route         | Feature                                                                                                                                                                                                                                                                                                                                                                                                                                          |

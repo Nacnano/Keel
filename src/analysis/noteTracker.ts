@@ -6,7 +6,7 @@ export const NOTE_RELEASE_THRESHOLD = 0.06;
 export const NOTE_ATTACK_SEC = 0.12;
 export const NOTE_RELEASE_SEC = 0.24;
 
-/** Repeated candidates preview one hop before the historical confirmation gate. */
+/** Preview repeated, spectrally supported candidates before confirmation. */
 export const NOTE_TENTATIVE_SEC = 0.08;
 export const NOTE_CONFIRM_SEC = NOTE_ATTACK_SEC;
 
@@ -16,6 +16,7 @@ export function createPlayedNoteTracker() {
   const confirmed = new Set<number>();
   const attacks = new Map<number, number>();
   const releases = new Map<number, number>();
+  const confidence = new Map<number, number>();
   let lastT = -Infinity;
 
   function reset() {
@@ -23,6 +24,7 @@ export function createPlayedNoteTracker() {
     confirmed.clear();
     attacks.clear();
     releases.clear();
+    confidence.clear();
     lastT = -Infinity;
   }
 
@@ -44,6 +46,9 @@ export function createPlayedNoteTracker() {
       releases.delete(note);
       if (!attacks.has(note)) attacks.set(note, t);
       const held = t - attacks.get(note)!;
+      // Display evidence, not a calibrated probability: repeated acoustic support
+      // builds over 400 ms. Recovered dropouts rebuild instead of jumping to full ink.
+      confidence.set(note, Math.round((0.3 + 0.7 * Math.min(1, held / 0.4)) * 20) / 20);
       if (repeated && eligible.has(note) && held + 1e-6 >= NOTE_TENTATIVE_SEC) visible.add(note);
       if (repeated && held + 1e-6 >= NOTE_CONFIRM_SEC) {
         visible.add(note);
@@ -54,6 +59,7 @@ export function createPlayedNoteTracker() {
       if (want.has(note)) continue;
       if (!confirmed.has(note)) {
         visible.delete(note);
+        confidence.delete(note);
         continue;
       }
       if (!releases.has(note)) releases.set(note, t);
@@ -61,6 +67,7 @@ export function createPlayedNoteTracker() {
         visible.delete(note);
         confirmed.delete(note);
         releases.delete(note);
+        confidence.delete(note);
       }
     }
     return {
@@ -72,6 +79,17 @@ export function createPlayedNoteTracker() {
   return {
     reset,
     pushState,
+    /** Scores for visible notes only; fade held keys when acoustic support disappears. */
+    confidences(t: number): Record<number, number> {
+      return Object.fromEntries(
+        [...visible].map((note) => {
+          const released = releases.get(note);
+          const fade =
+            released === undefined ? 1 : Math.max(0.25, 1 - (t - released) / NOTE_RELEASE_SEC);
+          return [note, Math.round((confidence.get(note) ?? 0.3) * fade * 20) / 20];
+        }),
+      );
+    },
     /** Historical union API retained for callers that do not distinguish certainty. */
     push(t: number, notes: readonly number[], silent = false): number[] {
       const state = pushState(t, notes, silent);

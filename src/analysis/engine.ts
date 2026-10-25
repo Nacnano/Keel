@@ -400,9 +400,10 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
     pcs: PitchClass[],
     midiNotes?: readonly MidiNote[],
     tentative: readonly MidiNote[] = [],
+    noteConfidences?: Record<MidiNote, number>,
   ) {
     const midi = midiNotes ? [...midiNotes] : undefined;
-    const sig = `${pcs.join(',')}|${midi ? midi.join(',') : ''}|${tentative.join(',')}`;
+    const sig = `${pcs.join(',')}|${midi ? midi.join(',') : ''}|${tentative.join(',')}|${JSON.stringify(noteConfidences ?? {})}`;
     if (sig === lastNotes) return;
     lastNotes = sig;
     if (pcs.length === 0 && (!midi || midi.length === 0) && tentative.length === 0) {
@@ -416,6 +417,7 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
             pitchClasses: pcs,
             midiNotes: midi,
             ...(tentative.length ? { tentativeMidiNotes: [...tentative] } : {}),
+            ...(noteConfidences && Object.keys(noteConfidences).length ? { noteConfidences } : {}),
           }
         : { type: 'notes', t, pitchClasses: pcs },
     );
@@ -489,7 +491,13 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
         : [];
       const notes = playedNotes.pushState(frame.t, frame.midiNotes, silent, tentative);
       const pcs = micNotes.push(frame.t, frame.noteChroma ?? frame.chroma, silent);
-      emitNotes(frame.t, pcs, notes.midiNotes, notes.tentativeMidiNotes);
+      emitNotes(
+        frame.t,
+        pcs,
+        notes.midiNotes,
+        notes.tentativeMidiNotes,
+        playedNotes.confidences(frame.t),
+      );
     } else {
       playedNotes.reset();
       emitNotes(frame.t, micNotes.push(frame.t, frame.noteChroma ?? frame.chroma, silent));

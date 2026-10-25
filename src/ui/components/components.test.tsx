@@ -216,7 +216,9 @@ describe('Piano', () => {
     expect(state(48)).toBe('pc');
     expect(state(108)).toBe('pc'); // C8
     expect(state(62)).toBe('off');
-    expect(container.querySelector('[data-note="60"]')).toHaveClass('fill-accent');
+    expect(container.querySelector('[data-note="60"]')).toHaveClass('fill-[#f4f4f5]');
+    expect(container.querySelector('[data-note-accent="60"]')).toHaveClass('fill-accent');
+    expect(container.querySelector('[data-note-accent="60"]')).toHaveAttribute('fill-opacity', '1');
   });
 
   it('outlines tentative observed notes in their exact octaves and clears them on release', () => {
@@ -230,14 +232,101 @@ describe('Piano', () => {
     expect(state(64)).toBe('tentative');
     expect(state(49)).toBe('off');
     expect(state(76)).toBe('off');
-    expect(container.querySelector('[data-note="61"]')).toHaveClass(
-      'stroke-accent',
-      'fill-[#111113]',
+    expect(container.querySelector('[data-note="61"]')).toHaveClass('fill-[#111113]');
+    expect(container.querySelector('[data-note-accent="61"]')).toHaveClass('stroke-accent');
+    expect(container.querySelector('[data-note-accent="61"]')).toHaveAttribute(
+      'stroke-dasharray',
+      '4 3',
+    );
+    expect(container.querySelector('[data-note-accent="61"]')).toHaveAttribute(
+      'fill-opacity',
+      '0.35',
     );
     expect(screen.getByRole('img')).toHaveAccessibleName('Piano, confirmed C4; tentative C#4, E4');
     rerender(<Piano />);
     expect(state(61)).toBe('off');
     expect(screen.getByRole('img')).toHaveAccessibleName('Piano, no notes');
+  });
+
+  it('layers confidence tint over opaque white and black keys and updates unchanged note sets', () => {
+    const { container, rerender } = render(
+      <Piano activeMidiNotes={[60, 61]} noteConfidences={{ 60: 0.25, 61: 0.75 }} />,
+    );
+    const tint = (note: number) => container.querySelector(`[data-note-accent="${note}"]`);
+    for (const note of [60, 61]) {
+      const base = container.querySelector(`[data-note="${note}"]`)!;
+      expect(base).not.toHaveAttribute('opacity');
+      expect(base).not.toHaveAttribute('fill-opacity');
+      expect(base.nextElementSibling).toBe(tint(note));
+    }
+    expect(container.querySelector('[data-note="60"]')).toHaveClass('fill-[#f4f4f5]');
+    expect(container.querySelector('[data-note="61"]')).toHaveClass('fill-[#111113]');
+    expect(tint(60)).toHaveAttribute('fill-opacity', '0.25');
+    expect(tint(61)).toHaveAttribute('fill-opacity', '0.75');
+    rerender(<Piano activeMidiNotes={[60, 61]} noteConfidences={{ 60: 0.9, 61: 0.4 }} />);
+    expect(tint(60)).toHaveAttribute('fill-opacity', '0.9');
+    expect(tint(61)).toHaveAttribute('fill-opacity', '0.4');
+  });
+
+  it('keeps MIDI and legacy exact notes fully filled without evidence scores', () => {
+    const { container } = render(
+      <Piano activeMidiNotes={[60, 61]} tentativeMidiNotes={[60, 61]} />,
+    );
+    for (const note of [60, 61]) {
+      expect(container.querySelector(`[data-note="${note}"]`)).toHaveAttribute(
+        'data-state',
+        'exact',
+      );
+      expect(container.querySelectorAll(`[data-note-accent="${note}"]`)).toHaveLength(1);
+      expect(container.querySelector(`[data-note-accent="${note}"]`)).toHaveAttribute(
+        'fill-opacity',
+        '1',
+      );
+      expect(container.querySelector(`[data-note-accent="${note}"]`)).not.toHaveAttribute(
+        'stroke-dasharray',
+      );
+    }
+    expect(screen.getByRole('img')).toHaveAccessibleName('Piano, confirmed C4, C#4');
+  });
+
+  it('clamps finite scores and safely defaults nonfinite evidence', () => {
+    const { container } = render(
+      <Piano
+        activeMidiNotes={[60, 61, 62]}
+        tentativeMidiNotes={[63, 64, 65]}
+        noteConfidences={{ 60: -2, 61: 2, 62: NaN, 63: Infinity, 64: -Infinity, 65: 0 }}
+      />,
+    );
+    for (const [note, opacity] of [
+      [60, 0],
+      [61, 1],
+      [62, 1],
+      [63, 0.35],
+      [64, 0.35],
+      [65, 0],
+    ]) {
+      expect(container.querySelector(`[data-note-accent="${note}"]`)).toHaveAttribute(
+        'fill-opacity',
+        String(opacity),
+      );
+    }
+  });
+
+  it('keeps scale and voicing fills independent of observed-note confidence', () => {
+    const { container } = render(
+      <Piano
+        range={[60, 71]}
+        highlightPitchClasses={[0, 1]}
+        leftHandNotes={[64]}
+        rightHandNotes={[67]}
+        noteConfidences={{ 60: 0, 61: 0, 64: 0, 67: 0 }}
+      />,
+    );
+    expect(container.querySelector('[data-note="60"]')).toHaveClass('fill-accent/22');
+    expect(container.querySelector('[data-note="61"]')).toHaveClass('fill-accent/45');
+    expect(container.querySelector('[data-note="64"]')).toHaveClass('fill-sky-400');
+    expect(container.querySelector('[data-note="67"]')).toHaveClass('fill-accent');
+    expect(container.querySelectorAll('[data-note-accent]')).toHaveLength(0);
   });
 
   it('supports a 61-key range', () => {

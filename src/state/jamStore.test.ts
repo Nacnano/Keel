@@ -261,10 +261,13 @@ describe('provisional live results', () => {
       pitchClasses: [0],
       midiNotes: [60],
       tentativeMidiNotes: [60, 64],
+      noteConfidences: { 60: 0.6, 64: 0.4 },
     });
     expect(jamStore.getState().tentativeMidiNotes).toEqual([64]);
+    expect(jamStore.getState().noteConfidences).toEqual({ 60: 0.6, 64: 0.4 });
     s.applyEvent({ type: 'notes', t: 2, pitchClasses: [0], midiNotes: [60] });
     expect(jamStore.getState().tentativeMidiNotes).toEqual([]);
+    expect(jamStore.getState().noteConfidences).toEqual({});
   });
 
   it('clears live estimates on stop without erasing chord or key history', () => {
@@ -279,6 +282,7 @@ describe('provisional live results', () => {
       pitchClasses: [0],
       midiNotes: [60],
       tentativeMidiNotes: [64],
+      noteConfidences: { 60: 0.6, 64: 0.4 },
     });
     s.stopSession();
     expect(jamStore.getState()).toMatchObject({
@@ -288,6 +292,7 @@ describe('provisional live results', () => {
       previewKey: null,
       activeMidiNotes: [],
       tentativeMidiNotes: [],
+      noteConfidences: {},
     });
     expect(jamStore.getState().timeline).toHaveLength(1);
     expect(jamStore.getState().keyHistory).toHaveLength(1);

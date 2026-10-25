@@ -155,6 +155,8 @@ export type AnalysisEvent =
       midiNotes?: MidiNote[];
       /** Repeated microphone candidates awaiting confirmation. Disjoint from midiNotes. */
       tentativeMidiNotes?: MidiNote[];
+      /** Per-note 0..1 acoustic stability for display, not a calibrated probability. MIDI omits it. */
+      noteConfidences?: Record<MidiNote, number>;
     }
   | {
       /** Display-only estimates; never session history, recorded MIDI or confirmed theory. */
