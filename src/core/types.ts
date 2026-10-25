@@ -87,6 +87,8 @@ export interface ChromaFrame {
    * fall back to pitch-class chroma.
    */
   midiNotes?: MidiNote[];
+  /** Per-note acoustic support, 0..1; display evidence, not pitch probabilities. */
+  noteConfidences?: Record<MidiNote, number>;
   /** 0..1 loudness proxy. */
   energy: number;
   bass: PitchClass | null;
@@ -155,7 +157,7 @@ export type AnalysisEvent =
       midiNotes?: MidiNote[];
       /** Repeated microphone candidates awaiting confirmation. Disjoint from midiNotes. */
       tentativeMidiNotes?: MidiNote[];
-      /** Per-note 0..1 acoustic stability for display, not a calibrated probability. MIDI omits it. */
+      /** Per-note 0..1 acoustic support and stability for display, not a calibrated probability. MIDI omits it. */
       noteConfidences?: Record<MidiNote, number>;
     }
   | {

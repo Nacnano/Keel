@@ -262,10 +262,10 @@ describe('Piano', () => {
     expect(container.querySelector('[data-note="60"]')).toHaveClass('fill-[#f4f4f5]');
     expect(container.querySelector('[data-note="61"]')).toHaveClass('fill-[#111113]');
     expect(tint(60)).toHaveAttribute('fill-opacity', '0.25');
-    expect(tint(61)).toHaveAttribute('fill-opacity', '0.75');
+    expect(tint(61)).toHaveAttribute('fill-opacity', '0.65');
     rerender(<Piano activeMidiNotes={[60, 61]} noteConfidences={{ 60: 0.9, 61: 0.4 }} />);
-    expect(tint(60)).toHaveAttribute('fill-opacity', '0.9');
-    expect(tint(61)).toHaveAttribute('fill-opacity', '0.4');
+    expect(tint(60)).toHaveAttribute('fill-opacity', '0.85');
+    expect(tint(61)).toHaveAttribute('fill-opacity', '0.33');
   });
 
   it('keeps MIDI and legacy exact notes fully filled without evidence scores', () => {
@@ -298,12 +298,12 @@ describe('Piano', () => {
       />,
     );
     for (const [note, opacity] of [
-      [60, 0],
+      [60, 0.2],
       [61, 1],
       [62, 1],
       [63, 0.35],
       [64, 0.35],
-      [65, 0],
+      [65, 0.2],
     ]) {
       expect(container.querySelector(`[data-note-accent="${note}"]`)).toHaveAttribute(
         'fill-opacity',

@@ -546,19 +546,16 @@ export function JamScreen() {
                     aria-label="Keyboard note legend"
                   >
                     <span className="flex items-center gap-1.5">
-                      <span
-                        aria-hidden
-                        className="size-2.5 rounded-sm border-2 border-dashed border-accent bg-accent/30"
-                      />
-                      Tentative
+                      <span aria-hidden className="size-2.5 rounded-sm bg-accent/30" />
+                      Lower confidence
                     </span>
                     <span className="flex items-center gap-1.5">
                       <span aria-hidden className="size-2.5 rounded-sm bg-accent" />
-                      Confirmed
+                      Higher confidence
                     </span>
                   </div>
                   <p className="mt-1 text-center text-caption text-label-2">
-                    Stronger color means steadier detection.
+                    Dashed outlines are tentative notes.
                   </p>
                 </div>
               )}

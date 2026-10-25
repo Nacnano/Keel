@@ -356,9 +356,16 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
     // Local flatness catches colored rumble whose spectral slope hides its noise
     // in whole-band flatness. Restrict this guard to octave-specific observations:
     // chord/key chroma retains its existing masking and sustain behavior.
+    const noteConfidences: Record<number, number> = {};
     let midiNotes = noteChroma
       ? []
-      : estimatePlayedMidiNotes(chromaPeaks, tunedA4, profile.harmonics, profile.peakExponent);
+      : estimatePlayedMidiNotes(
+          chromaPeaks,
+          tunedA4,
+          profile.harmonics,
+          profile.peakExponent,
+          noteConfidences,
+        );
     const localFlatness = octaveBandFlatness(longMag, sampleRate, frameSize);
     // Only a strong spectral slope calls for this additional check. Guitar
     // attacks can be locally noisy without the large whole/local entropy
@@ -373,11 +380,14 @@ export function createChromaPipeline(input: PipelineConfigInput): ChromaPipeline
         );
       });
     }
+    for (const note of Object.keys(noteConfidences))
+      if (!midiNotes.includes(Number(note))) delete noteConfidences[Number(note)];
     return {
       t,
       chroma,
       ...(noteChroma ? { noteChroma } : {}),
       midiNotes,
+      noteConfidences,
       energy: energyOut,
       bass,
       onset: on.onset,

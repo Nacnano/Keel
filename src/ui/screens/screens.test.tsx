@@ -208,11 +208,11 @@ describe('JamScreen', () => {
     expect(state(66)).toBe('tentative');
     expect(container.querySelector('[data-note-accent="60"]')).toHaveAttribute(
       'fill-opacity',
-      '0.65',
+      '0.54',
     );
     expect(container.querySelector('[data-note-accent="66"]')).toHaveAttribute(
       'fill-opacity',
-      '0.4',
+      '0.33',
     );
     expect(state(48)).toBe('off');
     expect(state(64)).toBe('off');
