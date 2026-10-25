@@ -97,6 +97,7 @@ export function JamScreen() {
       previewConfidence: s.previewConfidence,
       previewKey: s.previewKey,
       tentativeMidiNotes: s.tentativeMidiNotes,
+      noteConfidences: s.noteConfidences,
       keyEstimate: s.key,
       keyHistory: s.keyHistory,
       timeline: s.timeline,
@@ -538,13 +539,17 @@ export function JamScreen() {
                     keys={wide ? 88 : 61}
                     activeMidiNotes={quiet ? [] : jam.activeMidiNotes}
                     tentativeMidiNotes={quiet ? [] : jam.tentativeMidiNotes}
+                    noteConfidences={quiet ? {} : jam.noteConfidences}
                   />
                   <div
                     className="mt-2 flex justify-center gap-4 text-caption text-label-2"
                     aria-label="Keyboard note legend"
                   >
                     <span className="flex items-center gap-1.5">
-                      <span aria-hidden className="size-2.5 rounded-sm border-2 border-accent" />
+                      <span
+                        aria-hidden
+                        className="size-2.5 rounded-sm border-2 border-dashed border-accent bg-accent/30"
+                      />
                       Tentative
                     </span>
                     <span className="flex items-center gap-1.5">
@@ -552,6 +557,9 @@ export function JamScreen() {
                       Confirmed
                     </span>
                   </div>
+                  <p className="mt-1 text-center text-caption text-label-2">
+                    Stronger color means steadier detection.
+                  </p>
                 </div>
               )}
             </div>

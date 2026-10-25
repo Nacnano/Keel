@@ -13,6 +13,8 @@ export interface PianoProps {
   activeMidiNotes?: readonly MidiNote[];
   /** Provisional observed notes: outlined, never repeated across octaves. */
   tentativeMidiNotes?: readonly MidiNote[];
+  /** 0..1 display evidence for observed notes, not calibrated probabilities. */
+  noteConfidences?: Readonly<Record<number, number>>;
   /** Explicit [lowest, highest] MIDI range; overrides `keys` (e.g. a two-octave helper). */
   range?: readonly [MidiNote, MidiNote];
   /** Scale tones: tinted softly in every octave (below detected notes in priority). */
@@ -74,6 +76,7 @@ export const Piano = memo(function Piano({
   activePitchClasses = [],
   activeMidiNotes = [],
   tentativeMidiNotes = [],
+  noteConfidences,
   range,
   highlightPitchClasses = [],
   accentPitchClasses = [],
@@ -88,7 +91,7 @@ export const Piano = memo(function Piano({
   const geom = useMemo(() => layout(lo, hi), [lo, hi]);
   const pcs = new Set<number>(activePitchClasses);
   const exact = new Set<number>(activeMidiNotes);
-  const tentative = new Set<number>(tentativeMidiNotes);
+  const tentative = new Set<number>(tentativeMidiNotes.filter((note) => !exact.has(note)));
   const scale = new Set<number>(highlightPitchClasses);
   const accent = new Set<number>(accentPitchClasses);
   const left = new Set<number>(leftHandNotes);
@@ -134,24 +137,49 @@ export const Piano = memo(function Piano({
 
   const renderKey = (k: KeyGeom) => {
     const st = stateOf(k.note);
+    const observed = st === 'exact' || st === 'tentative';
+    const fallbackConfidence = st === 'tentative' ? 0.35 : 1;
+    const score = noteConfidences?.[k.note];
+    const confidence =
+      typeof score === 'number' && Number.isFinite(score)
+        ? Math.min(1, Math.max(0, score))
+        : fallbackConfidence;
+    const geometry = {
+      x: k.x,
+      y: 0,
+      width: k.black ? BW : W,
+      height: k.black ? BH : H,
+      rx: k.black ? 2 : 3,
+    };
     return (
-      <rect
-        key={k.note}
-        data-note={k.note}
-        data-state={st}
-        x={k.x}
-        y={0}
-        width={k.black ? BW : W}
-        height={k.black ? BH : H}
-        rx={k.black ? 2 : 3}
-        className={cx(
-          FILL[st][k.black ? 1 : 0],
-          st === 'tentative' ? 'stroke-accent' : 'stroke-black/70',
-          'transition-[fill] duration-75',
+      <g key={k.note}>
+        <rect
+          {...geometry}
+          data-note={k.note}
+          data-state={st}
+          className={cx(
+            FILL[observed ? 'off' : st][k.black ? 1 : 0],
+            'stroke-black/70 transition-[fill] duration-75',
+          )}
+          strokeWidth={k.black ? 1 : 1.5}
+          vectorEffect="non-scaling-stroke"
+        />
+        {observed && (
+          <rect
+            {...geometry}
+            data-note-accent={k.note}
+            aria-hidden="true"
+            className={cx(
+              'fill-accent transition-[fill-opacity] duration-75',
+              st === 'tentative' ? 'stroke-accent' : 'stroke-black/70',
+            )}
+            fillOpacity={confidence}
+            strokeWidth={st === 'tentative' ? 3 : k.black ? 1 : 1.5}
+            strokeDasharray={st === 'tentative' ? '4 3' : undefined}
+            vectorEffect="non-scaling-stroke"
+          />
         )}
-        strokeWidth={st === 'tentative' ? 3 : k.black ? 1 : 1.5}
-        vectorEffect="non-scaling-stroke"
-      />
+      </g>
     );
   };
 

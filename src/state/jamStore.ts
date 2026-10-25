@@ -55,6 +55,7 @@ export interface JamData {
   activePitchClasses: PitchClass[];
   activeMidiNotes: MidiNote[];
   tentativeMidiNotes: MidiNote[];
+  noteConfidences: Record<MidiNote, number>;
   previewChord: Chord | null;
   previewConfidence: number;
   previewKey: KeyEstimate | null;
@@ -138,6 +139,7 @@ const EMPTY_SESSION = {
   activePitchClasses: [],
   activeMidiNotes: [],
   tentativeMidiNotes: [],
+  noteConfidences: {},
   previewChord: null,
   previewConfidence: 0,
   previewKey: null,
@@ -238,6 +240,7 @@ export const useJamStore = create<JamState>()((set, get) => ({
             tentativeMidiNotes: (e.tentativeMidiNotes ?? []).filter(
               (note) => !e.midiNotes?.includes(note),
             ),
+            noteConfidences: e.noteConfidences ?? {},
             exactKeys: e.midiNotes !== undefined,
           };
         case 'level':
@@ -284,6 +287,7 @@ export const useJamStore = create<JamState>()((set, get) => ({
       activePitchClasses: [],
       activeMidiNotes: [],
       tentativeMidiNotes: [],
+      noteConfidences: {},
       previewChord: null,
       previewConfidence: 0,
       previewKey: null,
