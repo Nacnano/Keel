@@ -18,7 +18,7 @@ import {
   SENSITIVITY_MIN_LABEL,
 } from './settings/labels';
 
-import { INSTRUMENT_OPTIONS } from './jam/labels';
+import { INSTRUMENT_OPTIONS, PIANO_DESCRIPTION } from './jam/labels';
 
 export const A4_MIN = 415;
 export const A4_MAX = 466;
@@ -315,6 +315,7 @@ export function SettingsScreen() {
         >
           <Row
             label="Instrument"
+            detail={settings.instrument === 'piano' ? PIANO_DESCRIPTION : undefined}
             stacked
             accessory={
               <Segmented<Instrument>

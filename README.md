@@ -15,7 +15,8 @@ timeline of the progression, and captures ideas so they are not lost.
 
 Open **Listen**, choose **Start listening**, and allow microphone access. Play a chord
 and hold it briefly. Choose **Finish & save**, then **Open session** to review it.
-**Try a demo** shows the flow without microphone access. **Listening options** holds
+**Try a demo** shows the flow without microphone access.
+Use **Piano/keyboard** for acoustic, electric, and digital piano voices; no separate sound preset is needed. **Listening options** holds
 sensitivity, optional audio recording, and the keyboard. For a USB piano, use
 **Tools → Settings → Find input devices** before starting.
 
@@ -50,6 +51,21 @@ pnpm build        # production build with PWA service worker
 ```
 
 Node 22, pnpm 11.
+
+Additional keyboard detection checks:
+
+```sh
+pnpm eval:piano-timbres # Synthetic mellow/bright, tine, reed, FM and bell stress probes
+pnpm eval:real-jams     # Real ensemble piano, tack-piano/synth and synth excerpts
+pnpm eval:real-jams --offline # Reuse downloaded audio without network access
+```
+
+The real-jam suite needs `ffmpeg` and `unzip` on first use and downloads about 147 MB
+into the ignored evaluation cache. It runs six cases from three human ensemble recordings.
+These recordings have instrument/activity metadata, not independent chord or note labels,
+so the suite measures activity and stability, not transcription accuracy. Audio is never
+bundled with the app or committed to the repository. See [`eval/BENCHMARK.md`](eval/BENCHMARK.md)
+for sources, noncommercial research licensing, reproducibility and remaining timbre limits.
 
 ## Deploy
 

@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "archive": {
+    "url": "https://github.com/sigsep/sigsep-mus-db/releases/download/v0.4.0/MUSDB18-7-STEMS.zip",
+    "filename": "MUSDB18-7-STEMS.zip",
+    "sha256": "365f66acffc57282e474a4c24b32afec3678258c50b8d45646ac849b0a287df3",
+    "license": "CC-BY-NC-SA-4.0 for selected MedleyDB-origin MUSDB18 research previews. Audio is downloaded to ignored local cache; no audio redistribution in repository or QA artifacts.",
+    "licenseSource": "https://sigsep.github.io/datasets/musdb.html ; https://medleydb.weebly.com/downloads.html (CC BY-NC-SA 4.0; publisher asks not to republish audio)"
+  },
+  "tracks": [
+    {
+      "id": "matthew-entwistle-dont-you-ever",
+      "title": "Matthew Entwistle - Dont You Ever",
+      "archiveEntry": "train/Matthew Entwistle - Dont You Ever.stem.mp4",
+      "sourceSha256": "2308013c374a220b49ffa8845cfd2fc356968d34cf11c46f6fb4985397adecb3",
+      "sourceInstruments": [
+        "double bass",
+        "piano",
+        "brass section",
+        "drum set",
+        "violin section",
+        "male singer"
+      ],
+      "keyboardTimbre": "piano",
+      "instrumentMetadataSource": "https://raw.githubusercontent.com/marl/medleydb/537bb7bad0601fc58e4fff8404f71658b86ef60e/medleydb/data/Metadata/MatthewEntwistle_DontYouEver_METADATA.yaml",
+      "activationEvidence": "Official MedleyDB activation confidence, original source seconds 80\u201387: S02 piano: minimum 0.9991, mean 0.999934. All published activation samples are >=0.5. Primary data: https://raw.githubusercontent.com/marl/medleydb/537bb7bad0601fc58e4fff8404f71658b86ef60e/medleydb/data/Annotations/Activation_Confidence/v2/MatthewEntwistle_DontYouEver_ACTIVATION_CONF.lab . Original preview start is the 30-second source start plus the RELATIVE 7-second start: https://github.com/sigsep/sigsep-mus-cutlist-generator/releases/download/v0.3/30s_previews.csv and https://github.com/sigsep/sigsep-mus-cutlist-generator/releases/download/v0.3/7s_previews.csv . This suite uses an explicit 6.5-second subset of the nominal 7-second release (actual decoded preview is 6.8 seconds). Activation metadata supplies no chord or polyphonic-note truth.",
+      "attribution": "Matthew Entwistle - Dont You Ever. Artist/composer/producer: Matthew Entwistle; origin: Independent Artist (official MedleyDB YAML). MUSDB18 preview prepared by Fabian-Robert St\u00f6ter and collaborators. Source mapping: https://raw.githubusercontent.com/sigsep/website/b98277bfafa9fe1bb850e88b69232b803918c0ee/content/datasets/assets/tracklist.csv",
+      "originalSourceStartSec": 80,
+      "activationConfidenceMinimum": 0.9991,
+      "startSec": 0,
+      "durationSec": 6.5
+    },
+    {
+      "id": "snowmine-curfews",
+      "title": "Snowmine - Curfews",
+      "archiveEntry": "train/Snowmine - Curfews.stem.mp4",
+      "sourceSha256": "68c565d759431f54b8f0b31173cb3421ef45114a76ad28da79756cf65887fac4",
+      "sourceInstruments": [
+        "auxiliary percussion",
+        "electric bass",
+        "male singer",
+        "vibraphone",
+        "drum set",
+        "sampler",
+        "clean electric guitar",
+        "synthesizer",
+        "vocalists",
+        "tack piano"
+      ],
+      "keyboardTimbre": "tack piano and synthesizer",
+      "instrumentMetadataSource": "https://raw.githubusercontent.com/marl/medleydb/537bb7bad0601fc58e4fff8404f71658b86ef60e/medleydb/data/Metadata/Snowmine_Curfews_METADATA.yaml",
+      "activationEvidence": "Official MedleyDB activation confidence, original source seconds 169\u2013176: S11 tack piano: minimum 1.0; S09 synthesizer: minimum 0.9987. All published activation samples are >=0.5. Primary data: https://raw.githubusercontent.com/marl/medleydb/537bb7bad0601fc58e4fff8404f71658b86ef60e/medleydb/data/Annotations/Activation_Confidence/v2/Snowmine_Curfews_ACTIVATION_CONF.lab . Original preview start is the 30-second source start plus the RELATIVE 7-second start: https://github.com/sigsep/sigsep-mus-cutlist-generator/releases/download/v0.3/30s_previews.csv and https://github.com/sigsep/sigsep-mus-cutlist-generator/releases/download/v0.3/7s_previews.csv . This suite uses an explicit 6.5-second subset of the nominal 7-second release (actual decoded preview is 6.8 seconds). Activation metadata supplies no chord or polyphonic-note truth.",
+      "attribution": "Snowmine - Curfews. Artist: Snowmine; composer: Grayson Sanders; producer: Andy Williams; origin: Weathervane Music; album: Shanking Through Volume 2 (publisher YAML spelling). MUSDB18 preview prepared by Fabian-Robert St\u00f6ter and collaborators. Source mapping: https://raw.githubusercontent.com/sigsep/website/b98277bfafa9fe1bb850e88b69232b803918c0ee/content/datasets/assets/tracklist.csv",
+      "originalSourceStartSec": 169,
+      "activationConfidenceMinimum": 0.9987,
+      "startSec": 0,
+      "durationSec": 6.5
+    },
+    {
+      "id": "night-panther-fire",
+      "title": "Night Panther - Fire",
+      "archiveEntry": "train/Night Panther - Fire.stem.mp4",
+      "sourceSha256": "55b14ca975d0efdb34d085bec12d5d577317f49c214fdaba74ca5bcceb388eb1",
+      "sourceInstruments": [
+        "electric bass",
+        "vocalists",
+        "drum machine",
+        "drum set",
+        "brass section",
+        "male singer",
+        "auxiliary percussion",
+        "string section",
+        "synthesizer"
+      ],
+      "keyboardTimbre": "synthesizer",
+      "instrumentMetadataSource": "https://raw.githubusercontent.com/marl/medleydb/537bb7bad0601fc58e4fff8404f71658b86ef60e/medleydb/data/Metadata/NightPanther_Fire_METADATA.yaml",
+      "activationEvidence": "Official MedleyDB activation confidence, original source seconds 166\u2013173: S10/S11/S12 synthesizers: minima 1.0/0.9999/0.9998. All published activation samples are >=0.5. Primary data: https://raw.githubusercontent.com/marl/medleydb/537bb7bad0601fc58e4fff8404f71658b86ef60e/medleydb/data/Annotations/Activation_Confidence/v2/NightPanther_Fire_ACTIVATION_CONF.lab . Original preview start is the 30-second source start plus the RELATIVE 7-second start: https://github.com/sigsep/sigsep-mus-cutlist-generator/releases/download/v0.3/30s_previews.csv and https://github.com/sigsep/sigsep-mus-cutlist-generator/releases/download/v0.3/7s_previews.csv . This suite uses an explicit 6.5-second subset of the nominal 7-second release (actual decoded preview is 6.8 seconds). Activation metadata supplies no chord or polyphonic-note truth.",
+      "attribution": "Night Panther - Fire. Artist/composer: Night Panther; producer: Andy Williams; origin: Weathervane Music; album: Shaking Through Volume 4. MUSDB18 preview prepared by Fabian-Robert St\u00f6ter and collaborators. Source mapping: https://raw.githubusercontent.com/sigsep/website/b98277bfafa9fe1bb850e88b69232b803918c0ee/content/datasets/assets/tracklist.csv",
+      "originalSourceStartSec": 166,
+      "activationConfidenceMinimum": 0.9998,
+      "startSec": 0,
+      "durationSec": 6.5
+    }
+  ]
+}

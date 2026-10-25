@@ -16,3 +16,5 @@ export const INSTRUMENT_OPTIONS: ReadonlyArray<{ value: Instrument; label: strin
   { value: 'piano', label: 'Piano/keyboard' },
   { value: 'guitar', label: 'Guitar' },
 ];
+
+export const PIANO_DESCRIPTION = 'Acoustic, electric, and digital piano sounds.';

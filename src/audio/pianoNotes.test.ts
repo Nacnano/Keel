@@ -46,6 +46,52 @@ describe('played piano keys', () => {
     expect(estimatePlayedMidiNotes(series(midiHz(60)))).toEqual([60]);
   });
 
+  it('accepts a weak resolved partial without accepting broad noise peaks', () => {
+    const weak: Peak[] = [
+      { freq: midiHz(60), mag: 1, curvature: -1.4 },
+      { freq: midiHz(60) * 2, mag: 0.02, curvature: -1.4 },
+    ];
+    expect(estimatePlayedMidiNotes(weak)).toEqual([60]);
+    expect(estimatePlayedMidiNotes(weak.map((peak) => ({ ...peak, curvature: -0.5 })))).toEqual([]);
+  });
+
+  it.each([44100, 48000])('keeps sparse mellow fundamentals at %i Hz', (sampleRate) => {
+    for (const notes of [[60], [60, 64, 67]]) {
+      const seen = steadyMidi(
+        synthChord({ notes, rolloff: 5, sampleRate, seconds: 2 }),
+        sampleRate,
+      );
+      for (const note of notes) expect(seen.get(note) ?? 0).toBeGreaterThan(20);
+      expect([...seen.keys()].filter((note) => !notes.includes(note))).toEqual([]);
+    }
+  });
+
+  it.each([44100, 48000])(
+    'keeps an electric-piano tail after upper partials soften at %i Hz',
+    (sampleRate) => {
+      const samples = new Float32Array(Math.floor(sampleRate * 2.5));
+      for (let i = 0; i < samples.length; i++) {
+        const t = i / sampleRate;
+        const phase = 2 * Math.PI * midiHz(60) * t;
+        samples[i] =
+          0.1 *
+          Math.min(1, t / 0.005) *
+          Math.exp(-t / 3) *
+          (Math.sin(phase) + 0.3 * Math.exp(-t / 0.7) * Math.sin(2 * phase));
+      }
+      const pipeline = createChromaPipeline({ sampleRate });
+      const hop = pipeline.config.hopSize;
+      let tailFrames = 0;
+      for (let i = 0; i + hop <= samples.length; i += hop) {
+        const frame = pipeline.process(samples.subarray(i, i + hop), i / sampleRate)!;
+        if (i / sampleRate >= 1.5 && i / sampleRate <= 2.2 && frame.midiNotes?.includes(60))
+          tailFrames++;
+        expect((frame.midiNotes ?? []).filter((note) => note !== 60)).toEqual([]);
+      }
+      expect(tailFrames).toBeGreaterThan(10);
+    },
+  );
+
   it('keeps a close triad and drops harmonic ghosts', () => {
     const peaks = merge([60, 64, 67].map((note) => series(midiHz(note))));
     expect(estimatePlayedMidiNotes(peaks)).toEqual([60, 64, 67]);

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import type { Instrument, JamMode, VocabLevel } from '@/core';
 import { Button, Group, Row, Segmented, Sheet, Slider, Switch } from '../../kit';
-import { INSTRUMENT_OPTIONS, MODE_OPTIONS, VOCAB_OPTIONS } from './labels';
+import { INSTRUMENT_OPTIONS, MODE_OPTIONS, PIANO_DESCRIPTION, VOCAB_OPTIONS } from './labels';
 import { useMediaQuery } from '../../lib/useMediaQuery';
 
 export interface JamOptionsProps {
@@ -81,6 +81,7 @@ export function JamOptions(p: JamOptionsProps) {
             />
             <Row
               label="Instrument"
+              detail={p.instrument === 'piano' ? PIANO_DESCRIPTION : undefined}
               stacked
               accessory={
                 <Segmented
