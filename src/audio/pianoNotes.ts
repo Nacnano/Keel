@@ -58,7 +58,13 @@ function partialCount(peaks: readonly Peak[], index: number, harmonics: number):
     const target = f0 * h;
     if (target > PARTIAL_CEILING_HZ) break;
     const j = nearestPartial(peaks, target);
-    if (j > index && peaks[j].mag >= floor) count++;
+    if (j <= index) continue;
+    // Electric-piano and mellow keyboard partials can decay much faster than
+    // their fundamentals. A weak but resolved sinusoidal partial still supports
+    // pitch; broad/noisy maxima retain the stronger acoustic-piano requirement.
+    const resolved = (peaks[index].curvature ?? 0) < -1.1 && (peaks[j].curvature ?? 0) < -1.1;
+    const threshold = resolved ? peaks[index].mag * 0.01 : floor;
+    if (peaks[j].mag >= threshold) count++;
   }
   return count;
 }
