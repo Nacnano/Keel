@@ -489,7 +489,13 @@ export function createAnalysisEngine(config: Partial<AnalysisConfig> = {}): Anal
               noteChroma[note % 12] >= notePeak * 0.6 && frame.chroma[note % 12] >= max * 0.4,
           )
         : [];
-      const notes = playedNotes.pushState(frame.t, frame.midiNotes, silent, tentative);
+      const notes = playedNotes.pushState(
+        frame.t,
+        frame.midiNotes,
+        silent,
+        tentative,
+        frame.noteConfidences,
+      );
       const pcs = micNotes.push(frame.t, frame.noteChroma ?? frame.chroma, silent);
       emitNotes(
         frame.t,

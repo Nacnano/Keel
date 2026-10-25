@@ -197,3 +197,36 @@ describe('microphone key confidence', () => {
     expect(events.at(-1)?.noteConfidences).toBeUndefined();
   });
 });
+
+describe('persistent acoustic support', () => {
+  it('keeps weak held notes dim after time-based confirmation and follows changed evidence', () => {
+    const tracker = createPlayedNoteTracker();
+    for (let i = 0; i <= 50; i++)
+      tracker.pushState(i * 0.04, [60, 64], false, [60, 64], { 60: 0.4, 64: 0.95 });
+    expect(tracker.confidences(2)).toEqual({ 60: 0.4, 64: 0.95 });
+    // A single stronger frame cannot cause a full-opacity flash.
+    tracker.pushState(2.04, [60, 64], false, [60, 64], { 60: 1, 64: 0.95 });
+    expect(tracker.confidences(2.04)[60]).toBeGreaterThan(0.4);
+    expect(tracker.confidences(2.04)[60]).toBeLessThan(0.7);
+    for (let i = 52; i <= 65; i++)
+      tracker.pushState(i * 0.04, [60, 64], false, [60, 64], { 60: 1, 64: 0.95 });
+    expect(tracker.confidences(2.6)[60]).toBe(1);
+    // Lost raw evidence fades, but does not change the existing release hold.
+    expect(tracker.pushState(2.64, []).midiNotes).toEqual([60, 64]);
+    tracker.pushState(2.76, []);
+    expect(tracker.confidences(2.76)[60]).toBe(0.5);
+    expect(tracker.pushState(2.92, []).midiNotes).toEqual([]);
+    expect(tracker.confidences(2.92)).toEqual({});
+  });
+
+  it('clears acoustic history on reset and clamps malformed optional scores', () => {
+    const tracker = createPlayedNoteTracker();
+    for (let i = 0; i <= 10; i++)
+      tracker.pushState(i * 0.04, [60, 64], false, [60, 64], { 60: -2, 64: 3 });
+    expect(tracker.confidences(0.4)).toEqual({ 60: 0, 64: 1 });
+    tracker.reset();
+    for (let i = 0; i <= 10; i++)
+      tracker.pushState(i * 0.04, [60, 64], false, [60, 64], { 60: NaN, 64: Infinity });
+    expect(tracker.confidences(0.4)).toEqual({ 60: 1, 64: 1 });
+  });
+});

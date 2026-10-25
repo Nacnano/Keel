@@ -17,6 +17,7 @@ export function createPlayedNoteTracker() {
   const attacks = new Map<number, number>();
   const releases = new Map<number, number>();
   const confidence = new Map<number, number>();
+  const spectralSupport = new Map<number, number>();
   let lastT = -Infinity;
 
   function reset() {
@@ -25,6 +26,7 @@ export function createPlayedNoteTracker() {
     attacks.clear();
     releases.clear();
     confidence.clear();
+    spectralSupport.clear();
     lastT = -Infinity;
   }
 
@@ -33,9 +35,11 @@ export function createPlayedNoteTracker() {
     notes: readonly number[],
     silent = false,
     tentativeNotes: readonly number[] = notes,
+    noteConfidences?: Readonly<Record<number, number>>,
   ) {
     if (t < lastT || t - lastT > 0.5) reset();
     const repeated = t > lastT;
+    const smoothing = 1 - Math.exp(-Math.max(0, t - lastT) / 0.12);
     lastT = t;
     const eligible = new Set(tentativeNotes);
     const want = new Set(
@@ -46,9 +50,19 @@ export function createPlayedNoteTracker() {
       releases.delete(note);
       if (!attacks.has(note)) attacks.set(note, t);
       const held = t - attacks.get(note)!;
-      // Display evidence, not a calibrated probability: repeated acoustic support
-      // builds over 400 ms. Recovered dropouts rebuild instead of jumping to full ink.
-      confidence.set(note, Math.round((0.3 + 0.7 * Math.min(1, held / 0.4)) * 20) / 20);
+      // Time caps the attack; it must never turn weak spectral evidence into
+      // certainty merely because a candidate persists. Smooth acoustic support
+      // over 120 ms so the color follows evidence without flashing every hop.
+      const raw = noteConfidences?.[note];
+      let support = 1;
+      if (typeof raw === 'number' && Number.isFinite(raw)) {
+        const bounded = Math.max(0, Math.min(1, raw));
+        const previous = spectralSupport.get(note) ?? bounded;
+        support = previous + smoothing * (bounded - previous);
+        spectralSupport.set(note, support);
+      } else spectralSupport.delete(note);
+      const attack = 0.3 + 0.7 * Math.min(1, held / 0.4);
+      confidence.set(note, Math.round(Math.min(attack, support) * 20) / 20);
       if (repeated && eligible.has(note) && held + 1e-6 >= NOTE_TENTATIVE_SEC) visible.add(note);
       if (repeated && held + 1e-6 >= NOTE_CONFIRM_SEC) {
         visible.add(note);
@@ -60,6 +74,7 @@ export function createPlayedNoteTracker() {
       if (!confirmed.has(note)) {
         visible.delete(note);
         confidence.delete(note);
+        spectralSupport.delete(note);
         continue;
       }
       if (!releases.has(note)) releases.set(note, t);
@@ -68,6 +83,7 @@ export function createPlayedNoteTracker() {
         confirmed.delete(note);
         releases.delete(note);
         confidence.delete(note);
+        spectralSupport.delete(note);
       }
     }
     return {

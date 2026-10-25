@@ -133,3 +133,104 @@ describe('played piano keys', () => {
     expect([...chord.keys()].filter((n) => ![60, 64, 67].includes(n))).toEqual([]);
   });
 });
+
+describe('per-note spectral support', () => {
+  const sharp = (peaks: Peak[]) => peaks.map((peak) => ({ ...peak, curvature: -1.4 }));
+  function scored(peaks: Peak[]) {
+    const scores: Record<number, number> = {};
+    const notes = estimatePlayedMidiNotes(peaks, 440, 8, 0.6, scores);
+    expect(notes).toEqual(estimatePlayedMidiNotes(peaks));
+    expect(
+      Object.keys(scores)
+        .map(Number)
+        .sort((a, b) => a - b),
+    ).toEqual(notes);
+    for (const score of Object.values(scores)) {
+      expect(Number.isFinite(score)).toBe(true);
+      expect(score).toBeGreaterThanOrEqual(0);
+      expect(score).toBeLessThanOrEqual(1);
+    }
+    return { notes, scores };
+  }
+
+  it('ranks strong resolved support above weak, broad or detuned support without changing keys', () => {
+    const frequency = midiHz(60);
+    const clear = sharp([
+      { freq: frequency, mag: 1 },
+      { freq: frequency * 2, mag: 0.5 },
+    ]);
+    const weak = sharp([
+      { freq: frequency, mag: 1 },
+      { freq: frequency * 2, mag: 0.015 },
+    ]);
+    const broad = clear.map((peak) => ({ ...peak, curvature: -0.5 }));
+    const detuned = clear.map((peak) => ({ ...peak, freq: peak.freq * 2 ** (20 / 1200) }));
+    expect(scored(clear).scores[60]).toBeGreaterThan(0.95);
+    expect(scored(weak).notes).toEqual([60]);
+    expect(scored(weak).scores[60]).toBeLessThan(0.6);
+    expect(scored(broad).scores[60]).toBeLessThan(0.7);
+    expect(scored(detuned).scores[60]).toBeLessThan(scored(clear).scores[60] - 0.1);
+  });
+
+  it('is invariant to global gain and an unrelated louder supported note', () => {
+    const peaks = sharp(series(midiHz(60)));
+    const original = scored(peaks).scores[60];
+    const quiet = peaks.map((peak) => ({ ...peak, mag: peak.mag * 0.01 }));
+    expect(scored(quiet).scores[60]).toBeCloseTo(original, 12);
+    const chord = [
+      ...peaks,
+      ...sharp(series(midiHz(66))).map((peak) => ({ ...peak, mag: peak.mag * 2.5 })),
+    ].sort((a, b) => a.freq - b.freq);
+    expect(scored(chord).notes).toContain(60);
+    expect(scored(chord).scores[60]).toBeCloseTo(original, 12);
+  });
+
+  it('discounts a candidate fundamental substantially explained by a lower note', () => {
+    const frequency = midiHz(60);
+    const clear = sharp([
+      { freq: frequency, mag: 2 },
+      { freq: frequency * 2, mag: 2 },
+    ]);
+    const ambiguous = sharp([{ freq: frequency / 2, mag: 1 }, ...clear]);
+    expect(scored(ambiguous).notes).toContain(60);
+    expect(scored(ambiguous).scores[60]).toBeLessThan(scored(clear).scores[60] - 0.15);
+  });
+
+  it('keeps unobservable high-register partials uncertain and clears stale output entries', () => {
+    const high = scored(sharp([{ freq: midiHz(105), mag: 1 }]));
+    expect(high.notes).toEqual([105]);
+    expect(high.scores[105]).toBeLessThan(0.8);
+    const scores: Record<number, number> = { 60: 1 };
+    expect(estimatePlayedMidiNotes([], 440, 8, 0.6, scores)).toEqual([]);
+    expect(scores).toEqual({});
+    expect(scored([{ freq: 440, mag: 1 }]).scores).toEqual({});
+  });
+
+  it.each([44100, 48000])(
+    'keeps weaker spectral support lower after sustained audio at %i Hz',
+    (sampleRate) => {
+      const measure = (rolloff: number) => {
+        const pipeline = createChromaPipeline({ sampleRate });
+        const audio = synthChord({ notes: [60], sampleRate, seconds: 2, rolloff });
+        const scores: number[] = [];
+        const hop = pipeline.config.hopSize;
+        for (let i = 0; i + hop <= audio.length; i += hop) {
+          const frame = pipeline.process(audio.subarray(i, i + hop), i / sampleRate)!;
+          expect(
+            Object.keys(frame.noteConfidences ?? {})
+              .map(Number)
+              .sort((a, b) => a - b),
+          ).toEqual(frame.midiNotes ?? []);
+          if (i / sampleRate > 1 && frame.midiNotes?.includes(60))
+            scores.push(frame.noteConfidences![60]);
+        }
+        expect(scores.length).toBeGreaterThan(10);
+        return scores;
+      };
+      const strong = measure(1.2),
+        weak = measure(5);
+      expect(Math.min(...strong)).toBeGreaterThan(0.85);
+      expect(Math.max(...weak)).toBeLessThan(0.7);
+    },
+  );
+});

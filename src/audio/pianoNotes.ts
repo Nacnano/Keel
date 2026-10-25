@@ -69,16 +69,47 @@ function partialCount(peaks: readonly Peak[], index: number, harmonics: number):
   return count;
 }
 
+function unit(value: number): number {
+  return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
+}
+
+function peakSharpness(peak: Peak): number {
+  // Missing shape metadata is unknown evidence, not an ideal sinusoid.
+  return Number.isFinite(peak.curvature) ? unit(-peak.curvature! / 1.4) : 0.5;
+}
+
+/** Current spectral corroboration only: no loudness or elapsed-time normalization. */
+function partialQuality(peaks: readonly Peak[], index: number, harmonics: number): number {
+  const fundamental = peaks[index];
+  // No observable partial in the analysis band means limited corroboration.
+  if (requiredPartials(fundamental.freq) === 0) return 0.5;
+  let best = 0;
+  for (let h = 2; h <= Math.min(harmonics, 8); h++) {
+    const target = fundamental.freq * h;
+    if (target > PARTIAL_CEILING_HZ) break;
+    const j = nearestPartial(peaks, target);
+    if (j <= index) continue;
+    const strength = unit(peaks[j].mag / (fundamental.mag * 0.08));
+    const alignment = unit(1 - Math.abs(1200 * Math.log2(peaks[j].freq / target)) / 65);
+    best = Math.max(best, strength * alignment * peakSharpness(peaks[j]));
+  }
+  return best;
+}
+
 /**
  * MIDI note numbers to light. `peaks` must be sorted by ascending frequency.
- * Empty when the frame has no supported piano tone.
+ * Empty when the frame has no supported piano tone. Optional output is a bounded
+ * spectral-support heuristic, not a calibrated probability; it never changes eligibility.
  */
 export function estimatePlayedMidiNotes(
   peaks: readonly Peak[],
   a4 = 440,
   harmonics = 8,
   magnitudeExponent = 0.6,
+  noteConfidences?: Record<MidiNote, number>,
 ): MidiNote[] {
+  if (noteConfidences)
+    for (const note of Object.keys(noteConfidences)) delete noteConfidences[Number(note)];
   if (peaks.length === 0) return [];
   const { own, claimed } = attributeHarmonics(peaks, harmonics, magnitudeExponent);
   const mass = new Float64Array(peaks.length);
@@ -93,6 +124,7 @@ export function estimatePlayedMidiNotes(
   }
   if (!(best > 0)) return [];
   const byMidi = new Map<number, number>();
+  const supportMass = new Map<number, number>();
   for (let i = 0; i < peaks.length; i++) {
     if (!supported[i] || mass[i] < best * MIN_MASS) continue;
     if (requiredPartials(peaks[i].freq) === 0 && mass[i] < best * 0.45) continue;
@@ -101,12 +133,25 @@ export function estimatePlayedMidiNotes(
     if (midi < PIANO_LO || midi > PIANO_HI) continue;
     if (Math.abs(midiF - midi) * 100 > MAX_CENTS) continue;
     byMidi.set(midi, (byMidi.get(midi) ?? 0) + mass[i]);
+    if (noteConfidences) {
+      // Reference tuning is evidence, not proof: detuning/vibrato can lower it.
+      const tuning = unit(1 - (Math.abs(midiF - midi) * 100) / MAX_CENTS);
+      const ownership = unit(own[i] / Math.pow(peaks[i].mag, magnitudeExponent));
+      const core = 0.35 * tuning + 0.25 * peakSharpness(peaks[i]) + 0.4 * ownership;
+      const score = unit(core * (0.35 + 0.65 * partialQuality(peaks, i, harmonics)));
+      supportMass.set(midi, (supportMass.get(midi) ?? 0) + mass[i] * score);
+    }
   }
   let top = 0;
   for (const value of byMidi.values()) if (value > top) top = value;
   if (!(top > 0)) return [];
   const notes: number[] = [];
-  for (const [midi, value] of byMidi) if (value >= top * MIN_MASS) notes.push(midi);
+  for (const [midi, value] of byMidi) {
+    if (value >= top * MIN_MASS) {
+      notes.push(midi);
+      if (noteConfidences) noteConfidences[midi] = unit((supportMass.get(midi) ?? 0) / value);
+    }
+  }
   notes.sort((a, b) => a - b);
   return notes;
 }

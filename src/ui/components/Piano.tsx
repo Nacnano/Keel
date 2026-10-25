@@ -144,6 +144,11 @@ export const Piano = memo(function Piano({
       typeof score === 'number' && Number.isFinite(score)
         ? Math.min(1, Math.max(0, score))
         : fallbackConfidence;
+    // Spread middle support values across a visible tint range. Keep a minimum
+    // tint for every detected key; opacity is not a probability percentage.
+    const opacity = Number.isFinite(score)
+      ? Math.round((0.2 + 0.8 * confidence ** 2) * 100) / 100
+      : fallbackConfidence;
     const geometry = {
       x: k.x,
       y: 0,
@@ -173,7 +178,7 @@ export const Piano = memo(function Piano({
               'fill-accent transition-[fill-opacity] duration-75',
               st === 'tentative' ? 'stroke-accent' : 'stroke-black/70',
             )}
-            fillOpacity={confidence}
+            fillOpacity={opacity}
             strokeWidth={st === 'tentative' ? 3 : k.black ? 1 : 1.5}
             strokeDasharray={st === 'tentative' ? '4 3' : undefined}
             vectorEffect="non-scaling-stroke"
