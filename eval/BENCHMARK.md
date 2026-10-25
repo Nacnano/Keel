@@ -315,3 +315,65 @@ The keyboard lights one MIDI key per sounding fundamental. Harmonic partials are
 and a pitch class is not painted in every octave. Pitch-class note metrics in this benchmark stay
 on the chord chroma, so a coverage change here is a change in which classes are active, not in
 which octaves the keyboard draws.
+
+## Piano timbres and real keyboard ensembles
+
+`pnpm eval:piano-timbres` exercises the actual DSP and analysis engine with 60 deterministic
+oscillator probes: mellow/bright acoustic-like, tine-like, reed-like, FM-style and inharmonic
+bell-like spectra, low/high single notes, sustained triads, two sample rates and both listening
+modes, plus fan/hum controls. These are spectral/envelope approximations, not sampled instruments
+or branded patch certification. The accompanying 57 tests include retention, octave, precision,
+onset and release gates for the five harmonic families. The bell probes remain diagnostic:
+strongly inharmonic sounds can still be missed or misidentified.
+
+The resolved-weak-partial fix improves confirmed note recall in the 48 kHz My instrument,
+four-second synthetic triads: mellow 42.7%→94.4%, tine 39.8%→94.4%, reed 59.4%→94.4%, FM
+44.4%→80%; bright remains 94.4%. Recovered notes now retain the existing release hold, so some
+post-release note time rises to the same roughly 321 ms release behavior already seen on bright
+piano. This is a sustain/release tradeoff, not zero false-note time. All twelve new music-free
+controls and all 241 original noise/recorded-noise cases remain clear. The original 461-case
+regression suite passes unchanged; its baseline and thresholds were not rewritten.
+
+`pnpm eval:real-jams` is a separate download-on-demand suite of real human ensemble recordings:
+
+| Recording                         | Documented keyboard family | Original source window |
+| --------------------------------- | -------------------------- | ---------------------- |
+| Matthew Entwistle — Dont You Ever | Piano                      | 80–87 s                |
+| Snowmine — Curfews                | Tack piano and synthesizer | 169–176 s              |
+| Night Panther — Fire              | Synthesizer                | 166–173 s              |
+
+Each case uses the original full mix, including the other instruments and vocals, not an isolated
+keyboard or generated accompaniment. The public nominal seven-second MUSDB18 previews decode to
+6.8 seconds; the suite explicitly uses the first 6.5 seconds. Each recording runs in My instrument
+and Overall harmony at 48 kHz: three recordings, six cases. Official MedleyDB metadata and
+aligned activation-confidence annotations support keyboard presence throughout the selected
+windows. Activation confidence is not chord or polyphonic-note ground truth. Harmony and notes
+are therefore `unknown`, accuracy/precision/recall remain unscored, and existing activity/stability
+regression gates detect losses or unstable output without claiming correct transcription.
+
+The source archive, individual full-mix containers, instrument metadata URLs, source-window mapping,
+activity evidence and attribution are pinned in [`real-jams-sources.json`](real-jams-sources.json).
+The public [MUSDB18 research previews](https://sigsep.github.io/datasets/musdb.html) include these
+[MedleyDB-origin recordings](https://medleydb.weebly.com/downloads.html), under CC BY-NC-SA 4.0.
+The publisher asks that audio not be republished; only recipes, checksums, measurements and code
+are committed. Audio stays in ignored `eval/.cache/real-jams`, outside production and CI artifacts.
+The first run downloads about 147 MB and requires `unzip` and `ffmpeg`; subsequent `--offline`
+runs use the checked local cache. The original offline regression suite does not download audio
+or require these tools, and normal unit tests exercise the new plumbing without downloading.
+
+The separate reference in [`real-jams-baseline.json`](real-jams-baseline.json) was measured by
+running the new evaluation harness inside the immutable pre-fix `361c27a` source archive with
+its own TypeScript path mappings. Current `b6f6bf8` uses identical decoded samples and passes
+all six comparisons. Both sources share the same scoring protocol and per-case PCM hashes.
+Archive/source corruption, changed recipes, changed case inventory or different decoded PCM
+reject baseline comparison. Decoder version is recorded. If another decoder produces different
+PCM, reuse the matching cache/decoder, or remeasure the unchanged reference source with that
+decoder using `--candidate` and review a new separate baseline; never bless current output as its
+own reference. `--output=<directory>` controls report location; reports contain no source audio.
+
+The real suite currently covers piano, tack-piano/synth and synth ensemble material. It does not
+verify actual Rhodes/Wurlitzer/FM hardware or branded patches. Those remain synthetic development
+coverage pending suitable recorded references. The clips are short studio ensemble excerpts,
+not a human usability study or proof of accuracy during a full improvised live jam. Physical
+laptop/iPad microphones, effects-heavy keyboard sounds and independently annotated polyphonic
+recordings still need validation.

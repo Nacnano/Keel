@@ -21,7 +21,9 @@
     "eval": "tsx --tsconfig eval/tsconfig.json eval/run.ts",
     "eval:inspect": "tsx --tsconfig eval/tsconfig.json eval/inspect.ts",
     "eval:benchmark": "tsx --tsconfig eval/tsconfig.json eval/benchmark.ts --suite=ci",
-    "eval:benchmark:full": "tsx --tsconfig eval/tsconfig.json eval/benchmark.ts --suite=full"
+    "eval:benchmark:full": "tsx --tsconfig eval/tsconfig.json eval/benchmark.ts --suite=full",
+    "eval:piano-timbres": "tsx --tsconfig eval/tsconfig.json eval/pianoTimbres.ts",
+    "eval:real-jams": "tsx --tsconfig eval/tsconfig.json eval/realJams.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
