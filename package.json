@@ -26,13 +26,13 @@
     "eval:real-jams": "tsx --tsconfig eval/tsconfig.json eval/realJams.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
+    "@supabase/supabase-js": "^2.119.0",
     "dexie": "^4",
-    "lucide-react": "^1.60.0",
+    "lucide-react": "^1.70.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router": "^7",
-    "smplr": "^0.16",
+    "smplr": "^0.26",
     "uuid": "^13",
     "zustand": "^5"
   },
@@ -43,17 +43,17 @@
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
+    "@vitejs/plugin-react": "^6.3.0",
     "@vitest/coverage-v8": "^4.1.12",
     "fake-indexeddb": "^6",
     "jsdom": "^27",
     "ogg-opus-decoder": "^1.7.5",
-    "oxlint": "^1.88.0",
+    "oxlint": "^1.92.0",
     "prettier": "^3",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",
-    "vite": "^8.3.4",
+    "vite": "^8.3.6",
     "vite-plugin-pwa": "^1",
     "vitest": "^4"
   }
